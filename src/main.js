@@ -1,6 +1,10 @@
 import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
@@ -109,7 +113,7 @@ function resize() {
   camera.aspect = W / H;
   camera.updateProjectionMatrix();
   const M = Math.max(W, H);
-  sun.position.set(-0.3 * M, 0.55 * M, 1.1 * M);
+  placeSun();
   const sc = sun.shadow.camera;
   sc.left = -M * 0.8; sc.right = M * 0.8; sc.top = M * 0.8; sc.bottom = -M * 0.8;
   sc.near = 1; sc.far = M * 4;
@@ -188,6 +192,7 @@ function setMode(m) {
   strand.visible = m !== 'stack';
   board.visible = m === 'stack';
   backdrop.visible = m !== 'stack';
+  applyMood();
   sparks.visible = false;
   if (m === 'tied') { tiedFired = false; say(TIED_HINT); }
   else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Nothing on display yet. Tie off a bracelet and hang it on the stand.'); syncStack(); }
@@ -220,10 +225,124 @@ function paintTexture() {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(), roughness: 0.95 }));
+// Plaster relief, so raking light picks out a real wall surface.
+function plasterTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = '#808080';
+  x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2600; i++) {
+    x.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.14)';
+    x.beginPath();
+    x.ellipse(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 5, 1 + Math.random() * 4, Math.random() * 3, 0, TAU);
+    x.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+const plaster = plasterTexture();
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(), roughness: 0.95, bumpMap: plaster, bumpScale: 2.2 }));
 wall.receiveShadow = true;
 wall.position.z = -70;
 board.add(wall);
+
+// Daylight: a soft patch of window light across the wall, with the shadow of the window frame.
+function windowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const x = c.getContext('2d');
+  x.filter = 'blur(9px)';
+  x.transform(1, 0.22, -0.3, 1, 150, -40);
+  x.fillStyle = 'rgba(255,238,205,.9)';
+  for (let col = 0; col < 2; col++) for (let row = 0; row < 3; row++) x.fillRect(90 + col * 150, 70 + row * 130, 134, 114);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const windowLight = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
+  map: windowTexture(), transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+}));
+windowLight.position.z = -68.5;
+board.add(windowLight);
+
+// A neon-style sign in script. It glows at night and sits unlit by day.
+function neonTexture(lit) {
+  const c = document.createElement('canvas');
+  c.width = 470; c.height = 220;
+  const x = c.getContext('2d');
+  x.font = '120px Pacifico, "Brush Script MT", cursive';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineJoin = 'round';
+  if (lit) {
+    x.shadowColor = '#ff3fa0'; x.shadowBlur = 34;
+    x.strokeStyle = '#ff6fbd'; x.lineWidth = 9;
+    for (let i = 0; i < 3; i++) x.strokeText('encore', 235, 112);
+    x.shadowBlur = 8;
+    x.strokeStyle = '#fff2fa'; x.lineWidth = 3.5;
+    x.strokeText('encore', 235, 112);
+  } else {
+    x.shadowColor = 'rgba(90,40,90,.35)'; x.shadowBlur = 5; x.shadowOffsetX = 3; x.shadowOffsetY = 4;
+    x.strokeStyle = '#fff4fa'; x.lineWidth = 8;
+    x.strokeText('encore', 235, 112);
+    x.shadowColor = 'transparent';
+    x.strokeStyle = '#ee8fbf'; x.lineWidth = 3;
+    x.strokeText('encore', 235, 112);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const neonMaps = { on: null, off: null };
+const neon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false }));
+neon.position.z = -40;
+board.add(neon);
+const neonGlow = new THREE.PointLight(0xff4fa8, 0, 0, 0);
+const lamp = new THREE.PointLight(0xffb873, 0, 0, 0);
+board.add(neonGlow, lamp);
+
+// Day in light mode, evening in dark mode. Leaving the wall restores the stage lighting.
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+function placeSun() {
+  const M = Math.max(W, H);
+  if (mode === 'stack') sun.position.set(-0.95 * M, 0.75 * M, 0.85 * M);
+  else sun.position.set(-0.3 * M, 0.55 * M, 1.1 * M);
+}
+function applyMood() {
+  const onWall = mode === 'stack', night = onWall && darkQuery.matches;
+  placeSun();
+  sun.color.set(!onWall ? 0xffffff : night ? 0x8fa2ff : 0xfff0dc);
+  sun.intensity = !onWall ? 1.7 : night ? 0.4 : 2.1;
+  scene.environmentIntensity = !onWall ? 0.55 : night ? 0.2 : 0.5;
+  stageA.intensity = stageB.intensity = onWall ? 0.12 : reduce ? 0.5 : 1.0;
+  wall.material.color.set(night ? 0x8d7cb8 : 0xffffff);
+  windowLight.visible = onWall && !night;
+  lamp.intensity = night ? 2.4 : 0;
+  neonGlow.intensity = night ? 1.5 : 0;
+  if (!neonMaps.on) { neonMaps.on = neonTexture(true); neonMaps.off = neonTexture(false); }
+  neon.material.map = night ? neonMaps.on : neonMaps.off;
+  neon.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+  neon.material.needsUpdate = true;
+}
+darkQuery.addEventListener('change', applyMood);
+
+// Depth of field on the wall: bracelets stay sharp, the wall behind falls slightly soft, like a phone photo.
+let composer = null, bokeh = null, composerKey = '';
+function renderWall(dist) {
+  if (reduce) { renderer.render(scene, camera); return; }
+  if (!composer) {
+    composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { samples: 4, type: THREE.HalfFloatType }));
+    composer.addPass(new RenderPass(scene, camera));
+    bokeh = new BokehPass(scene, camera, { focus: dist, aperture: 0.000022, maxblur: 0.003 });
+    composer.addPass(bokeh);
+    composer.addPass(new OutputPass());
+  }
+  const key = W + 'x' + H + '@' + renderer.getPixelRatio();
+  if (key !== composerKey) { composerKey = key; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(W, H); }
+  bokeh.uniforms.focus.value = dist;
+  composer.render();
+}
 
 // The display piece: a gold T-bar jewelry stand on a wood shelf. Bracelets hang from its bars on
 // small hooks, facing forward so every phrase can be read, and swing when touched.
@@ -254,9 +373,10 @@ const hookGeo = {
 // How many bars and hooks fit the current stage, in stage pixels (y measured down from the top).
 function wallGrid() {
   const cols = W < 520 ? 3 : W < 900 ? 4 : 5;
-  const slotW = Math.min((W * 0.9) / cols, 156), rMax = slotW * 0.42, rowH = rMax * 2 + 36;
-  const rows = clamp(Math.floor((H * 0.84) / rowH), 1, 3);
-  const top = (H - (rows * rowH + 30)) / 2 + 22;
+  const slotW = Math.min((W * 0.9) / cols, 148), rMax = slotW * 0.42, rowH = rMax * 2 + 36;
+  // Space is kept above the top bar for the neon sign.
+  const rows = clamp(Math.floor((H * 0.84 - 40) / rowH), 1, 3);
+  const top = (H - (rows * rowH + 30)) / 2 + 46;
   return { cols, rows, slotW, rMax, rowH, top, shelf: top + rows * rowH + 4, cap: Math.min(STACK_MAX, cols * rows) };
 }
 let standKey = '';
@@ -271,7 +391,22 @@ function buildStand(grid) {
     return m;
   };
   const Y = (py) => H / 2 - py, barW = grid.cols * grid.slotW, shelfY = Y(grid.shelf);
-  solid(new THREE.BoxGeometry(Math.max(W * 1.3, barW + 120), 18, 130), woodMat, 0, shelfY - 9, -6);
+  // Slim floating shelf.
+  solid(new THREE.BoxGeometry(Math.min(W * 0.98, barW + 150), 11, 112), woodMat, 0, shelfY - 5.5, -12);
+  // A small trailing plant in a white pot.
+  const ps = clamp(grid.rMax / 40, 1.1, 1.7), px = barW * 0.22 + 30 * ps, pz = 4;
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x4f9a63, roughness: 0.55 });
+  solid(new THREE.CylinderGeometry(15 * ps, 11.5 * ps, 24 * ps, 28), new THREE.MeshPhysicalMaterial({ color: 0xfbf8f3, roughness: 0.35, clearcoat: 0.6 }), px, shelfY + 12 * ps, pz);
+  const leaf = new THREE.SphereGeometry(1, 10, 8);
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * TAU * 2.3, r = (3 + (i % 5) * 2.6) * ps;
+    solid(leaf, leafMat, px + Math.cos(a) * r, shelfY + (25 + (i % 4) * 3) * ps, pz + Math.sin(a) * r).scale.set(5.2 * ps, 4.2 * ps, 5.2 * ps);
+  }
+  [[-13, 5, 46], [10, 9, 34], [15, -2, 58], [-4, 12, 26]].forEach(([dx, dz, len]) => {
+    for (let y = 0; y < len; y += 6.4) {
+      solid(leaf, leafMat, px + dx * ps + Math.sin(y * 0.2 + dx) * 1.6, shelfY + (20 - y) * ps, pz + (dz + 8) * ps).scale.setScalar(3.2 * ps);
+    }
+  });
   solid(new THREE.CylinderGeometry(barW * 0.2, barW * 0.22, 9, 48), goldMat, 0, shelfY + 4.5, -6);
   const topY = Y(grid.top);
   solid(new THREE.CylinderGeometry(5.5, 5.5, topY - shelfY + 16, 20), goldMat, 0, (topY + shelfY) / 2 + 8, -8);
@@ -346,6 +481,16 @@ function wear() {
 }
 function updateStack(dt) {
   wall.scale.set(W * 1.4, H * 1.4, 1);
+  plaster.repeat.set((W * 1.4) / 150, (H * 1.4) / 150);
+  windowLight.scale.set(Math.max(W, H) * 1.15, Math.max(W, H) * 1.15, 1);
+  windowLight.position.set(W * 0.12, H * 0.06, -68.5);
+  {
+    const g = wallGrid(), signH = clamp(g.top - 50, 30, 70), topY = H / 2 - g.top;
+    neon.scale.set(signH * 2.14, signH, 1);
+    neon.position.set(0, topY + 30 + signH / 2, -40);
+    neonGlow.position.set(0, neon.position.y, 60);
+    lamp.position.set(W * 0.42, -H * 0.3, 220);
+  }
   const grid = wallGrid();
   if ([grid.cols, grid.rows, Math.round(grid.rMax / 3), Math.round(W / 30), Math.round(H / 30)].join('|') !== standKey) rebuildStack();
   rings.forEach((r, i) => {
@@ -630,7 +775,7 @@ function frame(now) {
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
   if (mode === 'stack') updateStack(dt);
   tickMaterials(T);
-  renderer.render(scene, camera);
+  if (mode === 'stack') renderWall(dist); else renderer.render(scene, camera);
 }
 
 /* ---------- Pointer: tap to pull off, drag to reorder ---------- */
@@ -914,7 +1059,7 @@ $('sound').addEventListener('click', () => {
 /* ---------- Boot ---------- */
 async function start() {
   // Letter beads are drawn with the display font, so wait briefly for it.
-  try { await Promise.race([document.fonts.load('700 64px Fredoka'), new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* fallback font */ }
+  try { await Promise.race([Promise.all([document.fonts.load('700 64px Fredoka'), document.fonts.load('120px Pacifico')]), new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* fallback font */ }
   readTheme();
   resize();
   new ResizeObserver(resize).observe(cv);
