@@ -227,9 +227,29 @@ board.add(wall);
 
 const stand = new THREE.Group();
 board.add(stand);
-const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xffd260, metalness: 0.6, roughness: 0.24, clearcoat: 1, emissive: 0x5a3a00, emissiveIntensity: 0.35 });
-const ARM_X = 84;
-const armR = (y) => 23 + 8 * clamp((22 - y) / 170, 0, 1);
+// Satin gold, like a painted resin sculpture.
+const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xe9c25c, metalness: 0.55, roughness: 0.4, emissive: 0x4a3200, emissiveIntensity: 0.3 });
+// Each wrist rises from the shelf and leans in toward the heart. Bracelets stack around it.
+const SHELF_Y = -150, WRIST_TOP = -4, LEAN = 0.15;
+const wristT = (y) => clamp((y - SHELF_Y) / (WRIST_TOP - SHELF_Y), 0, 1);
+const wristX = (y) => 121 - 25 * wristT(y);
+const armR = (y) => 35 - 6 * wristT(y);
+function woodTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = '#5b3a27';
+  x.fillRect(0, 0, 512, 128);
+  for (let i = 0; i < 90; i++) {
+    x.strokeStyle = `rgba(${Math.random() < 0.5 ? '25,12,6' : '150,100,70'},${0.08 + Math.random() * 0.2})`;
+    x.lineWidth = 0.6 + Math.random() * 2.4;
+    const y = Math.random() * 128;
+    x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(170, y + 8, 340, y - 8, 512, y + 3); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 {
   const solid = (geo, mat, x = 0, y = 0, z = 0) => {
     const m = new THREE.Mesh(geo, mat);
@@ -238,29 +258,38 @@ const armR = (y) => 23 + 8 * clamp((22 - y) / 170, 0, 1);
     stand.add(m);
     return m;
   };
-  // White shelf and a gold plinth.
-  solid(new THREE.BoxGeometry(420, 14, 120), new THREE.MeshStandardMaterial({ color: 0xfffaf6, roughness: 0.6 }), 0, -171, 0);
-  solid(new THREE.CylinderGeometry(1, 1, 14, 56), goldMat, 0, -157, 0).scale.set(140, 1, 46);
-  const tip = new THREE.SphereGeometry(1, 16, 12);
-  const finger = (s, pts, r) => {
-    const v = pts.map(([x, y, z]) => new THREE.Vector3(s * x, y, z));
-    solid(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(v), 40, r, 12), goldMat);
-    for (const end of [v[0], v[v.length - 1]]) solid(tip, goldMat, end.x, end.y, end.z).scale.setScalar(r);
+  // A tube whose thickness changes along its length, with rounded ends.
+  const ball = new THREE.SphereGeometry(1, 18, 14);
+  const limb = (pts, radiusAt, seg = 56) => {
+    const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z || 0)));
+    const g = new THREE.TubeGeometry(curve, seg, 1, 18, false), pos = g.attributes.position;
+    const c = new THREE.Vector3(), v = new THREE.Vector3();
+    for (let i = 0; i <= seg; i++) {
+      curve.getPointAt(i / seg, c);
+      for (let j = 0; j <= 18; j++) {
+        const k = i * 19 + j;
+        v.fromBufferAttribute(pos, k).sub(c).multiplyScalar(radiusAt(i / seg)).add(c);
+        pos.setXYZ(k, v.x, v.y, v.z);
+      }
+    }
+    g.computeVertexNormals();
+    solid(g, goldMat);
+    for (const u of [0, 1]) { curve.getPointAt(u, c); solid(ball, goldMat, c.x, c.y, c.z).scale.setScalar(radiusAt(u)); }
   };
+  // Dark wood shelf.
+  solid(new THREE.BoxGeometry(460, 18, 130), new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.75 }), 0, SHELF_Y - 9, 0);
   for (const s of [-1, 1]) {
-    // Forearm, where the bracelets stack.
-    const prof = [];
-    for (let y = -150; y <= 22; y += 17.2) prof.push(new THREE.Vector2(armR(y), y));
-    prof.push(new THREE.Vector2(20, 34), new THREE.Vector2(0, 38));
-    solid(new THREE.LatheGeometry(prof, 40), goldMat, s * ARM_X, 0, 0);
-    solid(tip, goldMat, s * 86, 70, 0).scale.set(25, 46, 22);
-    // Four fingers arch over to meet in the middle: the top of the heart.
-    [-15, -5, 5, 15].forEach((z, i) => {
-      const k = 1 - Math.abs(i - 1.5) * 0.035;
-      finger(s, [[90, 100, z], [98, 152, z], [72, 200 * k, z * 0.9], [34, 198 * k, z * 0.8], [8, 170, z * 0.7]], 10.5);
+    // Wrist.
+    const wrist = solid(new THREE.CylinderGeometry(armR(WRIST_TOP), armR(SHELF_Y), WRIST_TOP - SHELF_Y, 40), goldMat, s * wristX((SHELF_Y + WRIST_TOP) / 2), (SHELF_Y + WRIST_TOP) / 2, 0);
+    wrist.rotation.z = s * LEAN;
+    // Thumb and the back of the hand: one smooth mass from the point of the heart up to the knuckles.
+    const mass = (u) => (u < 0.35 ? lerp(13, 27, u / 0.35) : u < 0.8 ? lerp(27, 31, (u - 0.35) / 0.45) : lerp(31, 23, (u - 0.8) / 0.2));
+    limb([[s * 3, -112], [s * 34, -84], [s * 70, -40], [s * 95, 6], [s * 100, 54], [s * 85, 96], [s * 58, 118]], mass);
+    // Four fingers fold over at the knuckles and point down into the heart, meeting the other hand.
+    [-16.5, -5.5, 5.5, 16.5].forEach((z, i) => {
+      const k = 1 - Math.abs(i - 1.5) * 0.03;
+      limb([[s * 66, 114 * k, z], [s * 44, 128 * k, z], [s * 21, 121 * k, z * 0.95], [s * 9, 100, z * 0.9], [s * 8, 80, z * 0.85]], (u) => lerp(11, 8.5, u), 30);
     });
-    // Thumbs reach down to meet: the point of the heart.
-    finger(s, [[74, 62, 8], [56, 30, 10], [28, 8, 8], [5, -6, 4]], 11.5);
   }
 }
 
@@ -278,7 +307,7 @@ function buildRing(list) {
   const S = 15, g = new THREE.Group(), inner = new THREE.Group();
   let U = 0;
   for (const d of list) U += UNIT[d.k];
-  const R = Math.max(34, (U * S + 12) / TAU);
+  const R = Math.max(41, (U * S + 12) / TAU);
   let acc = (-U * S) / 2;
   for (const d of list) {
     const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
@@ -296,7 +325,7 @@ function buildRing(list) {
   return { g, inner, R, y: 0, vy: 0, landed: true, ph: Math.random() * 6 };
 }
 // Bracelets alternate between the two wrists. The newest sits highest, and older ones slide down.
-const slotY = (i) => -8 - Math.floor(i / 2) * 19;
+const slotY = (i) => -32 - Math.floor(i / 2) * 19;
 function rebuildStack() {
   rings.forEach((r) => stand.remove(r.g));
   rings = stack.slice(-STACK_MAX).reverse().map((list, i) => {
@@ -319,10 +348,11 @@ function wear() {
   setMode('stack');
 }
 function updateStack(dt) {
-  const a = Math.min(W / 360, H / 430);
+  const a = Math.min(W / 370, H / 350);
   wall.scale.set(W * 1.4, H * 1.4, 1);
   stand.scale.setScalar(a);
-  stand.position.set(0, -20 * a, 0);
+  // Shelf sits in the lower part of the stage, unless that would push the hands off the top.
+  stand.position.set(0, Math.min(-0.22 * H - SHELF_Y * a, H / 2 - 20 - 135 * a), 0);
   if (!spin) { stackSpin += stackV * dt; stackV *= 0.96; }
   stackJig += dt;
   const jig = stackJig < 0.8 ? Math.exp(-stackJig * 5) * Math.sin(stackJig * 26) : 0;
@@ -333,9 +363,9 @@ function updateStack(dt) {
     if (!r.landed && r.y - target < 4) { r.landed = true; thud(); chime(); buzz(25); stackJig = 0; }
     // A bracelet longer than the wrist hangs loose and droops outward.
     const loose = Math.max(0, r.R - (armR(r.y) + 9));
-    const stretch = 1 + 0.9 * clamp((r.y - 10) / 130, 0, 1);
-    r.g.position.set(side * (ARM_X + loose * 0.55), r.y + jig * 3 * (i % 4 < 2 ? 1 : -1), 0);
-    r.g.rotation.z = -side * Math.min(0.42, loose / 62) + jig * 0.05;
+    const stretch = 1 + 0.9 * clamp((r.y - 0) / 130, 0, 1);
+    r.g.position.set(side * (wristX(r.y) + loose * 0.55), r.y + jig * 3 * (i % 4 < 2 ? 1 : -1), 0);
+    r.g.rotation.z = side * LEAN - side * Math.min(0.42, loose / 62) + jig * 0.05;
     r.g.scale.setScalar(stretch);
     r.inner.rotation.y = stackSpin + (reduce ? 0 : Math.sin(T * 0.5 + r.ph) * 0.2);
   });
