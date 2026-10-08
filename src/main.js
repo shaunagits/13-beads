@@ -15,8 +15,24 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
-const TIED_HINT = 'Drag to spin your bracelet. Tap it for sparkles.';
-const STACK_HINT = 'Swing a bracelet, brush across them, or tap one for a jingle.';
+const TIED_HINT = 'Tied off! Drag to spin it, tap for sparkles.';
+// Wall decoration: a few curated colors, and the word on the neon sign.
+const WALL_COLORS = {
+  white: { base: '#f3eee6', streak: 'rgba(150,120,90,.025)', edge: 'rgba(150,130,110,.2)' },
+  pink: { base: '#f6cfe2', streak: 'rgba(170,70,120,.02)', edge: 'rgba(190,120,190,.22)' },
+  sage: { base: '#cbdcc6', streak: 'rgba(60,100,70,.025)', edge: 'rgba(90,120,100,.22)' },
+};
+const SIGN_DEFAULT = '13 beads', SIGN_MAX = 12;
+const cleanSign = (t) => String(t || '').replace(/[^A-Za-z0-9 !?&]/g, '').replace(/\s+/g, ' ').slice(0, SIGN_MAX);
+let decor = { color: 'white', sign: SIGN_DEFAULT };
+try {
+  const d = JSON.parse(localStorage.getItem('13beads.wall') || 'null');
+  if (d && WALL_COLORS[d.color]) decor.color = d.color;
+  if (d && typeof d.sign === 'string' && cleanSign(d.sign).trim()) decor.sign = cleanSign(d.sign).trim();
+} catch (e) { /* optional */ }
+const STACK_HINT = 'Swing a bracelet, brush across them, or tap one for a jingle. ' +
+  (matchMedia('(pointer: coarse)').matches ? 'Press and hold one to take it off.' : 'Hold or right-click one to take it off.');
+const EMPTY_WALL = 'Nothing on display yet. Tie off a bracelet and hang it on the stand.';
 const STACK_MAX = 12;
 
 /* ---------- State ---------- */
@@ -135,7 +151,17 @@ function setBeads(list) {
   beads.forEach((b) => strand.remove(b.obj));
   beads = list.filter((d) => d && UNIT[d.k]).slice(0, MAX).map((d) => mk(d, true));
 }
-function say(m) { $('status').textContent = m; }
+// On the tie-off and wall screens, messages show as a note on the canvas that fades after a few seconds.
+let noteTimer = 0;
+function say(m) {
+  $('status').textContent = m;
+  if (mode === 'line') return;
+  const n = $('note');
+  n.textContent = m;
+  n.classList.remove('gone');
+  clearTimeout(noteTimer);
+  if (mode === 'tied' || stack.length) noteTimer = setTimeout(() => n.classList.add('gone'), m === STACK_HINT || m === TIED_HINT ? 7000 : 3500);
+}
 function save() { try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
 function sync() { $('count').textContent = beads.length + ' / ' + MAX; save(); }
 function pushUndo() { undoStack.push(JSON.stringify(defs())); if (undoStack.length > 40) undoStack.shift(); }
@@ -186,16 +212,19 @@ function stringPhrase(text) {
 function setMode(m) {
   mode = m;
   $('buildPanel').hidden = m !== 'line';
-  $('tiedPanel').hidden = m !== 'tied';
-  $('stackPanel').hidden = m !== 'stack';
-  $('count').hidden = m === 'stack';
+  $('hud').hidden = m === 'line';
+  $('hud').dataset.mode = m;
+  $('status').hidden = m !== 'line';
+  $('count').hidden = m !== 'line';
+  closePop(false);
+  closeCustom(false);
   strand.visible = m !== 'stack';
   board.visible = m === 'stack';
   backdrop.visible = m !== 'stack';
   applyMood();
   sparks.visible = false;
-  if (m === 'tied') { tiedFired = false; say(TIED_HINT); }
-  else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Nothing on display yet. Tie off a bracelet and hang it on the stand.'); syncStack(); }
+  if (m === 'tied') { tiedFired = false; $('photoBtn').disabled = false; say(TIED_HINT); }
+  else if (m === 'stack') { syncStack(); say(stack.length ? STACK_HINT : EMPTY_WALL); }
   else say(HINT);
   if (reduce) kLin = m === 'tied' ? 1 : 0;
 }
@@ -206,19 +235,20 @@ const board = new THREE.Group();
 board.visible = false;
 scene.add(board);
 
-function paintTexture() {
+function paintTexture(name) {
+  const col = WALL_COLORS[name] || WALL_COLORS.white;
   const c = document.createElement('canvas');
   c.width = c.height = 512;
   const x = c.getContext('2d');
-  x.fillStyle = '#f6cfe2';
+  x.fillStyle = col.base;
   x.fillRect(0, 0, 512, 512);
   // Faint roller streaks so the paint does not look like a flat fill.
   for (let i = 0; i < 520; i++) {
-    x.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(170,70,120,.02)';
+    x.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.035)' : col.streak;
     x.fillRect(Math.random() * 512, Math.random() * 512, 3 + Math.random() * 10, 60 + Math.random() * 200);
   }
   const glow = x.createRadialGradient(256, 200, 0, 256, 256, 380);
-  glow.addColorStop(0, 'rgba(255,250,240,.35)'); glow.addColorStop(1, 'rgba(190,120,190,.22)');
+  glow.addColorStop(0, 'rgba(255,250,240,.35)'); glow.addColorStop(1, col.edge);
   x.fillStyle = glow;
   x.fillRect(0, 0, 512, 512);
   const t = new THREE.CanvasTexture(c);
@@ -243,7 +273,7 @@ function plasterTexture() {
   return t;
 }
 const plaster = plasterTexture();
-const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(), roughness: 0.95, bumpMap: plaster, bumpScale: 2.2 }));
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(decor.color), roughness: 0.95, bumpMap: plaster, bumpScale: 2.2 }));
 wall.receiveShadow = true;
 wall.position.z = -70;
 board.add(wall);
@@ -272,23 +302,28 @@ function neonTexture(lit) {
   const c = document.createElement('canvas');
   c.width = 470; c.height = 220;
   const x = c.getContext('2d');
-  x.font = '120px Pacifico, "Brush Script MT", cursive';
+  const word = decor.sign || SIGN_DEFAULT;
+  // Shrink the script to fit the sign, so longer words stay inside the glow.
+  let size = 120;
+  x.font = size + 'px Pacifico, "Brush Script MT", cursive';
+  const wid = x.measureText(word).width;
+  if (wid > 410) { size = Math.max(54, Math.floor((size * 410) / wid)); x.font = size + 'px Pacifico, "Brush Script MT", cursive'; }
   x.textAlign = 'center'; x.textBaseline = 'middle';
   x.lineJoin = 'round';
   if (lit) {
     x.shadowColor = '#ff3fa0'; x.shadowBlur = 34;
     x.strokeStyle = '#ff6fbd'; x.lineWidth = 9;
-    for (let i = 0; i < 3; i++) x.strokeText('encore', 235, 112);
+    for (let i = 0; i < 3; i++) x.strokeText(word, 235, 112);
     x.shadowBlur = 8;
     x.strokeStyle = '#fff2fa'; x.lineWidth = 3.5;
-    x.strokeText('encore', 235, 112);
+    x.strokeText(word, 235, 112);
   } else {
     x.shadowColor = 'rgba(90,40,90,.35)'; x.shadowBlur = 5; x.shadowOffsetX = 3; x.shadowOffsetY = 4;
     x.strokeStyle = '#fff4fa'; x.lineWidth = 8;
-    x.strokeText('encore', 235, 112);
+    x.strokeText(word, 235, 112);
     x.shadowColor = 'transparent';
     x.strokeStyle = '#ee8fbf'; x.lineWidth = 3;
-    x.strokeText('encore', 235, 112);
+    x.strokeText(word, 235, 112);
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -329,12 +364,13 @@ darkQuery.addEventListener('change', applyMood);
 
 // Depth of field on the wall: bracelets stay sharp, the wall behind falls slightly soft, like a phone photo.
 let composer = null, bokeh = null, composerKey = '';
+// With reduced motion the blur is off, but the pipeline stays so the window light and neon are tone mapped the same.
 function renderWall(dist) {
-  if (reduce) { renderer.render(scene, camera); return; }
   if (!composer) {
     composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { samples: 4, type: THREE.HalfFloatType }));
     composer.addPass(new RenderPass(scene, camera));
     bokeh = new BokehPass(scene, camera, { focus: dist, aperture: 0.000022, maxblur: 0.003 });
+    bokeh.enabled = !reduce;
     composer.addPass(bokeh);
     composer.addPass(new OutputPass());
   }
@@ -424,9 +460,9 @@ try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (
 function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
 function syncStack() {
   $('stackBtn').textContent = stack.length ? 'Wall ' + stack.length : 'Wall';
-  $('stackTitle').textContent = stack.length === 1 ? '1 bracelet on display' : stack.length + ' bracelets on display';
-  $('takeOff').disabled = !stack.length;
-  $('stackPhoto').disabled = !stack.length;
+  $('stackTitle').textContent = stack.length + ' on display';
+  $('stackTitle').hidden = !stack.length;
+  if (mode === 'stack') $('photoBtn').disabled = !stack.length;
 }
 function buildRing(list, grid) {
   let U = 0;
@@ -456,7 +492,7 @@ function buildRing(list, grid) {
   loop.position.z = 4;
   g.add(loop);
   board.add(g);
-  return { g, loop, R: R + DROP / 2, hangs, th: (Math.random() - 0.5) * 0.3, thv: 0, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, x: 0, y: 0 };
+  return { g, loop, R: R + DROP / 2, cy: -DROP - R, cr: R, hangs, th: (Math.random() - 0.5) * 0.3, thv: 0, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, x: 0, y: 0 };
 }
 // Newest bracelet takes the first hook. Older ones shift along.
 function rebuildStack() {
@@ -465,6 +501,47 @@ function rebuildStack() {
   buildStand(grid);
   rings.forEach((r) => board.remove(r.g));
   rings = stack.slice(-grid.cap).reverse().map((list) => buildRing(list.filter((d) => d && UNIT[d.k]), grid));
+  buildRingButtons();
+}
+const tmpV = new THREE.Vector3();
+function toScreen(obj, x, y) {
+  tmpV.set(x, y, 0);
+  obj.localToWorld(tmpV);
+  tmpV.project(camera);
+  return { x: ((tmpV.x + 1) / 2) * W, y: ((1 - tmpV.y) / 2) * H };
+}
+// Keyboard and screen reader access: one focusable button per hanging bracelet, kept over it each frame.
+let kbRing = null;
+function braceletName(list) {
+  const word = list.filter((d) => d && d.k === 'letter').map((d) => d.ch).join('');
+  return word ? 'Bracelet that says ' + word : 'Bracelet with ' + list.length + ' beads';
+}
+function buildRingButtons() {
+  const box = $('ringBtns');
+  const hadFocus = box.contains(document.activeElement) ? [...box.children].indexOf(document.activeElement) : -1;
+  box.textContent = '';
+  kbRing = null;
+  rings.forEach((r, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ring-btn';
+    b.setAttribute('aria-label', braceletName(stack[stack.length - 1 - i]) + ', ' + (i + 1) + ' of ' + rings.length + '. Press Enter to take it off.');
+    b.addEventListener('focus', () => { kbRing = r; });
+    b.addEventListener('blur', () => { if (kbRing === r) kbRing = null; });
+    b.addEventListener('click', () => { if (rings.includes(r)) openPop(r, b); });
+    b.addEventListener('keydown', (e) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); openPop(r, b); }
+      // Arrow keys move between bracelets.
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (step) { e.preventDefault(); const n = box.children[clamp(i + step, 0, rings.length - 1)]; if (n) n.focus(); }
+    });
+    r.btn = b;
+    box.appendChild(b);
+  });
+  if (hadFocus >= 0) {
+    const n = box.children[Math.min(hadFocus, box.children.length - 1)];
+    if (n) n.focus(); else $('another').focus();
+  }
 }
 function wear() {
   if (!beads.length) return;
@@ -508,6 +585,16 @@ function updateStack(dt) {
     }
     const idle = reduce ? 0 : Math.sin(T * 0.9 + r.ph) * 0.025;
     r.g.position.set(r.x, r.y, 0);
+    r.pick = lerp(r.pick || 0, popRing === r || kbRing === r ? 1 : 0, reduce ? 1 : Math.min(1, dt * 14));
+    if (r.btn) {
+      // Keep the invisible button centred on the bracelet as it swings, projected through the camera.
+      r.loop.updateWorldMatrix(true, false);
+      const c = toScreen(r.loop, 0, r.cy), e = toScreen(r.loop, r.cr, r.cy);
+      const d = Math.hypot(e.x - c.x, e.y - c.y) * 2 + 10;
+      r.btn.style.width = r.btn.style.height = d + 'px';
+      r.btn.style.transform = `translate(${c.x - d / 2}px, ${c.y - d / 2}px)`;
+    }
+    r.loop.scale.setScalar(1 + r.pick * 0.07);
     r.loop.position.y = r.drop;
     r.loop.rotation.z = r.th + idle;
     for (const h of r.hangs) h.hang.rotation.set(0, 0, -(h.phi + r.th + idle) - r.thv * 0.05);
@@ -524,6 +611,87 @@ function ringAt(p) {
   }
   return best;
 }
+
+// The confirm popover sits just below the picked bracelet, or above it if there is no room.
+let popRing = null, holdTimer = 0, popOpener = null;
+function openPop(r, opener) {
+  closeCustom(false);
+  popRing = r;
+  popOpener = opener || r.btn || null;
+  buzz(30);
+  tick(0.9, 0.1);
+  const pop = $('pop');
+  pop.hidden = false;
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  const cx = W / 2 + r.x, top = H / 2 - r.y, bottom = top + r.R * 2 + 12;
+  let y = bottom + 8;
+  if (y + ph > H - 74) y = top - ph - 8;
+  pop.style.left = clamp(cx - pw / 2, 10, W - pw - 10) + 'px';
+  pop.style.top = clamp(y, 10, H - ph - 10) + 'px';
+  $('popKeep').focus({ preventScroll: true });
+}
+function closePop(restore = true) {
+  if (!popRing) return;
+  popRing = null;
+  $('pop').hidden = true;
+  if (restore && popOpener && popOpener.isConnected) popOpener.focus({ preventScroll: true });
+  popOpener = null;
+}
+// Keep Tab inside an open popover, the way a dialog should behave.
+function trapTab(e, box) {
+  if (e.key !== 'Tab') return;
+  const f = [...box.querySelectorAll('button, input:checked, input[type="text"]')].filter((el) => !el.disabled);
+  if (!f.length) return;
+  const first = f[0], lastEl = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); lastEl.focus(); }
+  else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); first.focus(); }
+}
+$('pop').addEventListener('keydown', (e) => trapTab(e, $('pop')));
+
+// Decorate popover: wall color and the neon sign word, saved on this device.
+function saveDecor() { try { localStorage.setItem('13beads.wall', JSON.stringify(decor)); } catch (e) { /* optional */ } }
+function applyDecor() {
+  const old = wall.material.map;
+  wall.material.map = paintTexture(decor.color);
+  wall.material.needsUpdate = true;
+  if (old) old.dispose();
+  if (neonMaps.on) { neonMaps.on.dispose(); neonMaps.off.dispose(); neonMaps.on = null; }
+  applyMood();
+}
+function openCustom() {
+  closePop(false);
+  const box = $('custom');
+  box.hidden = false;
+  $('customBtn').setAttribute('aria-expanded', 'true');
+  box.querySelector(`input[value="${decor.color}"]`).checked = true;
+  $('signText').value = decor.sign;
+  box.querySelector('input:checked').focus({ preventScroll: true });
+}
+function closeCustom(restore = true) {
+  const box = $('custom');
+  if (box.hidden) return;
+  box.hidden = true;
+  $('customBtn').setAttribute('aria-expanded', 'false');
+  if (!decor.sign) { decor.sign = SIGN_DEFAULT; saveDecor(); applyDecor(); }
+  if (restore) $('customBtn').focus({ preventScroll: true });
+}
+$('customBtn').addEventListener('click', () => { if ($('custom').hidden) openCustom(); else closeCustom(); });
+$('customDone').addEventListener('click', () => closeCustom());
+$('custom').addEventListener('keydown', (e) => trapTab(e, $('custom')));
+$('custom').addEventListener('change', (e) => {
+  if (e.target.name !== 'wallColor') return;
+  decor.color = e.target.value;
+  saveDecor();
+  applyDecor();
+  tick(1.1, 0.08);
+});
+let signTimer = 0;
+$('signText').addEventListener('input', (e) => {
+  const v = cleanSign(e.target.value);
+  if (v !== e.target.value) e.target.value = v;
+  clearTimeout(signTimer);
+  signTimer = setTimeout(() => { decor.sign = v.trim(); saveDecor(); if (decor.sign) applyDecor(); }, 180);
+});
 
 /* ---------- Photo: save the current view as a picture ---------- */
 function savePhoto() {
@@ -789,6 +957,13 @@ cv.addEventListener('pointerdown', (e) => {
     spin = { x: p.x, y: p.y, moved: false };
     spinVY = 0; spinVX = 0;
     grabRing = mode === 'stack' ? ringAt(p) : null;
+    if (!$('custom').hidden) { closeCustom(false); spin.dismiss = true; }
+    else if (popRing) { closePop(false); spin.dismiss = true; }
+    else if (grabRing) {
+      // Press and hold a bracelet to get the option to take it off.
+      const r = grabRing;
+      holdTimer = setTimeout(() => { if (spin && !spin.moved && grabRing === r) { spin.held = true; openPop(r); } }, 480);
+    }
     return;
   }
   let best = null, bd = 1e9;
@@ -822,7 +997,8 @@ cv.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'mouse') { parTX = (p.x / W - 0.5) * 2; parTY = -(p.y / H - 0.5) * 2; }
   if (spin) {
     const dx = p.x - spin.x, dy = p.y - spin.y;
-    if (Math.abs(dx) + Math.abs(dy) > 6) spin.moved = true;
+    if (Math.abs(dx) + Math.abs(dy) > 6) { spin.moved = true; clearTimeout(holdTimer); }
+    if (spin.held || spin.dismiss) return;
     if (mode === 'stack') {
       const px = p.x - W / 2, py = H / 2 - p.y;
       if (grabRing) {
@@ -864,7 +1040,8 @@ function release() {
   if (spin) {
     // A tap on the tied bracelet makes it hop and throw sparkles.
     if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
-    if (!spin.moved && mode === 'stack' && grabRing) {
+    clearTimeout(holdTimer);
+    if (!spin.moved && !spin.held && !spin.dismiss && mode === 'stack' && grabRing) {
       grabRing.thv += (Math.random() < 0.5 ? -1 : 1) * 3.5;
       [0, 2, 4].forEach((n, i) => setTimeout(() => note(rings.indexOf(grabRing) + n), i * 60));
       buzz(15);
@@ -1027,17 +1204,33 @@ $('tie').addEventListener('click', () => {
 });
 $('untie').addEventListener('click', () => setMode('line'));
 $('wear').addEventListener('click', () => { arm(); wear(); });
-$('tiedPhoto').addEventListener('click', savePhoto);
-$('stackPhoto').addEventListener('click', savePhoto);
+$('photoBtn').addEventListener('click', savePhoto);
 $('another').addEventListener('click', () => setMode('line'));
 $('takeOff').addEventListener('click', () => {
-  if (!stack.length) return;
-  stack.pop();
+  const i = rings.indexOf(popRing), fromKeys = popOpener && popOpener.classList.contains('ring-btn');
+  closePop(false);
+  if (i < 0) return;
+  // Rings show the newest bracelet first, so ring i is counted back from the end of the stack.
+  stack.splice(stack.length - 1 - i, 1);
   saveStack();
   rebuildStack();
   syncStack();
   tick(0.6, 0.14);
-  say(stack.length ? 'Took the newest bracelet off.' : 'Nothing on display yet. Tie off a bracelet and hang it on the stand.');
+  say(stack.length ? 'Taken off the wall.' : EMPTY_WALL);
+  // Keyboard users land on the next bracelet, or on Make another if the wall is now empty.
+  if (fromKeys) { const n = $('ringBtns').children[Math.min(i, rings.length - 1)]; (n || $('another')).focus({ preventScroll: true }); }
+});
+$('popKeep').addEventListener('click', closePop);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (popRing) closePop();
+  else if (!$('custom').hidden) closeCustom();
+});
+cv.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (mode !== 'stack') return;
+  const r = ringAt(pos(e));
+  if (r) openPop(r);
 });
 $('stackBtn').addEventListener('click', () => {
   arm();

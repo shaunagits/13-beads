@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-10-08. Everything below is committed, pushed, and deployed to production (Vercel reports the build for commit `5e35695` as ready) unless marked otherwise.
+Last updated: 2026-10-08 (second session). Everything below is committed and pushed to `main`, which deploys to production, unless marked otherwise.
 
 ## What exists
 
@@ -18,10 +18,15 @@ Last updated: 2026-10-08. Everything below is committed, pushed, and deployed to
 - Dangles tab, 8 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder.
 
 **Tie-off (mode `tied`)**
-- The string morphs into a knotted loop. Drag to spin it, tap for sparkles. Save photo. "Add to my wall".
+- The string morphs into a knotted loop. Drag to spin it, tap for sparkles.
+- Controls float on the canvas: Untie (top left), camera icon for Save photo (top right), "Add to my wall" (bottom center), and a hint note that fades after a few seconds.
 
 **The wall (mode `stack`)**
-- Painted pink plaster wall, slim dark wood floating shelf, gold three-tier T-bar stand, small trailing plant, neon-style script sign.
+- Painted plaster wall, slim dark wood floating shelf, gold three-tier T-bar stand, small trailing plant, neon-style script sign.
+- Controls float on the canvas: "N on display" (top left), Decorate and Save photo icons (top right), "Make another" (bottom center), and a hint note that fades.
+- Decorate popover: wall color (white by default, pink, or sage) and the neon sign word (defaults to "13 beads", up to 12 letters, numbers, spaces, or ! ? &, shrinks to fit). Saved under `13beads.wall`.
+- Take any bracelet off: press and hold it (phone), or hold or right-click (computer). A confirm popover appears beside it.
+- Keyboard: Tab reaches each bracelet (an invisible button over it, with a focus ring around the bracelet). Arrow keys move between them. Enter or Delete opens the confirm. Popovers keep Tab inside, close on Escape, and return focus.
 - Bracelets hang from gold hooks facing forward. Grab to swing, brush across to knock them, tap for a jingle, tilt to lean.
 - Shows the newest 9 on a phone and 12 on desktop. Up to 24 are remembered.
 - Day mood in light mode (window light across the wall). Evening mood in dark mode (lamp glow, lit neon).
@@ -40,7 +45,10 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 - Tilt, and the iPhone permission button.
 - The phone share sheet for Save photo. Only the desktop download was exercised.
 - Performance of the wall's depth-of-field effect on phones. It renders the scene more than once per frame. If the wall is slow on a phone, this is the first thing to turn off (`renderWall` in `src/main.js`).
-- The daytime neon sign is faint against the pink wall.
+- The daytime neon sign is faint against the wall (pink and white both). To review now that white is the default.
+- Press-and-hold to take a bracelet off, on a real phone.
+- Screen reader announcements for the bracelet buttons (tested by keyboard only).
+- At night every wall color gets the same purple tint, so the color choice mostly shows in daytime.
 
 ## Decisions
 
@@ -66,6 +74,11 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-08 | Bracelets on the T-bar | Hang from hooks facing forward | On a real T-bar they sit edge-on and phrases cannot be read. |
 | 2026-10-08 | Wall color | Soft pink painted plaster | Shauna chose a painted wall to start. Whether players pick the color is still open. |
 | 2026-10-08 | Unlocks and trading links | Deferred | Shauna: hold until the core is further along. |
+| 2026-10-08 | Wall and tie-off controls | Float on the canvas instead of panels below it | Shauna asked. Direct manipulation: act on the bracelet itself, icons in corners, one labeled primary action. |
+| 2026-10-08 | Taking a bracelet off | Press and hold (or right-click) a bracelet, then confirm | Replaces "Take one off", which only removed the newest. |
+| 2026-10-08 | Wall color | Player picks from 3: white (default), pink, sage | Shauna approved. Neutral white makes bead colors pop. Few curated options all look good with the gold stand. |
+| 2026-10-08 | Neon sign word | Player can change it. Default is the game name, "13 beads" | Shauna: if it is editable it should be the player's word, within limits that keep it looking good. |
+| 2026-10-08 | Accessibility | Wall is keyboard operable | Shauna wants accessibility standards followed where possible. |
 
 ## Wrong turns worth knowing
 

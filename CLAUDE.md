@@ -23,7 +23,7 @@ There is no test suite. The check is `npm run build` (must finish with no errors
 
 ## Rules that must hold
 
-- Stack: Vite and Three.js, plain JavaScript modules, no framework, no backend, no accounts. Player data lives in local storage under `13beads.strand` and `13beads.stack`.
+- Stack: Vite and Three.js, plain JavaScript modules, no framework, no backend, no accounts. Player data lives in local storage under `13beads.strand`, `13beads.stack`, and `13beads.wall` (wall color and neon sign word).
 - `vite.config.js` keeps `base: './'`. The game is served both at a domain root and under `/13-beads`.
 - All artwork is original. No artist names, tour names, logos, album artwork, photos of real people, or lyrics, anywhere in the app. Fan references are made through generic objects and colors.
 - Third-party 3D models need a license that allows hosting on a public site (CC0 or CC BY), or written permission. See the heart-hands finding.
