@@ -5,7 +5,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 // Width each bead takes up along the string, as a fraction of bead size.
 export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
-  lucky13: 0.96, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36 };
+  lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36 };
 
 // Charms that hang below the string from a ring instead of sitting on it.
 export const DANGLE = new Set(['guitar']);
@@ -137,6 +137,29 @@ function guitarBodyGeo() {
   const g = new THREE.ExtrudeGeometry(s, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 4, curveSegments: 10 });
   g.translate(0, 0, -0.06);
   return (geo.guitar = g);
+}
+
+// The numerals 1 and 3 as flat shapes. `grow` fattens them to make the outline and border layers.
+function thirteenGeo(grow, depth, z, bevel) {
+  const D = Math.PI / 180, shapes = [];
+  const one = new THREE.Shape(), w = 0.085 + grow, h = 0.4 + grow, r = Math.min(0.05 + grow, w), ox = -0.3;
+  one.moveTo(ox - w + r, -h);
+  one.lineTo(ox + w - r, -h); one.quadraticCurveTo(ox + w, -h, ox + w, -h + r);
+  one.lineTo(ox + w + 0.012, h - r); one.quadraticCurveTo(ox + w + 0.012, h, ox + w - r, h);
+  one.lineTo(ox - w + r - 0.012, h - 0.015); one.quadraticCurveTo(ox - w - 0.012, h - 0.015, ox - w - 0.012, h - r);
+  one.lineTo(ox - w, -h + r); one.quadraticCurveTo(ox - w, -h, ox - w + r, -h);
+  shapes.push(one);
+  const arc = (cx, cy, R, rin, a0, a1) => {
+    const d = grow / ((R + rin) / 2), s = new THREE.Shape();
+    s.absarc(cx, cy, R + grow, (a0 * D) + d, (a1 * D) - d, true);
+    s.absarc(cx, cy, Math.max(0.012, rin - grow), (a1 * D) - d, (a0 * D) + d, false);
+    return s;
+  };
+  shapes.push(arc(0.13, 0.2, 0.3, 0.125, 152, -90), arc(0.14, -0.19, 0.32, 0.135, 90, -152));
+  const g = new THREE.ExtrudeGeometry(shapes, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 28 });
+  g.translate(0.02, 0, z);
+  g.scale(1.08, 1.08, 1);
+  return g;
 }
 
 /* ---------- Textures ---------- */
@@ -311,20 +334,24 @@ export function makeBead(d) {
       group.add(mesh(heartGeo(), mat('heart', () => plastic(0xf0245c))));
       break;
     case 'lucky13': {
-      group.add(mesh((geo.cube ||= new RoundedBoxGeometry(0.94, 0.94, 0.72, 5, 0.17)), mat('lucky13', () => {
+      // Die-cut "13": blue glitter numerals, black outline, white sticker border.
+      const blue = mat('13blue', () => {
         const m = new THREE.MeshPhysicalMaterial({
-          color: 0xf7b52c, metalness: 0.55, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08,
-          bumpMap: sparkTex(), bumpScale: 1, emissive: 0xfff2c4, emissiveMap: sparkTex(), emissiveIntensity: 0.6,
+          color: 0x3f8be0, metalness: 0.25, roughness: 0.4, clearcoat: 1, clearcoatRoughness: 0.1,
+          bumpMap: sparkTex(), bumpScale: 0.8, emissive: 0xdff0ff, emissiveMap: sparkTex(), emissiveIntensity: 0.6,
         });
         m.userData = { kind: 'glitter', ph: 13 };
         animated.push(m);
         return m;
-      })));
-      const face = new THREE.Mesh(
-        (geo.face ||= new THREE.PlaneGeometry(0.8, 0.8)),
-        mat('L13', () => new THREE.MeshBasicMaterial({ map: letterTex('13', '#ffffff', '#5a2c00'), transparent: true, depthWrite: false, toneMapped: false })));
-      face.position.z = 0.362;
-      group.add(face);
+      });
+      const layers = [
+        [0.105, 0.07, -0.09, 0.012, mat('13white', () => plastic(0xffffff, { roughness: 0.35 }))],
+        [0.036, 0.07, -0.01, 0.01, mat('13black', () => plastic(0x101018, { roughness: 0.3 }))],
+        [0, 0.06, 0.07, 0.022, blue],
+      ];
+      layers.forEach(([grow, depth, z, bevel, m], i) => {
+        group.add(mesh((geo['13_' + i] ||= thirteenGeo(grow, depth, z, bevel)), m));
+      });
       break;
     }
     case 'moon':
