@@ -20,13 +20,13 @@
         <span>1</span><span>3</span><span class="dot"></span><span>B</span><span>E</span><span>A</span><span>D</span><span>S</span>
       </h1>
       <div class="head-right">
-        <span class="count" id="count" aria-label="Beads on the string">0 / 26</span>
         <button class="ghost" id="tilt" type="button" hidden>Tilt</button>
-        <button class="ghost" id="sound" type="button" aria-pressed="true">Sound on</button>
+        <button class="ghost" id="sound" type="button" aria-pressed="true">Sound</button>
+        <button class="ghost" id="stackBtn" type="button">Stack</button>
       </div>
     </header>
 
-    <div class="stage" id="stage"><canvas id="cv" aria-label="Your bracelet string"></canvas></div>
+    <div class="stage" id="stage"><canvas id="cv" aria-label="Your bracelet string"></canvas><span class="count" id="count" aria-label="Beads on the string">0 / 26</span></div>
     <p class="status" id="status" aria-live="polite">Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.</p>
 
     <div class="panel" id="buildPanel">
@@ -56,11 +56,20 @@
     </div>
 
     <div class="panel" id="tiedPanel" hidden>
-      <p class="tied-title">Tied off and ready to trade.</p>
-      <p class="tied-sub">Your bracelet stack and trading links are coming next.</p>
+      <p class="tied-title">Tied off. Put it on?</p>
       <div class="actions">
-        <button class="btn" id="untie" type="button">Untie and keep editing</button>
-        <button class="btn primary" id="fresh" type="button">Start a new one</button>
+        <button class="btn" id="untie" type="button">Untie</button>
+        <button class="btn" id="tiedPhoto" type="button">Save photo</button>
+        <button class="btn primary" id="wear" type="button">Wear it</button>
+      </div>
+    </div>
+
+    <div class="panel" id="stackPanel" hidden>
+      <p class="tied-title" id="stackTitle">Your stack</p>
+      <div class="actions">
+        <button class="btn" id="takeOff" type="button">Take one off</button>
+        <button class="btn" id="stackPhoto" type="button">Save photo</button>
+        <button class="btn primary" id="another" type="button">Make another</button>
       </div>
     </div>
   </div>

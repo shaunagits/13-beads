@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
-import { arm, setMuted, land, tick, chime, buzz, note, twang } from './audio.js';
+import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
 const MAX = 26, TAU = Math.PI * 2, N = 90;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -12,6 +12,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
 const TIED_HINT = 'Drag to spin your bracelet. Tap it for sparkles.';
+const STACK_HINT = 'Drag to turn your stack. Tap it for a jingle.';
+const STACK_MAX = 8;
 
 /* ---------- State ---------- */
 let beads = [], fallers = [], undoStack = [];
@@ -134,11 +136,12 @@ function save() { try { localStorage.setItem('13beads.strand', JSON.stringify(de
 function sync() { $('count').textContent = beads.length + ' / ' + MAX; save(); }
 function pushUndo() { undoStack.push(JSON.stringify(defs())); if (undoStack.length > 40) undoStack.shift(); }
 
-function addBead(def, noUndo, end = side) {
+function addBead(def, noUndo, end = side, step = null) {
   if (mode !== 'line') return false;
   if (beads.length >= MAX) { say('That is a full wrist. Pull a bead off to add more.'); return false; }
   if (!noUndo) pushUndo();
   const b = mk(def, reduce, end);
+  b.step = step;
   end === 'L' ? beads.unshift(b) : beads.push(b);
   sync();
   return true;
@@ -173,14 +176,175 @@ function stringPhrase(text) {
   const q = list.slice(0, room);
   if (end === 'L') q.reverse();
   if (reduce) { q.forEach((d) => addBead(d, true, end)); return; }
-  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end)) clearInterval(phraseTimer); }, 120);
+  let step = 0;
+  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) clearInterval(phraseTimer); }, 120);
 }
 function setMode(m) {
   mode = m;
   $('buildPanel').hidden = m !== 'line';
-  $('tiedPanel').hidden = m === 'line';
-  if (m === 'tied') { tiedFired = false; say(TIED_HINT); } else say(HINT);
+  $('tiedPanel').hidden = m !== 'tied';
+  $('stackPanel').hidden = m !== 'stack';
+  $('count').hidden = m === 'stack';
+  strand.visible = m !== 'stack';
+  arm3d.visible = m === 'stack';
+  sparks.visible = false;
+  if (m === 'tied') { tiedFired = false; say(TIED_HINT); }
+  else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Your stack is empty. Tie off a bracelet and wear it.'); syncStack(); }
+  else say(HINT);
   if (reduce) kLin = m === 'tied' ? 1 : 0;
+}
+
+/* ---------- The stack: finished bracelets worn on a display arm ---------- */
+const arm3d = new THREE.Group();
+arm3d.visible = false;
+scene.add(arm3d);
+const armMat = new THREE.MeshPhysicalMaterial({ color: 0xd9cdee, roughness: 0.55, sheen: 1, sheenRoughness: 0.4, sheenColor: new THREE.Color(0xffffff) });
+const armR = (y) => { const t = clamp((70 - y) / 330, 0, 1); return 33 + 17 * t * t * (3 - 2 * t); };
+{
+  const add = (g, x = 0, y = 0, z = 0, rz = 0) => {
+    const m = new THREE.Mesh(g, armMat);
+    m.position.set(x, y, z); m.rotation.z = rz;
+    m.castShadow = true; m.receiveShadow = true;
+    arm3d.add(m);
+    return m;
+  };
+  const prof = [];
+  for (let y = -700; y <= 70; y += 22) prof.push(new THREE.Vector2(armR(y), y));
+  prof.push(new THREE.Vector2(32, 84), new THREE.Vector2(26, 96), new THREE.Vector2(0, 100));
+  add(new THREE.LatheGeometry(prof, 40));
+  add(new THREE.SphereGeometry(1, 28, 20), 0, 130).scale.set(41, 50, 18);
+  [[-27, 40], [-9, 52], [9, 49], [27, 37]].forEach(([x, len]) => add(new THREE.CapsuleGeometry(8.6, len, 6, 14), x, 160 + len / 2));
+  add(new THREE.CapsuleGeometry(9.6, 34, 6, 14), -47, 124, 0, 0.62);
+}
+arm3d.rotation.z = -0.1;
+
+let stack = [];
+let rings = [], stackSpin = 0, stackV = 0, stackJig = 9;
+try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.filter(Array.isArray); } catch (e) { /* optional */ }
+function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
+function syncStack() {
+  $('stackBtn').textContent = stack.length ? 'Stack ' + stack.length : 'Stack';
+  $('stackTitle').textContent = stack.length === 1 ? '1 bracelet on your wrist' : stack.length + ' bracelets on your wrist';
+  $('takeOff').disabled = !stack.length;
+  $('stackPhoto').disabled = !stack.length;
+}
+function buildRing(list) {
+  const S = 15, g = new THREE.Group(), inner = new THREE.Group();
+  let U = 0;
+  for (const d of list) U += UNIT[d.k];
+  const R = Math.max(41, (U * S + 12) / TAU);
+  let acc = (-U * S) / 2;
+  for (const d of list) {
+    const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
+    acc += w;
+    o.scale.setScalar(S);
+    o.position.set(R * Math.sin(phi), 0, R * Math.cos(phi));
+    o.rotation.y = phi;
+    inner.add(o);
+  }
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.7, 6, 72).rotateX(Math.PI / 2), stringMat);
+  inner.add(cord);
+  g.add(inner);
+  arm3d.add(g);
+  return { g, inner, R, y: 0, vy: 0, landed: true, ph: Math.random() * 6 };
+}
+// Newest bracelet sits at the wrist. Older ones slide down the arm.
+function rebuildStack() {
+  rings.forEach((r) => arm3d.remove(r.g));
+  rings = stack.slice(-STACK_MAX).reverse().map((list, i) => {
+    const r = buildRing(list.filter((d) => d && UNIT[d.k]));
+    r.y = 52 - i * 19;
+    return r;
+  });
+}
+function wear() {
+  if (!beads.length) return;
+  stack.push(defs());
+  if (stack.length > 24) stack.shift();
+  saveStack();
+  rebuildStack();
+  if (rings[0] && !reduce) { rings[0].y = 330; rings[0].landed = false; whoosh(); }
+  pushUndo();
+  setBeads([]);
+  sync();
+  kLin = 0;
+  setMode('stack');
+}
+function updateStack(dt) {
+  const a = Math.min(W / 330, H / 470);
+  arm3d.scale.setScalar(a);
+  arm3d.position.set(0, H * 0.44 - 222 * a, 0);
+  if (!spin) { stackSpin += stackV * dt; stackV *= 0.96; }
+  stackJig += dt;
+  const jig = stackJig < 0.8 ? Math.exp(-stackJig * 5) * Math.sin(stackJig * 26) : 0;
+  rings.forEach((r, i) => {
+    const target = 52 - i * 19;
+    r.vy += ((target - r.y) * 130 - r.vy * 15) * dt;
+    r.y += r.vy * dt;
+    if (!r.landed && r.y - target < 4) { r.landed = true; thud(); chime(); buzz(25); stackJig = 0; }
+    const loose = Math.max(0, r.R - (armR(r.y) + 7));
+    const stretch = 1 + 0.55 * clamp((r.y - 70) / 110, 0, 1);
+    r.g.position.set(loose * 0.55, r.y + jig * 3 * (i % 2 ? -1 : 1), 0);
+    r.g.rotation.z = -Math.min(0.42, loose / 62) + jig * 0.05;
+    r.g.scale.setScalar(stretch);
+    r.inner.rotation.y = stackSpin + (reduce ? 0 : Math.sin(T * 0.5 + r.ph) * 0.2);
+  });
+}
+
+/* ---------- Photo: save the current view as a picture ---------- */
+function savePhoto() {
+  const css = getComputedStyle(document.documentElement);
+  const pr = renderer.getPixelRatio();
+  renderer.setPixelRatio(Math.max(2, Math.min(3, pr * 1.5)));
+  renderer.setSize(W, H, false);
+  const sparkWas = sparks.visible;
+  sparks.visible = false;
+  renderer.render(scene, camera);
+  const k = cv.width / W, foot = Math.round(64 * k);
+  const c = document.createElement('canvas');
+  c.width = cv.width; c.height = cv.height + foot;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(c.width / 2, 0, 0, c.width / 2, 0, c.height * 1.1);
+  g.addColorStop(0, css.getPropertyValue('--stage-a').trim() || '#fff6fb');
+  g.addColorStop(1, css.getPropertyValue('--stage-b').trim() || '#e2d6f1');
+  x.fillStyle = g;
+  x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(cv, 0, 0);
+  // Wordmark as a row of letter beads on a string.
+  const chars = ['1', '3', '', 'B', 'E', 'A', 'D', 'S'], t = 26 * k, gap = 4 * k;
+  const total = chars.reduce((w, ch) => w + (ch ? t : t * 0.5) + gap, -gap);
+  let px = (c.width - total) / 2;
+  const py = cv.height + (foot - t) / 2 - 6 * k;
+  x.fillStyle = css.getPropertyValue('--string').trim() || '#7f7398';
+  x.fillRect(px - 10 * k, py + t / 2 - k, total + 20 * k, 2 * k);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = `700 ${16 * k}px Fredoka, "Arial Rounded MT Bold", sans-serif`;
+  for (const ch of chars) {
+    const w = ch ? t : t * 0.5;
+    x.fillStyle = ch ? '#ffffff' : '#d3217c';
+    x.beginPath(); x.roundRect(px, py, w, t, 7 * k); x.fill();
+    if (ch) { x.fillStyle = '#1c1830'; x.fillText(ch, px + w / 2, py + t / 2 + k); }
+    px += w + gap;
+  }
+  renderer.setPixelRatio(pr);
+  renderer.setSize(W, H, false);
+  sparks.visible = sparkWas;
+  c.toBlob(async (blob) => {
+    if (!blob) { say('The photo could not be made in this browser.'); return; }
+    const file = new File([blob], '13-beads-bracelet.png', { type: 'image/png' });
+    // Phones get the share sheet, so the photo can go straight to messages or the camera roll.
+    if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: '13 Beads' }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    say('Photo saved as 13-beads-bracelet.png.');
+  }, 'image/png');
 }
 
 /* ---------- Geometry helpers (2D layout in stage pixels, then lifted into 3D) ---------- */
@@ -268,7 +432,7 @@ function frame(now) {
         b.landed = true; b.sq = 0; b.rv += (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 2);
         sagVel += 80; swayVel += (Math.random() - 0.5) * 60;
         for (const o of beads) o.swv += (Math.random() - 0.5) * 1.6;
-        land(b.def.k); buzz(8);
+        land(b.def.k, b.step); buzz(8);
       }
     }
     b.rv += (-b.rock * 70 - b.rv * 4.5) * dt;
@@ -375,6 +539,7 @@ function frame(now) {
   camera.lookAt(0, 0, 0);
   stageA.position.set(Math.cos(T * 0.45) * W * 0.6, H * 0.2 + Math.sin(T * 0.6) * H * 0.3, 240);
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
+  if (mode === 'stack') updateStack(dt);
   tickMaterials(T);
   renderer.render(scene, camera);
 }
@@ -419,6 +584,7 @@ cv.addEventListener('pointermove', (e) => {
   if (spin) {
     const dx = p.x - spin.x, dy = p.y - spin.y;
     if (Math.abs(dx) + Math.abs(dy) > 6) spin.moved = true;
+    if (mode === 'stack') { stackSpin += dx * 0.014; stackV = dx * 0.35; spin.x = p.x; spin.y = p.y; return; }
     spinY += dx * 0.012; spinX += dy * 0.006;
     spinVY = dx * 0.25; spinVX = dy * 0.1;
     spin.x = p.x; spin.y = p.y;
@@ -439,6 +605,7 @@ function release() {
   if (spin) {
     // A tap on the tied bracelet makes it hop and throw sparkles.
     if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
+    if (!spin.moved && mode === 'stack' && rings.length) { stackJig = 0; rings.forEach((r, i) => setTimeout(() => note(i * 2), i * 45)); buzz(15); }
     spin = null;
     return;
   }
@@ -595,13 +762,32 @@ $('tie').addEventListener('click', () => {
   setMode('tied');
 });
 $('untie').addEventListener('click', () => setMode('line'));
-$('fresh').addEventListener('click', () => { pushUndo(); setBeads([]); sync(); setMode('line'); });
+$('wear').addEventListener('click', () => { arm(); wear(); });
+$('tiedPhoto').addEventListener('click', savePhoto);
+$('stackPhoto').addEventListener('click', savePhoto);
+$('another').addEventListener('click', () => setMode('line'));
+$('takeOff').addEventListener('click', () => {
+  if (!stack.length) return;
+  stack.pop();
+  saveStack();
+  rebuildStack();
+  syncStack();
+  tick(0.6, 0.14);
+  say(stack.length ? 'Took the newest bracelet off.' : 'Your stack is empty. Tie off a bracelet and wear it.');
+});
+$('stackBtn').addEventListener('click', () => {
+  arm();
+  if (mode === 'stack') { setMode('line'); return; }
+  clearInterval(phraseTimer);
+  kLin = 0;
+  setMode('stack');
+});
 let muted = false;
 $('sound').addEventListener('click', () => {
   muted = !muted;
   arm();
   setMuted(muted);
-  $('sound').textContent = muted ? 'Sound off' : 'Sound on';
+  $('sound').textContent = muted ? 'Muted' : 'Sound';
   $('sound').setAttribute('aria-pressed', muted ? 'false' : 'true');
   if (!muted) tick(1);
 });
@@ -626,6 +812,8 @@ async function start() {
     else demo.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R'); }, 350 + i * 130));
   }
   sync();
+  rebuildStack();
+  syncStack();
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start();

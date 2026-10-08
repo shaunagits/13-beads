@@ -403,22 +403,29 @@ const CHARM_BUILDERS = {
   clock(g) {
     g.add(mesh(G('clockFace', () => new THREE.CylinderGeometry(0.42, 0.42, 0.16, 44).rotateX(Math.PI / 2)), mat('clockFace', () => plastic(0x141d4d))));
     g.add(mesh(G('clockRim', () => new THREE.TorusGeometry(0.42, 0.055, 12, 44)), goldMat()));
+    const f = new THREE.Group();
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       const dot = part(G('tickDot', () => new THREE.SphereGeometry(0.02, 8, 6)), goldMat(), Math.sin(a) * 0.32, Math.cos(a) * 0.32, 0.085);
       if (i % 3 === 0) dot.scale.setScalar(1.7);
-      g.add(dot);
+      f.add(dot);
     }
     // Both hands point straight up: midnight.
-    g.add(part(G('handM', () => new THREE.BoxGeometry(0.03, 0.3, 0.02)), goldMat(), 0, 0.13, 0.095));
-    g.add(part(G('handH', () => new THREE.BoxGeometry(0.055, 0.19, 0.02)), goldMat(), 0, 0.08, 0.105));
-    g.add(part(G('handHub', () => new THREE.SphereGeometry(0.045, 12, 10)), goldMat(), 0, 0, 0.1));
+    f.add(part(G('handM', () => new THREE.BoxGeometry(0.03, 0.3, 0.02)), goldMat(), 0, 0.13, 0.095));
+    f.add(part(G('handH', () => new THREE.BoxGeometry(0.055, 0.19, 0.02)), goldMat(), 0, 0.08, 0.105));
+    f.add(part(G('handHub', () => new THREE.SphereGeometry(0.045, 12, 10)), goldMat(), 0, 0, 0.1));
+    const back = f.clone();
+    back.scale.z = -1;
+    g.add(f, back);
   },
   photo(g) {
     g.add(mesh(G('photoFrame', () => new RoundedBoxGeometry(0.8, 0.94, 0.1, 3, 0.04)), mat('photoFrame', () => plastic(0xffffff, { roughness: 0.4 }))));
     const pic = new THREE.Mesh(G('photoPic', () => new THREE.PlaneGeometry(0.64, 0.62)), mat('photoPic', () => new THREE.MeshBasicMaterial({ map: photoTex(), toneMapped: false })));
     pic.position.set(0, 0.08, 0.052);
-    g.add(pic);
+    const picBack = pic.clone();
+    picBack.position.z = -0.052;
+    picBack.rotation.y = Math.PI;
+    g.add(pic, picBack);
   },
   cat(g) {
     const fur = mat('cat', () => plastic(0x17131f, { roughness: 0.26, iridescence: 0.6, iridescenceIOR: 1.6 }));
@@ -527,11 +534,15 @@ const CHARM_BUILDERS = {
       mat('boot', () => plastic(0xb8632c, { roughness: 0.3 }))));
     b.add(part(G('bootSole', () => new RoundedBoxGeometry(0.76, 0.06, 0.27, 2, 0.02)), dark, 0.13, -0.92));
     b.add(part(G('bootHeel', () => new RoundedBoxGeometry(0.22, 0.12, 0.25, 2, 0.02)), dark, -0.13, -1.0));
-    b.add(mesh(G('bootStitch', () => tubeOf([[-0.18, -0.2, 0.128], [-0.05, -0.31, 0.128], [0.08, -0.2, 0.128]], 0.014, false, 20)), goldMat()));
-    b.add(mesh(G('bootStitch2', () => tubeOf([[0.04, -0.62, 0.128], [0.2, -0.7, 0.128], [0.4, -0.78, 0.128]], 0.012, false, 16)), goldMat()));
+    const deco = new THREE.Group();
+    deco.add(mesh(G('bootStitch', () => tubeOf([[-0.18, -0.2, 0.128], [-0.05, -0.31, 0.128], [0.08, -0.2, 0.128]], 0.014, false, 20)), goldMat()));
+    deco.add(mesh(G('bootStitch2', () => tubeOf([[0.04, -0.62, 0.128], [0.2, -0.7, 0.128], [0.4, -0.78, 0.128]], 0.012, false, 16)), goldMat()));
     const star = part(starGeo(), goldMat(), -0.05, -0.46, 0.12);
     star.scale.setScalar(0.2);
-    b.add(star);
+    deco.add(star);
+    const decoBack = deco.clone();
+    decoBack.scale.z = -1;
+    b.add(deco, decoBack);
     c.add(b);
   },
   coupe(g) {
@@ -597,7 +608,10 @@ export function makeBead(d) {
         (geo.face ||= new THREE.PlaneGeometry(0.8, 0.8)),
         mat('L' + d.ch, () => new THREE.MeshBasicMaterial({ map: letterTex(d.ch), transparent: true, depthWrite: false, toneMapped: false })));
       face.position.z = 0.362;
-      group.add(face);
+      const faceBack = face.clone();
+      faceBack.position.z = -0.362;
+      faceBack.rotation.y = Math.PI;
+      group.add(face, faceBack);
       break;
     }
     case 'pearl':
@@ -632,12 +646,15 @@ export function makeBead(d) {
         return m;
       });
       const layers = [
-        [0.105, 0.07, -0.09, 0.012, mat('13white', () => plastic(0xffffff, { roughness: 0.35 }))],
-        [0.036, 0.07, -0.01, 0.01, mat('13black', () => plastic(0x101018, { roughness: 0.3 }))],
-        [0, 0.06, 0.07, 0.022, blue],
+        [0.105, 0.09, -0.045, 0.003, mat('13white', () => plastic(0xffffff, { roughness: 0.35 }))],
+        [0.036, 0.05, 0.03, 0.01, mat('13black', () => plastic(0x101018, { roughness: 0.3 }))],
+        [0, 0.05, 0.075, 0.022, blue],
       ];
       layers.forEach(([grow, depth, z, bevel, m], i) => {
-        group.add(mesh((geo['13_' + i] ||= thirteenGeo(grow, depth, z, bevel)), m));
+        const layer = mesh((geo['13_' + i] ||= thirteenGeo(grow, depth, z, bevel)), m);
+        group.add(layer);
+        // The outline and numerals repeat on the back, the way a real die-cut charm looks from behind.
+        if (i > 0) { const back = layer.clone(); back.scale.z = -1; group.add(back); }
       });
       break;
     }
