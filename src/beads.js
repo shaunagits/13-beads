@@ -347,8 +347,8 @@ function hanger(group) {
   hang.add(part(G('bail', () => new THREE.TorusGeometry(0.11, 0.034, 10, 24)), silverMat(), 0, -0.12));
   const charm = new THREE.Group();
   charm.position.y = -0.22;
-  // Real charms are a good deal bigger than the beads beside them.
-  charm.scale.setScalar(1.3);
+  // Sized so a charm hangs about one to one and a half beads tall.
+  charm.scale.setScalar(1.02);
   hang.add(charm);
   group.add(hang);
   group.userData.hang = hang;
@@ -719,7 +719,7 @@ export function makeBead(d) {
       hang.add(bail);
       const charm = new THREE.Group();
       charm.position.y = -0.2;
-      charm.scale.setScalar(1.12);
+      charm.scale.setScalar(0.92);
       const dark = mat('gDark', () => plastic(0x3d2110, { roughness: 0.35 }));
       const gold = mat('star', () => new THREE.MeshPhysicalMaterial({ color: 0xffc533, metalness: 0.6, roughness: 0.22, clearcoat: 1 }));
       charm.add(mesh(guitarBodyGeo(), mat('gBody', () => plastic(0xffffff, { map: woodTex(), roughness: 0.25 }))));
