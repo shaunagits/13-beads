@@ -15,12 +15,13 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
-const TIED_HINT = 'Tied off! Drag to spin it, tap for sparkles.';
+const TIED_HINT = 'Drag to spin it. Tap for sparkles.';
 // Wall decoration: a few curated colors, and the word on the neon sign.
 const WALL_COLORS = {
-  white: { base: '#f3eee6', streak: 'rgba(150,120,90,.025)', edge: 'rgba(150,130,110,.2)' },
-  pink: { base: '#f6cfe2', streak: 'rgba(170,70,120,.02)', edge: 'rgba(190,120,190,.22)' },
-  sage: { base: '#cbdcc6', streak: 'rgba(60,100,70,.025)', edge: 'rgba(90,120,100,.22)' },
+  // shade: the deeper tone in the limewash clouds. night: how the wall reads under lamp and neon light.
+  white: { base: '#f4f0e8', shade: '#ddd3c4', night: 0x8a8ea8 },
+  pink: { base: '#f7d3e4', shade: '#e9b3cc', night: 0x9a7fb4 },
+  sage: { base: '#cfdecb', shade: '#b4c8b1', night: 0x7d9a94 },
 };
 const SIGN_DEFAULT = '13 beads', SIGN_MAX = 12;
 const cleanSign = (t) => String(t || '').replace(/[^A-Za-z0-9 !?&]/g, '').replace(/\s+/g, ' ').slice(0, SIGN_MAX);
@@ -30,8 +31,9 @@ try {
   if (d && WALL_COLORS[d.color]) decor.color = d.color;
   if (d && typeof d.sign === 'string' && cleanSign(d.sign).trim()) decor.sign = cleanSign(d.sign).trim();
 } catch (e) { /* optional */ }
-const STACK_HINT = 'Swing a bracelet, brush across them, or tap one for a jingle. ' +
-  (matchMedia('(pointer: coarse)').matches ? 'Press and hold one to take it off.' : 'Hold or right-click one to take it off.');
+const STACK_HINT = matchMedia('(pointer: coarse)').matches
+  ? 'Tap a bracelet to jingle it. Hold to take it off.'
+  : 'Click a bracelet to jingle it. Hold or right-click to take it off.';
 const EMPTY_WALL = 'Nothing on display yet. Tie off a bracelet and hang it on the stand.';
 const STACK_MAX = 12;
 
@@ -214,6 +216,7 @@ function setMode(m) {
   $('buildPanel').hidden = m !== 'line';
   $('hud').hidden = m === 'line';
   $('hud').dataset.mode = m;
+  $('stackBtn').setAttribute('aria-pressed', m === 'stack' ? 'true' : 'false');
   $('status').hidden = m !== 'line';
   $('count').hidden = m !== 'line';
   closePop(false);
@@ -235,45 +238,76 @@ const board = new THREE.Group();
 board.visible = false;
 scene.add(board);
 
+// Tileable value noise, layered into soft clouds. Used for the limewash paint and the plaster relief.
+function noiseField(period, seed) {
+  const g = new Float32Array(period * period);
+  let st = seed * 9301 + 49297;
+  for (let i = 0; i < g.length; i++) { st = (st * 9301 + 49297) % 233280; g[i] = st / 233280; }
+  // Coordinates run 0 to 1 across one tile; the lattice wraps at the edge so the texture repeats seamlessly.
+  return (x, y) => {
+    x *= period; y *= period;
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const x0 = ((xi % period) + period) % period, y0 = ((yi % period) + period) % period;
+    const x1 = (x0 + 1) % period, y1 = (y0 + 1) % period;
+    const a = g[y0 * period + x0], b = g[y0 * period + x1], c = g[y1 * period + x0], d = g[y1 * period + x1];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+}
+function fbm(fields, x, y) {
+  let sum = 0, amp = 0.5, norm = 0;
+  for (const f of fields) { sum += f(x, y) * amp; norm += amp; amp *= 0.5; }
+  return sum / norm;
+}
+const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+// Limewash: one base color with slow cloudy shifts in tone and a little brushed mottling, like a hand-painted wall.
 function paintTexture(name) {
-  const col = WALL_COLORS[name] || WALL_COLORS.white;
+  const col = WALL_COLORS[name] || WALL_COLORS.white, S = 768;
   const c = document.createElement('canvas');
-  c.width = c.height = 512;
-  const x = c.getContext('2d');
-  x.fillStyle = col.base;
-  x.fillRect(0, 0, 512, 512);
-  // Faint roller streaks so the paint does not look like a flat fill.
-  for (let i = 0; i < 520; i++) {
-    x.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.035)' : col.streak;
-    x.fillRect(Math.random() * 512, Math.random() * 512, 3 + Math.random() * 10, 60 + Math.random() * 200);
+  c.width = c.height = S;
+  const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
+  const clouds = [0, 1, 2, 3, 4].map((o) => noiseField(4 << o, 11 + o)), mott = [0, 1, 2].map((o) => noiseField(48 << o, 40 + o));
+  const [r0, g0, b0] = hexRGB(col.base), [rs, gs, bs] = hexRGB(col.shade);
+  for (let j = 0; j < S; j++) {
+    for (let i = 0; i < S; i++) {
+      const u = i / S, v = j / S;
+      // Warp the clouds with themselves so the patches look brushed rather than blobby.
+      const w = fbm(clouds, u + 0.13, v + 0.71) - 0.5;
+      const n = fbm(clouds, u + w * 0.35, v + w * 0.2);
+      const m = fbm(mott, u, v);
+      const k = Math.min(1, Math.max(0, (n - 0.38) * 1.9)) * 0.85 + (m - 0.5) * 0.12;
+      const lift = 1 + (m - 0.5) * 0.035;
+      const o = (j * S + i) * 4;
+      px[o] = (r0 + (rs - r0) * k) * lift; px[o + 1] = (g0 + (gs - g0) * k) * lift; px[o + 2] = (b0 + (bs - b0) * k) * lift; px[o + 3] = 255;
+    }
   }
-  const glow = x.createRadialGradient(256, 200, 0, 256, 256, 380);
-  glow.addColorStop(0, 'rgba(255,250,240,.35)'); glow.addColorStop(1, col.edge);
-  x.fillStyle = glow;
-  x.fillRect(0, 0, 512, 512);
+  x.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-// Plaster relief, so raking light picks out a real wall surface.
+// Plaster relief: fine grain plus soft trowel ridges, so raking light picks out a real wall surface.
 function plasterTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const x = c.getContext('2d');
-  x.fillStyle = '#808080';
-  x.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 2600; i++) {
-    x.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.14)';
-    x.beginPath();
-    x.ellipse(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 5, 1 + Math.random() * 4, Math.random() * 3, 0, TAU);
-    x.fill();
+  const S = 512, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
+  const grain = [0, 1, 2].map((o) => noiseField(64 << o, 70 + o)), ridge = [0, 1, 2].map((o) => noiseField(6 << o, 90 + o));
+  for (let j = 0; j < S; j++) {
+    for (let i = 0; i < S; i++) {
+      const u = i / S, v = j / S;
+      const r = fbm(ridge, u, v), ridges = 1 - Math.abs(r - 0.5) * 2;
+      const val = 128 + (fbm(grain, u, v) - 0.5) * 120 + Math.pow(ridges, 6) * 46;
+      const o = (j * S + i) * 4;
+      px[o] = px[o + 1] = px[o + 2] = val; px[o + 3] = 255;
+    }
   }
+  x.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
 const plaster = plasterTexture();
-const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(decor.color), roughness: 0.95, bumpMap: plaster, bumpScale: 2.2 }));
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(decor.color), roughness: 0.95, bumpMap: plaster, bumpScale: 3 }));
 wall.receiveShadow = true;
 wall.position.z = -70;
 board.add(wall);
@@ -351,7 +385,7 @@ function applyMood() {
   sun.intensity = !onWall ? 1.7 : night ? 0.4 : 2.1;
   scene.environmentIntensity = !onWall ? 0.55 : night ? 0.2 : 0.5;
   stageA.intensity = stageB.intensity = onWall ? 0.12 : reduce ? 0.5 : 1.0;
-  wall.material.color.set(night ? 0x8d7cb8 : 0xffffff);
+  wall.material.color.set(night ? (WALL_COLORS[decor.color] || WALL_COLORS.white).night : 0xffffff);
   windowLight.visible = onWall && !night;
   lamp.intensity = night ? 2.4 : 0;
   neonGlow.intensity = night ? 1.5 : 0;
@@ -418,10 +452,11 @@ function wallGrid() {
 let standKey = '';
 function buildStand(grid) {
   for (const m of [...stand.children]) { stand.remove(m); if (m.userData.own) m.geometry.dispose(); }
-  const solid = (geo, mat, x, y, z = 0) => {
+  // The stand and shelf cast no shadows. Their shadows on the wall read as clutter.
+  const solid = (geo, mat, x, y, z = 0, shadow = false) => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
-    m.castShadow = true; m.receiveShadow = true;
+    m.castShadow = shadow; m.receiveShadow = true;
     m.userData.own = true;
     stand.add(m);
     return m;
@@ -429,20 +464,6 @@ function buildStand(grid) {
   const Y = (py) => H / 2 - py, barW = grid.cols * grid.slotW, shelfY = Y(grid.shelf);
   // Slim floating shelf.
   solid(new THREE.BoxGeometry(Math.min(W * 0.98, barW + 150), 11, 112), woodMat, 0, shelfY - 5.5, -12);
-  // A small trailing plant in a white pot.
-  const ps = clamp(grid.rMax / 40, 1.1, 1.7), px = barW * 0.22 + 30 * ps, pz = 4;
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x4f9a63, roughness: 0.55 });
-  solid(new THREE.CylinderGeometry(15 * ps, 11.5 * ps, 24 * ps, 28), new THREE.MeshPhysicalMaterial({ color: 0xfbf8f3, roughness: 0.35, clearcoat: 0.6 }), px, shelfY + 12 * ps, pz);
-  const leaf = new THREE.SphereGeometry(1, 10, 8);
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * TAU * 2.3, r = (3 + (i % 5) * 2.6) * ps;
-    solid(leaf, leafMat, px + Math.cos(a) * r, shelfY + (25 + (i % 4) * 3) * ps, pz + Math.sin(a) * r).scale.set(5.2 * ps, 4.2 * ps, 5.2 * ps);
-  }
-  [[-13, 5, 46], [10, 9, 34], [15, -2, 58], [-4, 12, 26]].forEach(([dx, dz, len]) => {
-    for (let y = 0; y < len; y += 6.4) {
-      solid(leaf, leafMat, px + dx * ps + Math.sin(y * 0.2 + dx) * 1.6, shelfY + (20 - y) * ps, pz + (dz + 8) * ps).scale.setScalar(3.2 * ps);
-    }
-  });
   solid(new THREE.CylinderGeometry(barW * 0.2, barW * 0.22, 9, 48), goldMat, 0, shelfY + 4.5, -6);
   const topY = Y(grid.top);
   solid(new THREE.CylinderGeometry(5.5, 5.5, topY - shelfY + 16, 20), goldMat, 0, (topY + shelfY) / 2 + 8, -8);
@@ -459,9 +480,9 @@ let rings = [], grabRing = null;
 try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.filter(Array.isArray); } catch (e) { /* optional */ }
 function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
 function syncStack() {
-  $('stackBtn').textContent = stack.length ? 'Wall ' + stack.length : 'Wall';
-  $('stackTitle').textContent = stack.length + ' on display';
-  $('stackTitle').hidden = !stack.length;
+  $('wallCount').textContent = stack.length;
+  $('wallCount').hidden = !stack.length;
+  $('stackBtn').setAttribute('aria-label', stack.length ? 'Your wall, ' + stack.length + ' on display' : 'Your wall');
   if (mode === 'stack') $('photoBtn').disabled = !stack.length;
 }
 function buildRing(list, grid) {
@@ -558,7 +579,7 @@ function wear() {
 }
 function updateStack(dt) {
   wall.scale.set(W * 1.4, H * 1.4, 1);
-  plaster.repeat.set((W * 1.4) / 150, (H * 1.4) / 150);
+  plaster.repeat.set((W * 1.4) / 360, (H * 1.4) / 360);
   windowLight.scale.set(Math.max(W, H) * 1.15, Math.max(W, H) * 1.15, 1);
   windowLight.position.set(W * 0.12, H * 0.06, -68.5);
   {
@@ -1244,7 +1265,6 @@ $('sound').addEventListener('click', () => {
   muted = !muted;
   arm();
   setMuted(muted);
-  $('sound').textContent = muted ? 'Muted' : 'Sound';
   $('sound').setAttribute('aria-pressed', muted ? 'false' : 'true');
   if (!muted) tick(1);
 });

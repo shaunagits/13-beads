@@ -16,22 +16,31 @@
 <body>
   <div class="app">
     <header>
+      <a class="back" href="https://games.shauna.digital" title="All games">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Games</span>
+      </a>
       <h1 class="mark" aria-label="13 Beads">
         <span>1</span><span>3</span><span class="dot"></span><span>B</span><span>E</span><span>A</span><span>D</span><span>S</span>
       </h1>
       <div class="head-right">
-        <button class="ghost" id="tilt" type="button" hidden>Tilt</button>
-        <button class="ghost" id="sound" type="button" aria-pressed="true">Sound</button>
-        <button class="ghost" id="stackBtn" type="button">Wall</button>
+        <button class="hbtn" id="tilt" type="button" aria-label="Turn on tilt" title="Tilt" hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="7.5" y="3.5" width="9" height="17" rx="2.2" transform="rotate(-14 12 12)" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 9.5a9 9 0 0 0 0 5M20.5 9.5a9 9 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+        <button class="hbtn" id="sound" type="button" aria-label="Sound" aria-pressed="true" title="Sound">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="slash" d="M15.5 9.5l5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+        <button class="hbtn" id="stackBtn" type="button" aria-label="Your wall" aria-pressed="false" title="Your wall">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5h16M12 5v15M8.5 20h7M7 5v1.5M17 5v1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="7" cy="10" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="10" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span class="badge" id="wallCount" hidden></span>
+        </button>
       </div>
     </header>
 
     <div class="stage" id="stage"><canvas id="cv" aria-label="Your bracelet string"></canvas><span class="count" id="count" aria-label="Beads on the string">0 / 26</span>
       <div class="hud" id="hud" hidden>
-        <span class="chip" id="stackTitle" data-show="stack">Your wall</span>
-        <button class="chip chip-btn" id="untie" type="button" data-show="tied">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 7 4 12l5 5M4.5 12H14a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Untie
+        <button class="icon-btn solo" id="untie" type="button" data-show="tied" aria-label="Untie" title="Untie">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6 4 11l5 5M4.5 11H14a5.5 5.5 0 0 1 0 11h-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="corner">
           <button class="icon-btn" id="customBtn" type="button" data-show="stack" aria-label="Decorate the wall" title="Decorate the wall" aria-haspopup="dialog" aria-expanded="false" aria-controls="custom">

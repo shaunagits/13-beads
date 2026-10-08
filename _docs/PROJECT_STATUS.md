@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-10-08 (second session). Everything below is committed and pushed to `main`, which deploys to production, unless marked otherwise.
+Last updated: 2026-10-08 (second session). Everything below is on `main` and in production, except the items marked **(preview)**, which are on the `polish-wall-sound` branch waiting for Shauna's review.
 
 ## What exists
 
@@ -22,8 +22,9 @@ Last updated: 2026-10-08 (second session). Everything below is committed and pus
 - Controls float on the canvas: Untie (top left), camera icon for Save photo (top right), "Add to my wall" (bottom center), and a hint note that fades after a few seconds.
 
 **The wall (mode `stack`)**
-- Painted plaster wall, slim dark wood floating shelf, gold three-tier T-bar stand, small trailing plant, neon-style script sign.
-- Controls float on the canvas: "N on display" (top left), Decorate and Save photo icons (top right), "Make another" (bottom center), and a hint note that fades.
+- Limewash plaster wall (soft cloudy tone shifts, fine grain, trowel ridges, all generated in code), slim dark wood floating shelf, gold three-tier T-bar stand, neon-style script sign. **(preview)** The plant is gone, and the stand and shelf cast no shadows.
+- Each wall color has its own night tint. **(preview)**
+- Controls float on the canvas: Decorate and Save photo icons grouped top right, "Make another" (bottom center, dark ink button), and a short hint note that fades. The "on display" label moved to a badge on the header's wall button. **(preview)**
 - Decorate popover: wall color (white by default, pink, or sage) and the neon sign word (defaults to "13 beads", up to 12 letters, numbers, spaces, or ! ? &, shrinks to fit). Saved under `13beads.wall`.
 - Take any bracelet off: press and hold it (phone), or hold or right-click (computer). A confirm popover appears beside it.
 - Keyboard: Tab reaches each bracelet (an invisible button over it, with a focus ring around the bracelet). Arrow keys move between them. Enter or Delete opens the confirm. Popovers keep Tab inside, close on Escape, and return focus.
@@ -32,7 +33,9 @@ Last updated: 2026-10-08 (second session). Everything below is committed and pus
 - Day mood in light mode (window light across the wall). Evening mood in dark mode (lamp glow, lit neon).
 - Slight depth-of-field blur behind the bracelets.
 
-**Sound (`src/audio.js`)**: synthesized, chosen by material (plastic, block, pearl, metal, glass, wood, soft).
+**Header (preview)**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Tilt, Sound, and Your wall (with a count badge).
+
+**Sound (`src/audio.js`, preview)**: synthesized, chosen by material (plastic, block, pearl, metal, glass, wood, soft). Hits are modal (a few partials at a real object's frequency ratios, each with its own decay, started by a short click). The cord pluck is a plucked-string model. Every hit varies slightly in pitch, level, and stereo position. All of it runs through a soft low-pass, a compressor, and a small generated room.
 
 **Games site**: `games.shauna.digital` is live from the `games` repository, with 13 Beads mounted at `/13-beads`.
 
@@ -48,7 +51,7 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 - The daytime neon sign is faint against the wall (pink and white both). To review now that white is the default.
 - Press-and-hold to take a bracelet off, on a real phone.
 - Screen reader announcements for the bracelet buttons (tested by keyboard only).
-- At night every wall color gets the same purple tint, so the color choice mostly shows in daytime.
+- The rebuilt sounds. The test browser has no speakers; levels were checked by rendering them offline (no clipping, every sound audible).
 
 ## Decisions
 
@@ -79,6 +82,12 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-08 | Wall color | Player picks from 3: white (default), pink, sage | Shauna approved. Neutral white makes bead colors pop. Few curated options all look good with the gold stand. |
 | 2026-10-08 | Neon sign word | Player can change it. Default is the game name, "13 beads" | Shauna: if it is editable it should be the player's word, within limits that keep it looking good. |
 | 2026-10-08 | Accessibility | Wall is keyboard operable | Shauna wants accessibility standards followed where possible. |
+| 2026-10-08 | Wall props | Plant removed. Stand and shelf shadows off. Focus on the wall texture | Shauna: the shadows looked odd and the plant was clutter. |
+| 2026-10-08 | Night wall | Each color keeps its own feel at night | Shauna asked. |
+| 2026-10-08 | Interface style | Fewer, quieter controls: icon header, grouped icons, one dark primary button | Shauna asked for a simpler, more sophisticated interface. |
+| 2026-10-08 | Back to games | Muted "‹ Games" link at the start of the header | Shauna: visible but not obvious or intrusive. |
+| 2026-10-08 | Sound | Rebuilt in code (modal hits, plucked string, room). Recorded CC0 samples are the next step up if needed | Shauna said the old sounds were bad. |
+| 2026-10-08 | Daytime neon on white | Fine for now | Shauna. |
 
 ## Wrong turns worth knowing
 
