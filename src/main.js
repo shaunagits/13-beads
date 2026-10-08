@@ -12,7 +12,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
 const TIED_HINT = 'Drag to spin your bracelet. Tap it for sparkles.';
-const STACK_HINT = 'Drag to turn your bracelets. Tap for a jingle.';
+const STACK_HINT = 'Swing a bracelet, brush across them, or tap one for a jingle.';
 const STACK_MAX = 12;
 
 /* ---------- State ---------- */
@@ -190,13 +190,13 @@ function setMode(m) {
   backdrop.visible = m !== 'stack';
   sparks.visible = false;
   if (m === 'tied') { tiedFired = false; say(TIED_HINT); }
-  else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Nothing on display yet. Tie off a bracelet and put it on the heart hands.'); syncStack(); }
+  else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Nothing on display yet. Tie off a bracelet and hang it on the stand.'); syncStack(); }
   else say(HINT);
   if (reduce) kLin = m === 'tied' ? 1 : 0;
 }
 
 /* ---------- The wall: a painted wall with a shelf, where finished things go on display ---------- */
-// Stage one holds one display piece: a gold heart-hands stand with bracelets stacked on both wrists.
+// Stage one holds one display piece: a gold T-bar stand with bracelets hanging from its bars.
 const board = new THREE.Group();
 board.visible = false;
 scene.add(board);
@@ -225,15 +225,11 @@ wall.receiveShadow = true;
 wall.position.z = -70;
 board.add(wall);
 
+// The display piece: a gold T-bar jewelry stand on a wood shelf. Bracelets hang from its bars on
+// small hooks, facing forward so every phrase can be read, and swing when touched.
 const stand = new THREE.Group();
 board.add(stand);
-// Satin gold, like a painted resin sculpture.
-const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xe9c25c, metalness: 0.55, roughness: 0.4, emissive: 0x4a3200, emissiveIntensity: 0.3 });
-// Each wrist rises from the shelf and leans in toward the heart. Bracelets stack around it.
-const SHELF_Y = -150, WRIST_TOP = -4, LEAN = 0.15;
-const wristT = (y) => clamp((y - SHELF_Y) / (WRIST_TOP - SHELF_Y), 0, 1);
-const wristX = (y) => 121 - 25 * wristT(y);
-const armR = (y) => 35 - 6 * wristT(y);
+const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xf6c655, metalness: 0.9, roughness: 0.22, clearcoat: 0.6 });
 function woodTexture() {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 128;
@@ -250,51 +246,45 @@ function woodTexture() {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-{
-  const solid = (geo, mat, x = 0, y = 0, z = 0) => {
+const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.75 });
+const hookGeo = {
+  ring: new THREE.TorusGeometry(6.5, 1.3, 8, 20).rotateY(Math.PI / 2),
+  link: new THREE.CylinderGeometry(1.1, 1.1, 9, 6),
+};
+// How many bars and hooks fit the current stage, in stage pixels (y measured down from the top).
+function wallGrid() {
+  const cols = W < 520 ? 3 : W < 900 ? 4 : 5;
+  const slotW = Math.min((W * 0.9) / cols, 156), rMax = slotW * 0.42, rowH = rMax * 2 + 36;
+  const rows = clamp(Math.floor((H * 0.84) / rowH), 1, 3);
+  const top = (H - (rows * rowH + 30)) / 2 + 22;
+  return { cols, rows, slotW, rMax, rowH, top, shelf: top + rows * rowH + 4, cap: Math.min(STACK_MAX, cols * rows) };
+}
+let standKey = '';
+function buildStand(grid) {
+  for (const m of [...stand.children]) { stand.remove(m); if (m.userData.own) m.geometry.dispose(); }
+  const solid = (geo, mat, x, y, z = 0) => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
     m.castShadow = true; m.receiveShadow = true;
+    m.userData.own = true;
     stand.add(m);
     return m;
   };
-  // A tube whose thickness changes along its length, with rounded ends.
-  const ball = new THREE.SphereGeometry(1, 18, 14);
-  const limb = (pts, radiusAt, seg = 56) => {
-    const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z || 0)));
-    const g = new THREE.TubeGeometry(curve, seg, 1, 18, false), pos = g.attributes.position;
-    const c = new THREE.Vector3(), v = new THREE.Vector3();
-    for (let i = 0; i <= seg; i++) {
-      curve.getPointAt(i / seg, c);
-      for (let j = 0; j <= 18; j++) {
-        const k = i * 19 + j;
-        v.fromBufferAttribute(pos, k).sub(c).multiplyScalar(radiusAt(i / seg)).add(c);
-        pos.setXYZ(k, v.x, v.y, v.z);
-      }
-    }
-    g.computeVertexNormals();
-    solid(g, goldMat);
-    for (const u of [0, 1]) { curve.getPointAt(u, c); solid(ball, goldMat, c.x, c.y, c.z).scale.setScalar(radiusAt(u)); }
-  };
-  // Dark wood shelf.
-  solid(new THREE.BoxGeometry(460, 18, 130), new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.75 }), 0, SHELF_Y - 9, 0);
-  for (const s of [-1, 1]) {
-    // Wrist.
-    const wrist = solid(new THREE.CylinderGeometry(armR(WRIST_TOP), armR(SHELF_Y), WRIST_TOP - SHELF_Y, 40), goldMat, s * wristX((SHELF_Y + WRIST_TOP) / 2), (SHELF_Y + WRIST_TOP) / 2, 0);
-    wrist.rotation.z = s * LEAN;
-    // Thumb and the back of the hand: one smooth mass from the point of the heart up to the knuckles.
-    const mass = (u) => (u < 0.35 ? lerp(13, 27, u / 0.35) : u < 0.8 ? lerp(27, 31, (u - 0.35) / 0.45) : lerp(31, 23, (u - 0.8) / 0.2));
-    limb([[s * 3, -112], [s * 34, -84], [s * 70, -40], [s * 95, 6], [s * 100, 54], [s * 85, 96], [s * 58, 118]], mass);
-    // Four fingers fold over at the knuckles and point down into the heart, meeting the other hand.
-    [-16.5, -5.5, 5.5, 16.5].forEach((z, i) => {
-      const k = 1 - Math.abs(i - 1.5) * 0.03;
-      limb([[s * 66, 114 * k, z], [s * 44, 128 * k, z], [s * 21, 121 * k, z * 0.95], [s * 9, 100, z * 0.9], [s * 8, 80, z * 0.85]], (u) => lerp(11, 8.5, u), 30);
-    });
+  const Y = (py) => H / 2 - py, barW = grid.cols * grid.slotW, shelfY = Y(grid.shelf);
+  solid(new THREE.BoxGeometry(Math.max(W * 1.3, barW + 120), 18, 130), woodMat, 0, shelfY - 9, -6);
+  solid(new THREE.CylinderGeometry(barW * 0.2, barW * 0.22, 9, 48), goldMat, 0, shelfY + 4.5, -6);
+  const topY = Y(grid.top);
+  solid(new THREE.CylinderGeometry(5.5, 5.5, topY - shelfY + 16, 20), goldMat, 0, (topY + shelfY) / 2 + 8, -8);
+  solid(new THREE.SphereGeometry(9, 20, 14), goldMat, 0, topY + 20, -8);
+  for (let r = 0; r < grid.rows; r++) {
+    const y = Y(grid.top + r * grid.rowH);
+    solid(new THREE.CylinderGeometry(4.2, 4.2, barW, 16).rotateZ(Math.PI / 2), goldMat, 0, y, 0);
+    for (const sx of [-1, 1]) solid(new THREE.SphereGeometry(7, 16, 12), goldMat, (sx * barW) / 2, y, 0);
   }
 }
 
 let stack = [];
-let rings = [], stackSpin = 0, stackV = 0, stackJig = 9;
+let rings = [], grabRing = null;
 try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.filter(Array.isArray); } catch (e) { /* optional */ }
 function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
 function syncStack() {
@@ -303,36 +293,43 @@ function syncStack() {
   $('takeOff').disabled = !stack.length;
   $('stackPhoto').disabled = !stack.length;
 }
-function buildRing(list) {
-  const S = 15, g = new THREE.Group(), inner = new THREE.Group();
+function buildRing(list, grid) {
   let U = 0;
   for (const d of list) U += UNIT[d.k];
-  const R = Math.max(41, (U * S + 12) / TAU);
+  // Every bracelet hangs as the same size loop, so short ones show more cord, like real ones do.
+  const R = grid.rMax * 0.94;
+  const S = Math.min(clamp(grid.rMax * 0.27, 14, 26), (TAU * R - 10) / Math.max(U, 1));
+  const g = new THREE.Group(), loop = new THREE.Group(), hangs = [], DROP = 13;
   let acc = (-U * S) / 2;
   for (const d of list) {
     const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
     acc += w;
     o.scale.setScalar(S);
-    o.position.set(R * Math.sin(phi), 0, R * Math.cos(phi));
-    o.rotation.y = phi;
-    inner.add(o);
+    o.position.set(R * Math.sin(phi), -DROP - R - R * Math.cos(phi), 0);
+    o.rotation.z = phi;
+    if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
+    loop.add(o);
   }
-  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.7, 6, 72).rotateX(Math.PI / 2), stringMat);
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72), stringMat);
+  cord.position.y = -DROP - R;
   cord.castShadow = true;
-  inner.add(cord);
-  g.add(inner);
-  stand.add(g);
-  return { g, inner, R, y: 0, vy: 0, landed: true, ph: Math.random() * 6 };
+  // Hook: a ring over the bar and a short link down to the bracelet.
+  const ring = new THREE.Mesh(hookGeo.ring, goldMat), link = new THREE.Mesh(hookGeo.link, goldMat);
+  link.position.y = -8.5;
+  ring.castShadow = true;
+  loop.add(cord, ring, link);
+  loop.position.z = 4;
+  g.add(loop);
+  board.add(g);
+  return { g, loop, R: R + DROP / 2, hangs, th: (Math.random() - 0.5) * 0.3, thv: 0, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, x: 0, y: 0 };
 }
-// Bracelets alternate between the two wrists. The newest sits highest, and older ones slide down.
-const slotY = (i) => -32 - Math.floor(i / 2) * 19;
+// Newest bracelet takes the first hook. Older ones shift along.
 function rebuildStack() {
-  rings.forEach((r) => stand.remove(r.g));
-  rings = stack.slice(-STACK_MAX).reverse().map((list, i) => {
-    const r = buildRing(list.filter((d) => d && UNIT[d.k]));
-    r.y = slotY(i);
-    return r;
-  });
+  const grid = wallGrid();
+  standKey = [grid.cols, grid.rows, Math.round(grid.rMax / 3), Math.round(W / 30), Math.round(H / 30)].join('|');
+  buildStand(grid);
+  rings.forEach((r) => board.remove(r.g));
+  rings = stack.slice(-grid.cap).reverse().map((list) => buildRing(list.filter((d) => d && UNIT[d.k]), grid));
 }
 function wear() {
   if (!beads.length) return;
@@ -340,7 +337,7 @@ function wear() {
   if (stack.length > 24) stack.shift();
   saveStack();
   rebuildStack();
-  if (rings[0] && !reduce) { rings[0].y = 290; rings[0].landed = false; whoosh(); }
+  if (rings[0] && !reduce) { rings[0].drop = H * 0.8; rings[0].landed = false; whoosh(); }
   pushUndo();
   setBeads([]);
   sync();
@@ -348,27 +345,39 @@ function wear() {
   setMode('stack');
 }
 function updateStack(dt) {
-  const a = Math.min(W / 370, H / 350);
   wall.scale.set(W * 1.4, H * 1.4, 1);
-  stand.scale.setScalar(a);
-  // Shelf sits in the lower part of the stage, unless that would push the hands off the top.
-  stand.position.set(0, Math.min(-0.22 * H - SHELF_Y * a, H / 2 - 20 - 135 * a), 0);
-  if (!spin) { stackSpin += stackV * dt; stackV *= 0.96; }
-  stackJig += dt;
-  const jig = stackJig < 0.8 ? Math.exp(-stackJig * 5) * Math.sin(stackJig * 26) : 0;
+  const grid = wallGrid();
+  if ([grid.cols, grid.rows, Math.round(grid.rMax / 3), Math.round(W / 30), Math.round(H / 30)].join('|') !== standKey) rebuildStack();
   rings.forEach((r, i) => {
-    const side = i % 2 ? 1 : -1, target = slotY(i);
-    r.vy += ((target - r.y) * 130 - r.vy * 15) * dt;
-    r.y += r.vy * dt;
-    if (!r.landed && r.y - target < 4) { r.landed = true; thud(); chime(); buzz(25); stackJig = 0; }
-    // A bracelet longer than the wrist hangs loose and droops outward.
-    const loose = Math.max(0, r.R - (armR(r.y) + 9));
-    const stretch = 1 + 0.9 * clamp((r.y - 0) / 130, 0, 1);
-    r.g.position.set(side * (wristX(r.y) + loose * 0.55), r.y + jig * 3 * (i % 4 < 2 ? 1 : -1), 0);
-    r.g.rotation.z = side * LEAN - side * Math.min(0.42, loose / 62) + jig * 0.05;
-    r.g.scale.setScalar(stretch);
-    r.inner.rotation.y = stackSpin + (reduce ? 0 : Math.sin(T * 0.5 + r.ph) * 0.2);
+    const col = i % grid.cols, row = Math.floor(i / grid.cols);
+    r.x = (col - (grid.cols - 1) / 2) * grid.slotW;
+    r.y = H / 2 - (grid.top + row * grid.rowH);
+    // Falling onto the hook.
+    r.dropv += (-r.drop * 150 - r.dropv * 13) * dt;
+    r.drop += r.dropv * dt;
+    if (!r.landed && r.drop < 6) { r.landed = true; thud(); chime(); buzz(25); r.thv += 2.4; }
+    // Pendulum swing around the bar, leaning with the phone.
+    if (grabRing !== r) {
+      r.thv += (-(r.th - tiltS * 0.55) * 34 - r.thv * 1.5) * dt;
+      r.th = clamp(r.th + r.thv * dt, -1.4, 1.4);
+    }
+    const idle = reduce ? 0 : Math.sin(T * 0.9 + r.ph) * 0.025;
+    r.g.position.set(r.x, r.y, 0);
+    r.loop.position.y = r.drop;
+    r.loop.rotation.z = r.th + idle;
+    for (const h of r.hangs) h.hang.rotation.set(0, 0, -(h.phi + r.th + idle) - r.thv * 0.05);
   });
+}
+// Which hanging bracelet is under the pointer (stage pixels, y down)?
+function ringAt(p) {
+  const px = p.x - W / 2, py = H / 2 - p.y;
+  let best = null, bd = 1e9;
+  for (const r of rings) {
+    const cx = r.x + Math.sin(r.th) * r.R, cy = r.y - Math.cos(r.th) * r.R;
+    const d = Math.hypot(px - cx, py - cy);
+    if (d < r.R + 18 && d < bd) { bd = d; best = r; }
+  }
+  return best;
 }
 
 /* ---------- Photo: save the current view as a picture ---------- */
@@ -634,6 +643,7 @@ cv.addEventListener('pointerdown', (e) => {
   if (mode !== 'line') {
     spin = { x: p.x, y: p.y, moved: false };
     spinVY = 0; spinVX = 0;
+    grabRing = mode === 'stack' ? ringAt(p) : null;
     return;
   }
   let best = null, bd = 1e9;
@@ -668,7 +678,27 @@ cv.addEventListener('pointermove', (e) => {
   if (spin) {
     const dx = p.x - spin.x, dy = p.y - spin.y;
     if (Math.abs(dx) + Math.abs(dy) > 6) spin.moved = true;
-    if (mode === 'stack') { stackSpin += dx * 0.014; stackV = dx * 0.35; spin.x = p.x; spin.y = p.y; return; }
+    if (mode === 'stack') {
+      const px = p.x - W / 2, py = H / 2 - p.y;
+      if (grabRing) {
+        // Hold a bracelet and it follows your finger around its hook.
+        const th = clamp(Math.atan2(px - grabRing.x, -(py - grabRing.y)), -1.4, 1.4);
+        grabRing.thv = clamp((th - grabRing.th) * 30, -9, 9);
+        grabRing.th = th;
+      } else {
+        // Brushing across the stand knocks each bracelet you pass.
+        for (const r of rings) {
+          const cx = r.x + Math.sin(r.th) * r.R, cy = r.y - Math.cos(r.th) * r.R;
+          if (Math.hypot(px - cx, py - cy) < r.R && performance.now() - (r.hitAt || 0) > 300) {
+            r.hitAt = performance.now();
+            r.thv += clamp(dx * 0.35, -5, 5);
+            note(rings.indexOf(r) * 2);
+          }
+        }
+      }
+      spin.x = p.x; spin.y = p.y;
+      return;
+    }
     spinY += dx * 0.012; spinX += dy * 0.006;
     spinVY = dx * 0.25; spinVX = dy * 0.1;
     spin.x = p.x; spin.y = p.y;
@@ -689,7 +719,12 @@ function release() {
   if (spin) {
     // A tap on the tied bracelet makes it hop and throw sparkles.
     if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
-    if (!spin.moved && mode === 'stack' && rings.length) { stackJig = 0; rings.forEach((r, i) => setTimeout(() => note(i * 2), i * 45)); buzz(15); }
+    if (!spin.moved && mode === 'stack' && grabRing) {
+      grabRing.thv += (Math.random() < 0.5 ? -1 : 1) * 3.5;
+      [0, 2, 4].forEach((n, i) => setTimeout(() => note(rings.indexOf(grabRing) + n), i * 60));
+      buzz(15);
+    }
+    grabRing = null;
     spin = null;
     return;
   }
@@ -857,7 +892,7 @@ $('takeOff').addEventListener('click', () => {
   rebuildStack();
   syncStack();
   tick(0.6, 0.14);
-  say(stack.length ? 'Took the newest bracelet off.' : 'Nothing on display yet. Tie off a bracelet and put it on the heart hands.');
+  say(stack.length ? 'Took the newest bracelet off.' : 'Nothing on display yet. Tie off a bracelet and hang it on the stand.');
 });
 $('stackBtn').addEventListener('click', () => {
   arm();

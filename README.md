@@ -42,6 +42,6 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 
 ## Planned
 
-- The wall grows into a decorated room: more display pieces, drag-to-arrange decor, and new crafts (a jacket with patches and pins is the first candidate).
+- The wall currently shows one display piece, a gold T-bar stand. It grows into a decorated room: more display pieces (gold heart hands once a licensed or scanned 3D model is available, a shadow box, a framed keepsake ticket), drag-to-arrange decor, and new crafts (a jacket with patches and pins is the first candidate).
 - Trading links, so a bracelet can be sent to a friend.
 - Unlockable charms.
