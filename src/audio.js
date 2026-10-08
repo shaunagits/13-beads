@@ -44,3 +44,13 @@ export function buzz(ms) {
   if (!armed) return;
   try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { /* optional */ }
 }
+
+// Strumming across the beads plays up a pentatonic scale, so any sweep sounds musical.
+const SCALE = [0, 2, 4, 7, 9];
+export function note(i) {
+  const semis = SCALE[i % 5] + 12 * Math.floor(i / 5);
+  blip(392 * Math.pow(2, semis / 12), 'sine', 0.13, 0.32);
+}
+export function twang(pull) {
+  blip(170 + Math.min(pull, 90) * 1.4, 'triangle', 0.22, 0.4);
+}

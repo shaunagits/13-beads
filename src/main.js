@@ -1,8 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { COLORS, LETTERS, CHARMS, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
-import { arm, setMuted, land, tick, chime, buzz } from './audio.js';
+import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
+import { arm, setMuted, land, tick, chime, buzz, note, twang } from './audio.js';
 
 const MAX = 26, TAU = Math.PI * 2, N = 90;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -10,7 +10,8 @@ const $ = (id) => document.getElementById(id);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const HINT = 'Tap a bead below to string it. Tap one on the string to pull it off, or drag to reorder.';
+const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
+const TIED_HINT = 'Drag to spin your bracelet. Tap it for sparkles.';
 
 /* ---------- State ---------- */
 let beads = [], fallers = [], undoStack = [];
@@ -19,6 +20,8 @@ let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let sagDyn = 0, sagVel = 0, sway = 0, swayVel = 0, T = 0, last = 0;
 let phraseTimer = null, lastTubeKey = '';
 let parX = 0, parY = 0, parTX = 0, parTY = 0;
+let pluck = null, spin = null, spinY = 0, spinX = 0, spinVY = 0, spinVX = 0, hop = 9;
+let tilt = 0, tiltS = 0, hasTilt = false;
 
 /* ---------- Three.js scene ---------- */
 const cv = $('cv');
@@ -176,7 +179,7 @@ function setMode(m) {
   mode = m;
   $('buildPanel').hidden = m !== 'line';
   $('tiedPanel').hidden = m === 'line';
-  if (m === 'tied') { tiedFired = false; say(''); } else say(HINT);
+  if (m === 'tied') { tiedFired = false; say(TIED_HINT); } else say(HINT);
   if (reduce) kLin = m === 'tied' ? 1 : 0;
 }
 
@@ -223,7 +226,14 @@ function frame(now) {
   if (mode === 'tied' && kLin >= 1 && !tiedFired) { tiedFired = true; burst(); chime(); buzz(30); }
 
   sagVel += (-sagDyn * 130 - sagVel * 9) * dt; sagDyn += sagVel * dt;
-  swayVel += (-sway * 90 - swayVel * 6) * dt; sway += swayVel * dt;
+  tiltS += (tilt - tiltS) * 0.1;
+  if (pluck) {
+    // Finger on the string: it follows the pull, then springs back when released.
+    sagDyn += (clamp(pluck.dy, -70, 90) - sagDyn) * 0.4; sagVel = 0;
+    sway += (clamp(pluck.dx * 0.4, -36, 36) - sway) * 0.4; swayVel = 0;
+  } else {
+    swayVel += (-(sway - tiltS * 20) * 90 - swayVel * 6) * dt; sway += swayVel * dt;
+  }
 
   const n = beads.length;
   let U = 0;
@@ -264,7 +274,7 @@ function frame(now) {
     b.rv += (-b.rock * 70 - b.rv * 4.5) * dt;
     b.rock += b.rv * dt;
     // Hanging charms swing like a pendulum, pushed by the bead's own motion along the string.
-    b.swv += (-b.sw * 42 - b.swv * 2.2) * dt - clamp(b.v - b.pv, -400, 400) * 0.006;
+    b.swv += (-(b.sw + tiltS * 0.7) * 42 - b.swv * 2.2) * dt - clamp(b.v - b.pv, -400, 400) * 0.006;
     b.sw = clamp(b.sw + b.swv * dt, -1.3, 1.3);
     b.pv = b.v;
     b.sq += dt;
@@ -286,7 +296,13 @@ function frame(now) {
 
   // Lift into 3D. The strand pivots around the loop center so the tied bracelet can turn.
   strand.position.set(cx - W / 2, H / 2 - cy, 0);
-  strand.rotation.set(-0.3 * k, reduce ? 0 : Math.sin(T * 0.8) * 0.55 * k, 0);
+  // Tied bracelet: gentle idle turn, plus whatever spin the player has given it.
+  if (!spin) { spinY += spinVY * dt; spinX += spinVX * dt; spinVY *= 0.965; spinVX *= 0.9; spinX *= 0.97; }
+  if (k === 0) { spinY = 0; spinX = 0; spinVY = 0; spinVX = 0; }
+  hop += dt;
+  const hopS = 1 + (hop < 0.7 ? 0.12 * Math.exp(-hop * 6) * Math.cos(hop * 22) : 0);
+  strand.scale.setScalar(hopS);
+  strand.rotation.set((-0.3 + clamp(spinX, -0.9, 0.9)) * k, ((reduce ? 0 : Math.sin(T * 0.8) * 0.4) + spinY) * k, 0);
 
   const tubeKey = [sag.toFixed(1), sway.toFixed(1), k.toFixed(3), W, H].join();
   if (tubeKey !== lastTubeKey) {
@@ -352,6 +368,7 @@ function frame(now) {
   }
 
   // Camera: 1 world unit = 1 stage pixel at the string's depth, with a slight parallax.
+  if (hasTilt) parTX = tiltS;
   parX += (parTX - parX) * 0.06; parY += (parTY - parY) * 0.06;
   const dist = H / 2 / Math.tan((FOV * Math.PI) / 360);
   camera.position.set(parX * 26, parY * 18, dist);
@@ -367,8 +384,9 @@ let grab = null;
 const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
 cv.addEventListener('pointerdown', (e) => {
   arm();
-  if (mode !== 'line') return;
   const p = pos(e);
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { /* optional */ }
+  if (mode !== 'line') { spin = { x: p.x, y: p.y, moved: false }; spinVY = 0; spinVX = 0; return; }
   let best = null, bd = 1e9;
   for (const b of beads) {
     let d = Math.hypot(b.x - p.x, b.y - p.y);
@@ -376,14 +394,37 @@ cv.addEventListener('pointerdown', (e) => {
     if (DANGLE.has(b.def.k)) d = Math.min(d, Math.hypot(b.x - p.x, b.y + b.S * 1.1 - p.y) - b.S * 0.4);
     if (d < bd) { bd = d; best = b; }
   }
-  if (best && bd < Math.max(24, best.S * 0.75)) {
-    grab = { b: best, x: p.x, y: p.y, moved: false };
-    try { cv.setPointerCapture(e.pointerId); } catch (_) { /* optional */ }
-  }
+  if (best && bd < Math.max(24, best.S * 0.75)) grab = { b: best, x: p.x, y: p.y, moved: false };
+  else pluck = { x: p.x, y: p.y, dx: 0, dy: 0 };
 });
+// Running a finger across the beads strums them: each one rocks and plays a note.
+function strum(p) {
+  const now = performance.now();
+  beads.forEach((b, i) => {
+    if (Math.hypot(b.x - p.x, b.y - p.y) > b.S * 0.62 || now - (b.strumAt || 0) < 260) return;
+    b.strumAt = now;
+    b.rv += (p.vx >= 0 ? 1 : -1) * 6;
+    b.swv += (p.vx >= 0 ? 1 : -1) * 3;
+    b.sq = 0;
+    note(i);
+    buzz(5);
+  });
+}
+let lastX = 0;
 cv.addEventListener('pointermove', (e) => {
   const p = pos(e);
+  p.vx = p.x - lastX;
+  lastX = p.x;
   if (e.pointerType === 'mouse') { parTX = (p.x / W - 0.5) * 2; parTY = -(p.y / H - 0.5) * 2; }
+  if (spin) {
+    const dx = p.x - spin.x, dy = p.y - spin.y;
+    if (Math.abs(dx) + Math.abs(dy) > 6) spin.moved = true;
+    spinY += dx * 0.012; spinX += dy * 0.006;
+    spinVY = dx * 0.25; spinVX = dy * 0.1;
+    spin.x = p.x; spin.y = p.y;
+    return;
+  }
+  if (pluck) { pluck.dx = p.x - pluck.x; pluck.dy = p.y - pluck.y; strum(p); return; }
   if (!grab) return;
   if (!grab.moved && Math.hypot(p.x - grab.x, p.y - grab.y) > 10) { grab.moved = true; pushUndo(); }
   if (!grab.moved) return;
@@ -395,6 +436,21 @@ cv.addEventListener('pointermove', (e) => {
   if (beads.indexOf(b) !== idx) { others.splice(idx, 0, b); beads = others; tick(1.3, 0.08); }
 });
 function release() {
+  if (spin) {
+    // A tap on the tied bracelet makes it hop and throw sparkles.
+    if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
+    spin = null;
+    return;
+  }
+  if (pluck) {
+    const pull = Math.hypot(pluck.dx, pluck.dy);
+    if (pull > 12) {
+      twang(pull);
+      for (const b of beads) { b.rv += (Math.random() - 0.5) * pull * 0.12; b.swv += (Math.random() - 0.5) * pull * 0.06; }
+    }
+    pluck = null;
+    return;
+  }
   if (!grab) return;
   const b = grab.b;
   if (!grab.moved) removeBead(b);
@@ -407,10 +463,32 @@ function release() {
 }
 cv.addEventListener('pointerup', release);
 cv.addEventListener('pointercancel', release);
+
+/* ---------- Tilt: the string and hanging charms lean with the phone ---------- */
+function listenTilt() {
+  window.addEventListener('deviceorientation', (e) => {
+    if (e.gamma == null) return;
+    hasTilt = true;
+    tilt = clamp(e.gamma / 40, -1, 1);
+  });
+}
+if (!reduce && typeof DeviceOrientationEvent !== 'undefined') {
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iPhone asks for permission, and only from a tap.
+    const btn = $('tilt');
+    btn.hidden = false;
+    btn.addEventListener('click', async () => {
+      try {
+        if ((await DeviceOrientationEvent.requestPermission()) === 'granted') { listenTilt(); btn.hidden = true; say('Tilt is on. Lean your phone to swing the string.'); }
+        else say('Tilt was not allowed, so the string stays level.');
+      } catch (err) { say('Tilt is not available in this browser.'); }
+    });
+  } else listenTilt();
+}
 cv.addEventListener('pointerleave', () => { parTX = 0; parTY = 0; });
 
 /* ---------- Tray (thumbnails are real renders of each 3D bead) ---------- */
-const TABS = { colors: COLORS, letters: LETTERS, charms: CHARMS };
+const TABS = { colors: BEADS, letters: LETTERS, charms: CHARMS, dangles: DANGLES };
 let curTab = 'colors';
 const thumbs = {};
 function renderThumbs() {
@@ -429,13 +507,18 @@ function renderThumbs() {
   s.add(l);
   const cam = new THREE.OrthographicCamera(-0.68, 0.68, 0.68, -0.68, 0.1, 10);
   cam.position.z = 4;
-  for (const item of [...COLORS, ...LETTERS, ...CHARMS]) {
+  const box = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
+  for (const item of [...BEADS, ...LETTERS, ...CHARMS, ...DANGLES]) {
     const o = makeBead(item.def);
     if (o.userData.hang) {
-      // Hanging charms are tall, so frame the whole charm in the thumbnail.
-      o.scale.setScalar(0.72);
-      o.position.y = 0.6;
+      // Hanging charms vary in size, so fit each one to the thumbnail.
       o.rotation.set(0, -0.3, 0);
+      o.updateMatrixWorld(true);
+      box.setFromObject(o).getSize(size);
+      box.getCenter(mid);
+      const fit = 1.2 / Math.max(size.x, size.y);
+      o.scale.setScalar(fit);
+      o.position.set(-mid.x * fit, -mid.y * fit, 0);
     } else o.rotation.set(0.25, -0.3, 0);
     if (o.userData.flap) { o.userData.flap[0].rotation.y = -0.35; o.userData.flap[1].rotation.y = 0.35; }
     s.add(o);

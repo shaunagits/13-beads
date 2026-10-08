@@ -21,12 +21,13 @@
       </h1>
       <div class="head-right">
         <span class="count" id="count" aria-label="Beads on the string">0 / 26</span>
+        <button class="ghost" id="tilt" type="button" hidden>Tilt</button>
         <button class="ghost" id="sound" type="button" aria-pressed="true">Sound on</button>
       </div>
     </header>
 
     <div class="stage" id="stage"><canvas id="cv" aria-label="Your bracelet string"></canvas></div>
-    <p class="status" id="status" aria-live="polite">Tap a bead below to string it. Tap one on the string to pull it off, or drag to reorder.</p>
+    <p class="status" id="status" aria-live="polite">Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.</p>
 
     <div class="panel" id="buildPanel">
       <form class="phrase" id="phraseForm">
@@ -35,9 +36,10 @@
       </form>
       <div class="row">
         <div class="tabs" role="tablist">
-          <button class="tab" type="button" role="tab" data-tab="colors" aria-selected="true">Colors</button>
+          <button class="tab" type="button" role="tab" data-tab="colors" aria-selected="true">Beads</button>
           <button class="tab" type="button" role="tab" data-tab="letters" aria-selected="false">Letters</button>
           <button class="tab" type="button" role="tab" data-tab="charms" aria-selected="false">Charms</button>
+          <button class="tab" type="button" role="tab" data-tab="dangles" aria-selected="false">Dangles</button>
         </div>
         <div class="side" role="group" aria-label="Which end of the string to add beads to">
           <span class="side-label">Add to</span>
