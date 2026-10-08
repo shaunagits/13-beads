@@ -35,7 +35,7 @@ Last updated: 2026-10-08 (second session). Everything below is on `main` and in 
 
 **Header (preview)**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Tilt, Sound, and Your wall (with a count badge).
 
-**Sound (`src/audio.js`, preview)**: synthesized, chosen by material (plastic, block, pearl, metal, glass, wood, soft). Hits are modal (a few partials at a real object's frequency ratios, each with its own decay, started by a short click). The cord pluck is a plucked-string model. Every hit varies slightly in pitch, level, and stereo position. All of it runs through a soft low-pass, a compressor, and a small generated room.
+**Sound (`src/audio.js`, preview)**: musical. Every sound is a note in D major. Stringing beads plays a melody over I, V, vi, IV (four beads per chord), restarting after a 2 second pause, so each bracelet plays its own tune. Charms add a bell an octave up, wood charms drop an octave, fabric charms swell softly. Strumming arpeggiates the current chord, plucking the cord plays its bass note, and hanging a bracelet resolves to the home chord. One instrument voices everything (music box by default; kalimba and synth pluck are built in, chosen with `setInstrument`), through a tempo-synced ping-pong echo and a small room.
 
 **Games site**: `games.shauna.digital` is live from the `games` repository, with 13 Beads mounted at `/13-beads`.
 
@@ -86,7 +86,7 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-08 | Night wall | Each color keeps its own feel at night | Shauna asked. |
 | 2026-10-08 | Interface style | Fewer, quieter controls: icon header, grouped icons, one dark primary button | Shauna asked for a simpler, more sophisticated interface. |
 | 2026-10-08 | Back to games | Muted "‹ Games" link at the start of the header | Shauna: visible but not obvious or intrusive. |
-| 2026-10-08 | Sound | Rebuilt in code (modal hits, plucked string, room). Recorded CC0 samples are the next step up if needed | Shauna said the old sounds were bad. |
+| 2026-10-08 | Sound | Musical: every sound is a note in one key, stringing plays a melody | Shauna rejected both the original sounds and a realistic rebuild, and asked for music notes. |
 | 2026-10-08 | Daytime neon on white | Fine for now | Shauna. |
 
 ## Wrong turns worth knowing
