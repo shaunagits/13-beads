@@ -632,7 +632,7 @@ cv.addEventListener('pointerdown', (e) => {
   for (const b of beads) {
     let d = Math.hypot(b.x - p.x, b.y - p.y);
     // A hanging charm can also be grabbed by its body below the string.
-    if (DANGLE.has(b.def.k)) d = Math.min(d, Math.hypot(b.x - p.x, b.y + b.S * 1.1 - p.y) - b.S * 0.4);
+    if (DANGLE.has(b.def.k)) d = Math.min(d, Math.hypot(b.x - p.x, b.y + b.S * 1.3 - p.y) - b.S * 0.7);
     if (d < bd) { bd = d; best = b; }
   }
   if (best && bd < Math.max(24, best.S * 0.75)) grab = { b: best, x: p.x, y: p.y, moved: false };
