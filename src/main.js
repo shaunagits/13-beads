@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { COLORS, LETTERS, CHARMS, UNIT, makeBead, tickMaterials, defKey } from './beads.js';
+import { COLORS, LETTERS, CHARMS, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
 import { arm, setMuted, land, tick, chime, buzz } from './audio.js';
 
 const MAX = 26, TAU = Math.PI * 2, N = 90;
@@ -118,7 +118,7 @@ function mk(def, placed, from) {
   strand.add(obj);
   return {
     def, obj, s: placed ? null : (from === 'L' ? -70 : lineLen + 70), v: 0, landed: !!placed, sq: 9,
-    rock: 0, rv: 0, drag: null, x: 0, y: 0, S: 30,
+    rock: 0, rv: 0, sw: 0, swv: 0, pv: 0, ph: Math.random() * 6, drag: null, x: 0, y: 0, S: 30,
   };
 }
 const defs = () => beads.map((b) => b.def);
@@ -257,11 +257,16 @@ function frame(now) {
       if (!b.landed && Math.abs(b.target - b.s) < 5) {
         b.landed = true; b.sq = 0; b.rv += (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 2);
         sagVel += 80; swayVel += (Math.random() - 0.5) * 60;
+        for (const o of beads) o.swv += (Math.random() - 0.5) * 1.6;
         land(b.def.k); buzz(8);
       }
     }
     b.rv += (-b.rock * 70 - b.rv * 4.5) * dt;
     b.rock += b.rv * dt;
+    // Hanging charms swing like a pendulum, pushed by the bead's own motion along the string.
+    b.swv += (-b.sw * 42 - b.swv * 2.2) * dt - clamp(b.v - b.pv, -400, 400) * 0.006;
+    b.sw = clamp(b.sw + b.swv * dt, -1.3, 1.3);
+    b.pv = b.v;
     b.sq += dt;
   }
 
@@ -305,14 +310,23 @@ function frame(now) {
       o.position.set(b.x - cx, cy - b.y + 6, 34);
       o.rotation.set(0, 0, 0);
       o.scale.setScalar(S * 1.15);
+      if (o.userData.hang) o.userData.hang.rotation.set(0, 0, b.sw);
     } else {
       b.x = p.x; b.y = p.y;
       const q = b.sq < 0.6 ? Math.exp(-b.sq * 9) * Math.cos(b.sq * 34) : 0;
       o.position.set(p.x - cx, cy - p.y, 0);
-      o.rotation.set(b.rock, 0, -p.a, 'ZYX');
+      if (o.userData.hang) {
+        o.rotation.set(0, 0, -p.a);
+        o.userData.hang.rotation.set(b.rock * 0.5, 0, p.a + b.sw);
+      } else o.rotation.set(b.rock, 0, -p.a, 'ZYX');
       o.scale.set(S * (1 - 0.22 * q), S * (1 + 0.18 * q), S * (1 + 0.18 * q));
     }
     if (o.userData.spin) o.userData.spin.rotation.y = T * 0.9;
+    if (o.userData.flap) {
+      const a = 0.3 + 0.32 * Math.sin(T * 4.5 + b.ph);
+      o.userData.flap[0].rotation.y = -a;
+      o.userData.flap[1].rotation.y = a;
+    }
   }
 
   for (let i = fallers.length - 1; i >= 0; i--) {
@@ -356,7 +370,12 @@ cv.addEventListener('pointerdown', (e) => {
   if (mode !== 'line') return;
   const p = pos(e);
   let best = null, bd = 1e9;
-  for (const b of beads) { const d = Math.hypot(b.x - p.x, b.y - p.y); if (d < bd) { bd = d; best = b; } }
+  for (const b of beads) {
+    let d = Math.hypot(b.x - p.x, b.y - p.y);
+    // A hanging charm can also be grabbed by its body below the string.
+    if (DANGLE.has(b.def.k)) d = Math.min(d, Math.hypot(b.x - p.x, b.y + b.S * 1.1 - p.y) - b.S * 0.4);
+    if (d < bd) { bd = d; best = b; }
+  }
   if (best && bd < Math.max(24, best.S * 0.75)) {
     grab = { b: best, x: p.x, y: p.y, moved: false };
     try { cv.setPointerCapture(e.pointerId); } catch (_) { /* optional */ }
@@ -412,7 +431,13 @@ function renderThumbs() {
   cam.position.z = 4;
   for (const item of [...COLORS, ...LETTERS, ...CHARMS]) {
     const o = makeBead(item.def);
-    o.rotation.set(0.25, -0.3, 0);
+    if (o.userData.hang) {
+      // Hanging charms are tall, so frame the whole charm in the thumbnail.
+      o.scale.setScalar(0.72);
+      o.position.y = 0.6;
+      o.rotation.set(0, -0.3, 0);
+    } else o.rotation.set(0.25, -0.3, 0);
+    if (o.userData.flap) { o.userData.flap[0].rotation.y = -0.35; o.userData.flap[1].rotation.y = 0.35; }
     s.add(o);
     r.render(s, cam);
     thumbs[defKey(item.def)] = c.toDataURL('image/png');

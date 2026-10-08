@@ -7,6 +7,7 @@ export const setMuted = (m) => { muted = m; };
 const VOICE = {
   pony: [1500, 'triangle', 0.2], glitter: [1650, 'triangle', 0.2], glow: [1400, 'triangle', 0.2],
   letter: [1050, 'triangle', 0.24], pearl: [2100, 'sine', 0.16], heart: [1300, 'triangle', 0.2],
+  lucky13: [1900, 'sine', 0.16], moon: [2400, 'sine', 0.14], snake: [2000, 'sine', 0.14], guitar: [1250, 'sine', 0.18],
   star: [2600, 'sine', 0.14], mirror: [2900, 'sine', 0.14], spacer: [3300, 'sine', 0.1],
 };
 
