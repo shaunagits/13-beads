@@ -12,8 +12,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
 const TIED_HINT = 'Drag to spin your bracelet. Tap it for sparkles.';
-const STACK_HINT = 'Drag to turn your stack. Tap it for a jingle.';
-const STACK_MAX = 8;
+const STACK_HINT = 'Swing a bracelet, brush across them, or tap one for a jingle.';
+const STACK_MAX = 12;
 
 /* ---------- State ---------- */
 let beads = [], fallers = [], undoStack = [];
@@ -186,76 +186,132 @@ function setMode(m) {
   $('stackPanel').hidden = m !== 'stack';
   $('count').hidden = m === 'stack';
   strand.visible = m !== 'stack';
-  arm3d.visible = m === 'stack';
+  board.visible = m === 'stack';
+  backdrop.visible = m !== 'stack';
   sparks.visible = false;
   if (m === 'tied') { tiedFired = false; say(TIED_HINT); }
-  else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Your stack is empty. Tie off a bracelet and wear it.'); syncStack(); }
+  else if (m === 'stack') { say(stack.length ? STACK_HINT : 'Your jacket is bare. Tie off a bracelet and pin it on.'); syncStack(); }
   else say(HINT);
   if (reduce) kLin = m === 'tied' ? 1 : 0;
 }
 
-/* ---------- The stack: finished bracelets worn on a display arm ---------- */
-const arm3d = new THREE.Group();
-arm3d.visible = false;
-scene.add(arm3d);
-const armMat = new THREE.MeshPhysicalMaterial({ color: 0xd9cdee, roughness: 0.55, sheen: 1, sheenRoughness: 0.4, sheenColor: new THREE.Color(0xffffff) });
-const armR = (y) => { const t = clamp((70 - y) / 330, 0, 1); return 33 + 17 * t * t * (3 - 2 * t); };
-{
-  const add = (g, x = 0, y = 0, z = 0, rz = 0) => {
-    const m = new THREE.Mesh(g, armMat);
-    m.position.set(x, y, z); m.rotation.z = rz;
-    m.castShadow = true; m.receiveShadow = true;
-    arm3d.add(m);
-    return m;
-  };
-  const prof = [];
-  for (let y = -700; y <= 70; y += 22) prof.push(new THREE.Vector2(armR(y), y));
-  prof.push(new THREE.Vector2(32, 84), new THREE.Vector2(26, 96), new THREE.Vector2(0, 100));
-  add(new THREE.LatheGeometry(prof, 40));
-  add(new THREE.SphereGeometry(1, 28, 20), 0, 130).scale.set(41, 50, 18);
-  [[-27, 40], [-9, 52], [9, 49], [27, 37]].forEach(([x, len]) => add(new THREE.CapsuleGeometry(8.6, len, 6, 14), x, 160 + len / 2));
-  add(new THREE.CapsuleGeometry(9.6, 34, 6, 14), -47, 124, 0, 0.62);
+/* ---------- The jacket: finished bracelets hang from safety pins on a denim panel ---------- */
+const board = new THREE.Group();
+board.visible = false;
+scene.add(board);
+
+function denimCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = Math.max(256, Math.round((1024 * h) / w));
+  const x = c.getContext('2d'), cw = c.width, ch = c.height;
+  x.fillStyle = '#3d629c';
+  x.fillRect(0, 0, cw, ch);
+  // Twill weave: fine diagonal threads, lighter and darker.
+  for (let i = -ch; i < cw; i += 5) {
+    x.strokeStyle = `rgba(${i % 10 ? '255,255,255' : '10,20,60'},${0.05 + Math.random() * 0.07})`;
+    x.lineWidth = 1.6;
+    x.beginPath(); x.moveTo(i, 0); x.lineTo(i + ch, ch); x.stroke();
+  }
+  for (let i = 0; i < 9000; i++) {
+    x.fillStyle = `rgba(${Math.random() < 0.5 ? '255,255,255' : '8,18,50'},${Math.random() * 0.1})`;
+    x.fillRect(Math.random() * cw, Math.random() * ch, 2, 2);
+  }
+  // Worn fade toward the middle.
+  const fade = x.createRadialGradient(cw / 2, ch * 0.5, 0, cw / 2, ch * 0.5, cw * 0.75);
+  fade.addColorStop(0, 'rgba(160,190,235,.22)'); fade.addColorStop(1, 'rgba(10,20,60,.28)');
+  x.fillStyle = fade;
+  x.fillRect(0, 0, cw, ch);
+  // Yoke seam with double topstitching, like the shoulder of a jacket.
+  const seamY = ch * 0.075;
+  x.fillStyle = 'rgba(10,20,60,.35)';
+  x.fillRect(0, seamY - 3, cw, 6);
+  x.strokeStyle = '#e0a04a'; x.lineWidth = 3; x.setLineDash([13, 7]);
+  for (const dy of [-11, 11]) { x.beginPath(); x.moveTo(0, seamY + dy); x.lineTo(cw, seamY + dy); x.stroke(); }
+  return c;
 }
-arm3d.rotation.z = -0.1;
+const denimMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
+const denim = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), denimMat);
+denim.receiveShadow = true;
+denim.position.z = -16;
+board.add(denim);
+let denimKey = '';
+function fitDenim() {
+  const key = Math.round(W / 40) + 'x' + Math.round(H / 40);
+  if (key !== denimKey) {
+    denimKey = key;
+    if (denimMat.map) denimMat.map.dispose();
+    const t = new THREE.CanvasTexture(denimCanvas(W, H));
+    t.colorSpace = THREE.SRGBColorSpace;
+    denimMat.map = t;
+    denimMat.needsUpdate = true;
+  }
+  denim.scale.set(W * 1.12, H * 1.12, 1);
+}
+
+const pinGold = new THREE.MeshPhysicalMaterial({ color: 0xffc94a, metalness: 0.75, roughness: 0.22, clearcoat: 1 });
+const pinGeo = {
+  bar: new THREE.CylinderGeometry(1, 1, 32, 8).rotateZ(Math.PI / 2),
+  coil: new THREE.TorusGeometry(3, 1, 8, 18),
+  cap: new THREE.CapsuleGeometry(2.6, 4.5, 4, 10),
+};
+function makePin() {
+  const g = new THREE.Group();
+  const add = (geo, x, y, z) => { const m = new THREE.Mesh(geo, pinGold); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  add(pinGeo.bar, 0, 0, 3);
+  add(pinGeo.bar, 0, 4.4, -1).scale.x = 0.82;
+  add(pinGeo.coil, -17, 2.2, 1);
+  add(pinGeo.cap, 15.5, 2.2, 1);
+  return g;
+}
 
 let stack = [];
-let rings = [], stackSpin = 0, stackV = 0, stackJig = 9;
+let rings = [], ringKey = '', grabRing = null;
 try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.filter(Array.isArray); } catch (e) { /* optional */ }
 function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
 function syncStack() {
-  $('stackBtn').textContent = stack.length ? 'Stack ' + stack.length : 'Stack';
-  $('stackTitle').textContent = stack.length === 1 ? '1 bracelet on your wrist' : stack.length + ' bracelets on your wrist';
+  $('stackBtn').textContent = stack.length ? 'Jacket ' + stack.length : 'Jacket';
+  $('stackTitle').textContent = stack.length === 1 ? '1 bracelet on your jacket' : stack.length + ' bracelets on your jacket';
   $('takeOff').disabled = !stack.length;
   $('stackPhoto').disabled = !stack.length;
 }
-function buildRing(list) {
-  const S = 15, g = new THREE.Group(), inner = new THREE.Group();
+// How many pins fit, and how big a bracelet loop can be, for the current stage size.
+function jacketGrid() {
+  const cols = W < 520 ? 3 : W < 900 ? 4 : 5;
+  const slotW = W / cols, rowH = Math.min(slotW * 1.18, H * 0.44), top = H * 0.17;
+  const rows = Math.max(1, Math.floor((H - top - 8) / rowH));
+  return { cols, rows, slotW, rowH, top, rMax: Math.min(slotW * 0.42, rowH * 0.41), cap: Math.min(STACK_MAX, cols * rows) };
+}
+function buildRing(list, grid) {
   let U = 0;
   for (const d of list) U += UNIT[d.k];
-  const R = Math.max(41, (U * S + 12) / TAU);
+  // Every bracelet hangs as the same size loop, so short ones show more cord, like real ones do.
+  const R = grid.rMax * 0.94;
+  const S = Math.min(clamp(grid.rMax * 0.27, 14, 26), (TAU * R - 10) / Math.max(U, 1));
+  const g = new THREE.Group(), loop = new THREE.Group(), hangs = [];
   let acc = (-U * S) / 2;
   for (const d of list) {
     const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
     acc += w;
     o.scale.setScalar(S);
-    o.position.set(R * Math.sin(phi), 0, R * Math.cos(phi));
-    o.rotation.y = phi;
-    inner.add(o);
+    o.position.set(R * Math.sin(phi), -R - R * Math.cos(phi), 0);
+    o.rotation.z = phi;
+    if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
+    loop.add(o);
   }
-  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.7, 6, 72).rotateX(Math.PI / 2), stringMat);
-  inner.add(cord);
-  g.add(inner);
-  arm3d.add(g);
-  return { g, inner, R, y: 0, vy: 0, landed: true, ph: Math.random() * 6 };
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72), stringMat);
+  cord.position.y = -R;
+  cord.castShadow = true;
+  loop.add(cord);
+  g.add(makePin(), loop);
+  board.add(g);
+  return { g, loop, R, hangs, th: (Math.random() - 0.5) * 0.3, thv: 0, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, x: 0, y: 0 };
 }
-// Newest bracelet sits at the wrist. Older ones slide down the arm.
+// Newest bracelet takes the first pin. Older ones shift along.
 function rebuildStack() {
-  rings.forEach((r) => arm3d.remove(r.g));
-  rings = stack.slice(-STACK_MAX).reverse().map((list, i) => {
-    const r = buildRing(list.filter((d) => d && UNIT[d.k]));
-    r.y = 52 - i * 19;
-    return r;
-  });
+  const grid = jacketGrid();
+  ringKey = grid.cols + '|' + Math.round(grid.rMax / 4);
+  rings.forEach((r) => board.remove(r.g));
+  rings = stack.slice(-grid.cap).reverse().map((list) => buildRing(list.filter((d) => d && UNIT[d.k]), grid));
 }
 function wear() {
   if (!beads.length) return;
@@ -263,7 +319,7 @@ function wear() {
   if (stack.length > 24) stack.shift();
   saveStack();
   rebuildStack();
-  if (rings[0] && !reduce) { rings[0].y = 330; rings[0].landed = false; whoosh(); }
+  if (rings[0] && !reduce) { rings[0].drop = H * 0.8; rings[0].landed = false; whoosh(); }
   pushUndo();
   setBeads([]);
   sync();
@@ -271,24 +327,39 @@ function wear() {
   setMode('stack');
 }
 function updateStack(dt) {
-  const a = Math.min(W / 330, H / 470);
-  arm3d.scale.setScalar(a);
-  arm3d.position.set(0, H * 0.44 - 222 * a, 0);
-  if (!spin) { stackSpin += stackV * dt; stackV *= 0.96; }
-  stackJig += dt;
-  const jig = stackJig < 0.8 ? Math.exp(-stackJig * 5) * Math.sin(stackJig * 26) : 0;
+  fitDenim();
+  const grid = jacketGrid();
+  if (grid.cols + '|' + Math.round(grid.rMax / 4) !== ringKey) rebuildStack();
   rings.forEach((r, i) => {
-    const target = 52 - i * 19;
-    r.vy += ((target - r.y) * 130 - r.vy * 15) * dt;
-    r.y += r.vy * dt;
-    if (!r.landed && r.y - target < 4) { r.landed = true; thud(); chime(); buzz(25); stackJig = 0; }
-    const loose = Math.max(0, r.R - (armR(r.y) + 7));
-    const stretch = 1 + 0.55 * clamp((r.y - 70) / 110, 0, 1);
-    r.g.position.set(loose * 0.55, r.y + jig * 3 * (i % 2 ? -1 : 1), 0);
-    r.g.rotation.z = -Math.min(0.42, loose / 62) + jig * 0.05;
-    r.g.scale.setScalar(stretch);
-    r.inner.rotation.y = stackSpin + (reduce ? 0 : Math.sin(T * 0.5 + r.ph) * 0.2);
+    const col = i % grid.cols, row = Math.floor(i / grid.cols);
+    r.x = -W / 2 + grid.slotW * (col + 0.5);
+    r.y = H / 2 - (grid.top + row * grid.rowH);
+    // Falling onto the pin.
+    r.dropv += (-r.drop * 150 - r.dropv * 13) * dt;
+    r.drop += r.dropv * dt;
+    if (!r.landed && r.drop < 6) { r.landed = true; thud(); chime(); buzz(25); r.thv += 2.4; }
+    // Pendulum swing around the pin, leaning with the phone.
+    if (grabRing !== r) {
+      r.thv += (-(r.th - tiltS * 0.55) * 34 - r.thv * 1.5) * dt;
+      r.th = clamp(r.th + r.thv * dt, -1.4, 1.4);
+    }
+    const idle = reduce ? 0 : Math.sin(T * 0.9 + r.ph) * 0.025;
+    r.g.position.set(r.x, r.y, 0);
+    r.loop.position.y = r.drop;
+    r.loop.rotation.z = r.th + idle;
+    for (const h of r.hangs) h.hang.rotation.set(0, 0, -(h.phi + r.th + idle) - r.thv * 0.05);
   });
+}
+// Which hanging bracelet is under the pointer (stage pixels, y down)?
+function ringAt(p) {
+  const px = p.x - W / 2, py = H / 2 - p.y;
+  let best = null, bd = 1e9;
+  for (const r of rings) {
+    const cx = r.x + Math.sin(r.th) * r.R, cy = r.y - Math.cos(r.th) * r.R;
+    const d = Math.hypot(px - cx, py - cy);
+    if (d < r.R + 18 && d < bd) { bd = d; best = r; }
+  }
+  return best;
 }
 
 /* ---------- Photo: save the current view as a picture ---------- */
@@ -551,7 +622,12 @@ cv.addEventListener('pointerdown', (e) => {
   arm();
   const p = pos(e);
   try { cv.setPointerCapture(e.pointerId); } catch (_) { /* optional */ }
-  if (mode !== 'line') { spin = { x: p.x, y: p.y, moved: false }; spinVY = 0; spinVX = 0; return; }
+  if (mode !== 'line') {
+    spin = { x: p.x, y: p.y, moved: false };
+    spinVY = 0; spinVX = 0;
+    grabRing = mode === 'stack' ? ringAt(p) : null;
+    return;
+  }
   let best = null, bd = 1e9;
   for (const b of beads) {
     let d = Math.hypot(b.x - p.x, b.y - p.y);
@@ -584,7 +660,27 @@ cv.addEventListener('pointermove', (e) => {
   if (spin) {
     const dx = p.x - spin.x, dy = p.y - spin.y;
     if (Math.abs(dx) + Math.abs(dy) > 6) spin.moved = true;
-    if (mode === 'stack') { stackSpin += dx * 0.014; stackV = dx * 0.35; spin.x = p.x; spin.y = p.y; return; }
+    if (mode === 'stack') {
+      const px = p.x - W / 2, py = H / 2 - p.y;
+      if (grabRing) {
+        // Hold a bracelet and it follows your finger around its pin.
+        const th = clamp(Math.atan2(px - grabRing.x, -(py - grabRing.y)), -1.4, 1.4);
+        grabRing.thv = clamp((th - grabRing.th) * 30, -9, 9);
+        grabRing.th = th;
+      } else {
+        // Brushing across the jacket knocks each bracelet you pass.
+        for (const r of rings) {
+          const cx = r.x + Math.sin(r.th) * r.R, cy = r.y - Math.cos(r.th) * r.R;
+          if (Math.hypot(px - cx, py - cy) < r.R && performance.now() - (r.hitAt || 0) > 300) {
+            r.hitAt = performance.now();
+            r.thv += clamp(dx * 0.35, -5, 5);
+            note(rings.indexOf(r) * 2);
+          }
+        }
+      }
+      spin.x = p.x; spin.y = p.y;
+      return;
+    }
     spinY += dx * 0.012; spinX += dy * 0.006;
     spinVY = dx * 0.25; spinVX = dy * 0.1;
     spin.x = p.x; spin.y = p.y;
@@ -605,7 +701,12 @@ function release() {
   if (spin) {
     // A tap on the tied bracelet makes it hop and throw sparkles.
     if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
-    if (!spin.moved && mode === 'stack' && rings.length) { stackJig = 0; rings.forEach((r, i) => setTimeout(() => note(i * 2), i * 45)); buzz(15); }
+    if (!spin.moved && mode === 'stack' && grabRing) {
+      grabRing.thv += (Math.random() < 0.5 ? -1 : 1) * 3.5;
+      [0, 2, 4].forEach((n, i) => setTimeout(() => note(rings.indexOf(grabRing) + n), i * 60));
+      buzz(15);
+    }
+    grabRing = null;
     spin = null;
     return;
   }
@@ -773,7 +874,7 @@ $('takeOff').addEventListener('click', () => {
   rebuildStack();
   syncStack();
   tick(0.6, 0.14);
-  say(stack.length ? 'Took the newest bracelet off.' : 'Your stack is empty. Tie off a bracelet and wear it.');
+  say(stack.length ? 'Took the newest bracelet off.' : 'Your jacket is bare. Tie off a bracelet and pin it on.');
 });
 $('stackBtn').addEventListener('click', () => {
   arm();
