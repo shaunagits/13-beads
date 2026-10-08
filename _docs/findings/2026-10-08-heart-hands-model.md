@@ -31,7 +31,7 @@ Shiny surfaces are the usual reason a scan fails. Dust the sculpture lightly wit
 ### Export and hand over
 
 1. Export the scan as **GLB**. OBJ or USDZ also work.
-2. Put the file in this project folder at `assets/heart-hands-scan.glb`, or attach it to the chat.
+2. Put the file in this project folder at `public/heart-hands-scan.glb`, or attach it to the chat.
 3. Tell the session it is there.
 
 ## Option B: use an openly licensed model
@@ -53,5 +53,5 @@ Asking a designer directly is also reasonable: a short note asking to use the mo
 
 1. Clean it up: remove the scanned table surface, close holes, and reduce it to roughly 30,000 to 60,000 triangles so it loads quickly on phones. Target file size is under 3 MB.
 2. Load it in `src/main.js` with Three.js's GLTF loader and apply the gold material.
-3. Add it to the wall as a second display piece next to the T-bar stand, with bracelets stacked around the wrists. The earlier code-built version of this is in the git history (commit `e57bd8b`) and shows how the bracelets were placed around the wrists.
+3. Add it to the wall as a second display piece next to the T-bar stand, with bracelets stacked around the wrists. The rejected code-built version is in the git history (commit `e57bd8b`) and shows how the bracelets were placed around the wrists.
 4. If the model came from someone else, add the credit their license requires to the README and to the app.

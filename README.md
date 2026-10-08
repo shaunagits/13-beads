@@ -20,7 +20,7 @@ npm run dev
 | File | What it holds |
 |---|---|
 | `index.html` | Page structure: header, stage, bead tray, and the three bottom panels (build, tied, wall). |
-| `src/main.js` | The 3D scene, string physics, pointer and tilt input, the tie-off animation, the wall display, and photo export. |
+| `src/main.js` | The 3D scene, string physics, pointer and tilt input, the tie-off animation, the wall (stand, lighting moods, depth of field), and photo export. |
 | `src/beads.js` | The bead and charm catalog, and the code that builds each one in 3D. |
 | `src/audio.js` | Synthesized sounds, chosen by what each bead is made of. |
 | `src/style.css` | Layout and colors, light and dark. |
@@ -40,8 +40,9 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 - `vite.config.js` sets `base: './'` so the game works both at a domain root and under `/13-beads`. Keep asset paths relative.
 - Saved data keys: `13beads.strand` (the bracelet in progress) and `13beads.stack` (finished bracelets).
 
-## Planned
+## Project docs
 
-- The wall currently shows one display piece, a gold T-bar stand. It grows into a decorated room: more display pieces (gold heart hands once a licensed or scanned 3D model is available, a shadow box, a framed keepsake ticket), drag-to-arrange decor, and new crafts (a jacket with patches and pins is the first candidate).
-- Trading links, so a bracelet can be sent to a friend.
-- Unlockable charms.
+- `CLAUDE.md`: orientation and the rules that must hold.
+- `_docs/PROJECT_STATUS.md`: what exists, what is unverified, and the decisions table.
+- `_docs/TODO.md`: the queue.
+- `_docs/findings/`: research worth keeping, including how to get a heart-hands 3D model.
