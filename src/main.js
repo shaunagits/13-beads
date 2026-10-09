@@ -88,35 +88,32 @@ backdrop.receiveShadow = true;
 backdrop.position.z = -46;
 backdrop.visible = false;
 scene.add(backdrop);
-// The craft table under the string: wood planks, built when the theme is known (oak by day, walnut by night).
+// The craft table under the string: a solid wood slab, built when the theme is known (oak by day, walnut by night).
 const table = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: 0 }));
 table.receiveShadow = true;
 table.position.z = -46.5;
 scene.add(table);
 let tableDark = null;
 function woodTableTexture(dark) {
-  const S = 768, c = document.createElement('canvas');
+  const S = 1024, c = document.createElement('canvas');
   c.width = c.height = S;
   const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
-  const light = dark ? [112, 74, 50] : [226, 196, 156], deep = dark ? [78, 49, 33] : [196, 156, 110];
-  const warp = [0, 1, 2].map((o) => noiseField(2 << o, 120 + o)), streaks = [0, 1].map((o) => noiseField(5 << o, 150 + o));
-  const fine = noiseField(160, 140);
-  const PLANKS = 4, joints = [0.31, 0.77, 0.12, 0.58];
+  const light = dark ? [112, 74, 50] : [226, 196, 156], deep = dark ? [74, 46, 31] : [192, 150, 104];
+  // One continuous tabletop: no planks or seams, just grain, so nothing repeats into a pattern.
+  const warp = [0, 1, 2].map((o) => noiseField(2 << o, 120 + o)), streaks = [0, 1].map((o) => noiseField(4 << o, 150 + o));
+  const tone = [0, 1].map((o) => noiseField(2 << o, 170 + o)), fine = noiseField(160, 140);
   for (let j = 0; j < S; j++) {
-    const v = j / S, p = Math.floor(v * PLANKS), local = v * PLANKS - p, tint = [0.98, 1.03, 0.95, 1.01][p];
+    const v = j / S;
     for (let i = 0; i < S; i++) {
       const u = i / S;
-      // Fine grain running along the plank, drifting gently.
-      const w = fbm(warp, u, v + p * 0.37);
-      const ring = 0.5 + 0.5 * Math.sin((local * 22 + w * 1.8 + p * 1.7) * TAU);
-      // Long streaks: noise stretched along the plank.
-      const st = fbm(streaks, u, (v * 24) % 1);
-      const k = Math.min(1, Math.max(0, Math.pow(ring, 5) * 0.4 + (st - 0.5) * 0.9 + 0.3 + (fine(u, v) - 0.5) * 0.12));
-      // Seams between planks, and one butt joint per plank.
-      const seam = Math.min(local, 1 - local) * S / PLANKS, joint = Math.abs(u - joints[p]) * S;
-      let shade = tint;
-      if (seam < 2.2) shade *= 0.6 + seam * 0.16;
-      if (joint < 1.4) shade *= 0.65;
+      // Fine grain lines running across the table, drifting gently.
+      const w = fbm(warp, u, v);
+      const ring = 0.5 + 0.5 * Math.sin((v * 70 + w * 4.5) * TAU);
+      // Long streaks: noise stretched along the grain.
+      const st = fbm(streaks, u, (v * 16) % 1);
+      const k = Math.min(1, Math.max(0, Math.pow(ring, 6) * 0.35 + (st - 0.5) * 0.8 + 0.32 + (fine(u, v) - 0.5) * 0.1));
+      // Broad, soft variation in tone across the slab.
+      const shade = 0.95 + (fbm(tone, u, v) - 0.5) * 0.14;
       const o = (j * S + i) * 4;
       for (let ch = 0; ch < 3; ch++) px[o + ch] = (light[ch] + (deep[ch] - light[ch]) * k) * shade;
       px[o + 3] = 255;
@@ -1101,7 +1098,7 @@ function frame(now) {
   camera.lookAt(0, 0, 0);
   stageA.position.set(Math.cos(T * 0.45) * W * 0.6, H * 0.2 + Math.sin(T * 0.6) * H * 0.3, 240);
   table.scale.set(W * 1.6, H * 1.6, 1);
-  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 900, (H * 1.6) / 520);
+  if (table.material.map) table.material.map.repeat.set(1, 1);
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
   if (mode === 'stack') updateStack(dt);
   tickMaterials(T);
@@ -1277,7 +1274,7 @@ function renderThumbs() {
   let r;
   try { r = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true, preserveDrawingBuffer: true }); } catch (e) { return; }
   r.setPixelRatio(1);
-  r.setSize(128, 128, false);
+  r.setSize(112, 112, false);
   r.toneMapping = THREE.NeutralToneMapping;
   const s = new THREE.Scene();
   const pm = new THREE.PMREMGenerator(r);
@@ -1289,48 +1286,23 @@ function renderThumbs() {
   const cam = new THREE.OrthographicCamera(-0.68, 0.68, 0.68, -0.68, 0.1, 10);
   cam.position.z = 4;
   const box = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
-  // Each compartment of the bead case holds a little pile: a few copies tumbled at the back,
-  // and one on top facing forward so its color or letter is easy to read.
-  let seed = 7;
-  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   for (const item of [...BEADS, ...LETTERS, ...CHARMS, ...DANGLES]) {
-    const o = makeBead(item.def), pile = new THREE.Group();
-    let heroScale = 0.7, backs = 4, backScale = 0.5;
+    const o = makeBead(item.def);
     if (o.userData.hang) {
-      // Hanging charms vary in size, so fit each one first.
+      // Hanging charms vary in size, so fit each one to the thumbnail.
       o.rotation.set(0, -0.3, 0);
       o.updateMatrixWorld(true);
       box.setFromObject(o).getSize(size);
       box.getCenter(mid);
-      const fit = 1 / Math.max(size.x, size.y);
-      o.position.set(-mid.x * fit, -mid.y * fit, 0);
+      const fit = 1.2 / Math.max(size.x, size.y);
       o.scale.setScalar(fit);
-      const holder = new THREE.Group();
-      holder.add(o);
-      pile.userData.base = holder;
-      // Dangles lie one to a compartment, so their ring and bail do not clutter the pile.
-      heroScale = 1.04; backs = 0; backScale = 0.7;
-    } else {
-      pile.userData.base = o;
-      if (item.def.k !== 'pony' && item.def.k !== 'letter' && !BEADS.includes(item)) { heroScale = 0.78; backs = 2; backScale = 0.55; }
-      if (item.def.k === 'letter') { heroScale = 0.74; backs = 3; }
-    }
-    const base = pile.userData.base;
+      o.position.set(-mid.x * fit, -mid.y * fit, 0);
+    } else o.rotation.set(0.25, -0.3, 0);
     if (o.userData.flap) { o.userData.flap[0].rotation.y = -0.35; o.userData.flap[1].rotation.y = 0.35; }
-    for (let b = 0; b < backs; b++) {
-      const cpy = base.clone(), a = (b / backs) * TAU + rnd() * 0.8, rr = 0.2 + rnd() * 0.12;
-      cpy.position.set(Math.cos(a) * rr, 0.12 + Math.sin(a) * rr * 0.6, -0.4 - b * 0.05);
-      cpy.rotation.set(rnd() * TAU, rnd() * TAU, rnd() * TAU);
-      cpy.scale.setScalar(backScale);
-      pile.add(cpy);
-    }
-    if (o.userData.hang) { base.scale.setScalar(heroScale); base.position.set(0, 0.02, 0.3); base.rotation.z = -0.2; }
-    else { base.scale.setScalar(heroScale); base.rotation.set(0.35, -0.3, 0.05); base.position.set(0, -0.12, 0.3); }
-    pile.add(base);
-    s.add(pile);
+    s.add(o);
     r.render(s, cam);
     thumbs[defKey(item.def)] = c.toDataURL('image/png');
-    s.remove(pile);
+    s.remove(o);
   }
   pm.dispose();
   r.dispose();
@@ -1353,6 +1325,14 @@ function buildTray() {
   }
   tray.scrollLeft = 0;
 }
+// Fold the bead case away, or open it again.
+$('caseToggle').addEventListener('click', () => {
+  const closed = $('case').classList.toggle('closed');
+  $('caseToggle').setAttribute('aria-expanded', closed ? 'false' : 'true');
+  $('caseToggle').setAttribute('aria-label', closed ? 'Show the bead case' : 'Hide the bead case');
+  $('caseToggle').querySelector('.lid-label').textContent = closed ? 'Show beads' : 'Bead case';
+  tick(closed ? 0.8 : 1.2, 0.1);
+});
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
   curTab = t.dataset.tab;
   document.querySelectorAll('.tab').forEach((o) => o.setAttribute('aria-selected', o === t ? 'true' : 'false'));

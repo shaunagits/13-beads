@@ -90,15 +90,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* The tray is a clear plastic bead organizer: a case with a hinged lid edge and a grid of recessed compartments. */
 .case {
   --plastic: rgba(255, 255, 255, .5); --plastic-edge: rgba(255, 255, 255, .9); --well: rgba(120, 130, 160, .1); --well-shade: rgba(40, 30, 70, .16);
-  position: relative; border-radius: 18px; padding: 14px 8px 8px;
+  position: relative; border-radius: 18px; padding: 4px 8px 8px;
   background: linear-gradient(170deg, rgba(255, 255, 255, .75), rgba(214, 226, 240, .45));
   border: 1px solid var(--plastic-edge);
   box-shadow: inset 0 1px 0 #fff, inset 0 -2px 6px rgba(120, 140, 180, .18), 0 8px 22px var(--shadow);
-}
-/* Lid hinge along the top edge. */
-.case::before {
-  content: ""; position: absolute; left: 22px; right: 22px; top: 4px; height: 5px; border-radius: 3px;
-  background: linear-gradient(90deg, transparent, var(--well-shade) 8%, var(--well-shade) 14%, transparent 14%, transparent 86%, var(--well-shade) 86%, var(--well-shade) 92%, transparent);
 }
 .case::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -125,7 +120,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 1px solid var(--plastic-edge);
   box-shadow: inset 0 3px 6px var(--well-shade), inset 0 -1px 0 var(--plastic-edge);
 }
-.bead-btn img { width: 58px; height: 58px; display: block; pointer-events: none; }
+.bead-btn img { width: 50px; height: 50px; display: block; pointer-events: none; }
+/* The case's top edge is its lid: tap it to fold the case away and give the string more room. */
+.case-lid {
+  position: relative; z-index: 2; width: 100%; display: flex; align-items: center; justify-content: space-between;
+  min-height: 34px; padding: 4px 6px; border: 0; background: transparent; color: var(--muted); font: 600 12.5px var(--body);
+}
+.case-lid::before {
+  content: ""; position: absolute; left: 50%; top: 6px; width: 38px; height: 4px; translate: -50% 0; border-radius: 2px; background: var(--well-shade);
+}
+.lid-chev { transition: rotate .2s; }
+.case.closed .lid-chev { rotate: 180deg; }
+.case-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
+.case.closed .case-body { display: none; }
+.case.closed { padding-bottom: 4px; }
+.case .row { padding: 0 2px; }
+@media (prefers-reduced-motion: reduce) { .lid-chev { transition: none; } }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .actions .btn { flex: 1; }
 .actions .btn.primary { flex: 2; }
