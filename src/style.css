@@ -18,6 +18,9 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
+/* No double-tap zoom (rapid taps on beads kept zooming the page). Pinch zoom still works. */
+html, button, input, a { touch-action: manipulation; }
+.tray, .bead-btn { -webkit-user-select: none; user-select: none; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
   padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
@@ -84,12 +87,45 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .side-label { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 6px 0 8px; }
 .seg { background: transparent; border: 0; border-radius: 999px; padding: 5px 11px; font-weight: 700; font-size: 13px; color: var(--muted); }
 .seg[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-.tray {
-  display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 52px); grid-auto-columns: 52px; gap: 6px;
-  overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin;
+/* The tray is a clear plastic bead organizer: a case with a hinged lid edge and a grid of recessed compartments. */
+.case {
+  --plastic: rgba(255, 255, 255, .5); --plastic-edge: rgba(255, 255, 255, .9); --well: rgba(120, 130, 160, .1); --well-shade: rgba(40, 30, 70, .16);
+  position: relative; border-radius: 18px; padding: 14px 8px 8px;
+  background: linear-gradient(170deg, rgba(255, 255, 255, .75), rgba(214, 226, 240, .45));
+  border: 1px solid var(--plastic-edge);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -2px 6px rgba(120, 140, 180, .18), 0 8px 22px var(--shadow);
 }
-.bead-btn { width: 52px; height: 52px; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; display: grid; place-items: center; }
-.bead-btn img { width: 46px; height: 46px; display: block; pointer-events: none; }
+/* Lid hinge along the top edge. */
+.case::before {
+  content: ""; position: absolute; left: 22px; right: 22px; top: 4px; height: 5px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, var(--well-shade) 8%, var(--well-shade) 14%, transparent 14%, transparent 86%, var(--well-shade) 86%, var(--well-shade) 92%, transparent);
+}
+.case::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, .55) 0 8%, transparent 22% 70%, rgba(255, 255, 255, .25) 82%, transparent 90%);
+}
+@media (prefers-color-scheme: dark) {
+  .case {
+    --plastic-edge: rgba(255, 255, 255, .16); --well: rgba(255, 255, 255, .04); --well-shade: rgba(0, 0, 0, .45);
+    background: linear-gradient(170deg, rgba(255, 255, 255, .12), rgba(160, 170, 220, .05));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 8px 22px var(--shadow);
+  }
+  .case::after { background: linear-gradient(115deg, rgba(255, 255, 255, .1) 0 8%, transparent 22% 70%, rgba(255, 255, 255, .05) 82%, transparent 90%); }
+}
+.tray {
+  position: relative; z-index: 1;
+  display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 60px); grid-auto-columns: 60px; gap: 5px;
+  overflow-x: auto; scrollbar-width: none; border-radius: 10px;
+}
+.tray::-webkit-scrollbar { display: none; }
+/* A compartment: a square well with clear plastic walls. */
+.bead-btn {
+  width: 60px; height: 60px; padding: 0; display: grid; place-items: center; border-radius: 9px;
+  background: linear-gradient(180deg, var(--well-shade), var(--well) 45%, var(--well));
+  border: 1px solid var(--plastic-edge);
+  box-shadow: inset 0 3px 6px var(--well-shade), inset 0 -1px 0 var(--plastic-edge);
+}
+.bead-btn img { width: 58px; height: 58px; display: block; pointer-events: none; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .actions .btn { flex: 1; }
 .actions .btn.primary { flex: 2; }

@@ -6,11 +6,15 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 
 **Stringing (mode `line`)**
 - Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Tie it off" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
-- 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture. Tap a bead to add it. It slides on, squashes, and clicks.
+- 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture.
+- The string lies over a wood table generated in code (oak planks in light mode, walnut in dark), which catches the string and bead shadows.
+- Touch: the string is only caught by a press that starts on it (22 px band on touch screens, 14 px with a mouse) and only follows after the finger moves 8 px. Pulling is silent; the pluck sounds on release if pulled more than 18 px. Only a fast swipe across beads plays strum notes. Double-tap zoom is off (pinch zoom still works). Tap a bead to add it. It slides on, squashes, and clicks.
 - Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, rising in pitch.
 - On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
 - Limit of 26 beads. Undo and Clear.
 - Tilt leans the string and hanging charms. iPhone shows a Tilt button because it needs a tap for permission.
+
+**Bead case**: the tray is a clear plastic organizer (hinged lid edge, recessed compartments with clear walls). Each compartment shows a small pile of that bead, with one copy on top facing forward so colors and letters read clearly.
 
 **Catalog (`src/beads.js`)**
 - Beads tab: 12 colors, pearl, 3 glitter, 2 glow, silver spacer.
@@ -50,7 +54,6 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 - The phone share sheet for Save photo. Only the desktop download was exercised.
 - Performance of the wall's depth-of-field effect on phones. It renders the scene more than once per frame. If the wall is slow on a phone, this is the first thing to turn off (`renderWall` in `src/main.js`).
 - The daytime neon sign is faint against the wall (pink and white both). To review now that white is the default.
-- Press-and-hold to take a bracelet off, on a real phone.
 - Screen reader announcements for the bracelet buttons (tested by keyboard only).
 - The rebuilt sounds. The test browser has no speakers; levels were checked by rendering them offline (no clipping, every sound audible).
 
@@ -92,6 +95,9 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | Instrument | Acoustic guitar by default | Shauna asked for a guitar option. Music box, kalimba, and synth pluck stay available in code. |
 | 2026-10-09 | Stringing screen | Same on-canvas treatment as the wall and tie-off screens | Shauna approved the simplification pass. |
 | 2026-10-09 | String feel | Real rope simulation and a thread texture, same thickness | Shauna: it looked and felt like a rigid wire. Thickness kept for visibility. |
+| 2026-10-09 | Stringing surface | Wood table (oak by day, walnut by night) | Shauna asked for a surface someone would make a bracelet on. |
+| 2026-10-09 | Tray | Clear plastic bead organizer with piles in compartments | Shauna's reference: how people store pony beads in real life. |
+| 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |
 
 ## Wrong turns worth knowing
 
