@@ -6,8 +6,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
-import tableLightUrl from './assets/table-light.jpg';
-import tableDarkUrl from './assets/table-dark.jpg';
+import tableUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
 const MAX = 26, TAU = Math.PI * 2, N = 90;
@@ -99,13 +98,13 @@ table.renderOrder = -1;
 table.position.z = -46.5;
 scene.add(table);
 let tableDark = null;
-// The tabletop texture is a photo-scanned wood surface (CC0, Poly Haven): plywood, lightened, by day; dark wood by night.
+// The tabletop texture is a photo-scanned wood surface (CC0, Poly Haven "Dark Wood"), in both light and dark mode.
 const tableLoader = new THREE.TextureLoader();
 function buildTable() {
   const dark = darkScheme.matches;
   if (dark === tableDark) return;
   tableDark = dark;
-  tableLoader.load(dark ? tableDarkUrl : tableLightUrl, (t) => {
+  tableLoader.load(tableUrl, (t) => {
     t.colorSpace = THREE.SRGBColorSpace;
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = 4;
@@ -114,8 +113,7 @@ function buildTable() {
     // Part of the color comes from the texture itself, so the moving colored lights do not tint the table.
     table.material.emissive.set(0xffffff);
     table.material.emissiveMap = t;
-    table.material.emissiveIntensity = 0.5;
-    table.material.color.setScalar(0.62);
+    applyMood();
     table.material.needsUpdate = true;
   });
 }
@@ -167,8 +165,8 @@ scene.add(sparks);
 let sparkLife = 0;
 
 function readTheme() {
-  const c = getComputedStyle(document.documentElement).getPropertyValue('--string').trim();
-  if (c) stringMat.color.set(c);
+  // A pale cord in both themes, so it shows up against the dark wood table.
+  stringMat.color.set(0xe6ddf2);
   buildTable();
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
@@ -419,6 +417,8 @@ neon.position.z = -40;
 board.add(neon);
 const neonGlow = new THREE.PointLight(0xff4fa8, 0, 0, 0);
 const lamp = new THREE.PointLight(0xffb873, 0, 0, 0);
+const deskLamp = new THREE.PointLight(0xffc98a, 0, 1, 1.4);
+scene.add(deskLamp);
 board.add(neonGlow, lamp);
 
 // Day in light mode, evening in dark mode. Leaving the wall restores the stage lighting.
@@ -437,6 +437,14 @@ function applyMood() {
   stageA.intensity = stageB.intensity = onWall ? 0.12 : reduce ? 0.5 : 1.0;
   wall.material.color.set(night ? (WALL_COLORS[decor.color] || WALL_COLORS.white).night : 0xffffff);
   windowLight.visible = onWall && !night;
+  // The craft table: evenly lit by day; in dark mode the room dims and a warm desk lamp pools light in the middle.
+  const deskNight = !onWall && darkQuery.matches;
+  if (table.material.map) {
+    table.material.emissiveIntensity = deskNight ? 0.03 : 0.5;
+    table.material.color.setScalar(deskNight ? 0.4 : 0.62);
+  }
+  deskLamp.intensity = deskNight ? 7 : 0;
+  if (deskNight) { sun.intensity = 0.55; sun.color.set(0xffe2c4); scene.environmentIntensity = 0.35; stageA.intensity = stageB.intensity = 0.35; }
   lamp.intensity = night ? 2.4 : 0;
   neonGlow.intensity = night ? 1.5 : 0;
   if (!neonMaps.on) { neonMaps.on = neonTexture(true); neonMaps.off = neonTexture(false); }
@@ -1085,6 +1093,8 @@ function frame(now) {
   table.scale.set(W * 1.6, H * 1.6, 1);
   if (table.material.map) table.material.map.repeat.set((W * 1.6) / 760, (H * 1.6) / 760);
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
+  deskLamp.position.set(-W * 0.08, H * 0.12, 230);
+  deskLamp.distance = Math.max(W, H) * 0.9;
   if (mode === 'stack') updateStack(dt);
   tickMaterials(T);
   if (mode === 'stack') renderWall(dist); else renderer.render(scene, camera);

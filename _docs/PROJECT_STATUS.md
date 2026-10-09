@@ -7,7 +7,7 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 **Stringing (mode `line`)**
 - Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Finish bracelet" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
 - 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture.
-- The string lies over a wood tabletop made from photo-scanned CC0 textures from Poly Haven: "Plywood" (softened and lightened) in light mode, "Dark Wood" in dark mode. Files: `src/assets/table-light.jpg`, `src/assets/table-dark.jpg`. The table catches shadows but is drawn beneath everything, so the tilted loop never dips behind it, and part of its color is self-lit so the colored stage lights do not tint it.
+- The string lies over a wood tabletop made from a photo-scanned CC0 texture, Poly Haven "Dark Wood" (`src/assets/table-dark.jpg`), in both themes. The cord is pale lavender in both themes so it shows on the dark wood, and the bead counter has a dark backing. In dark mode the room dims and a warm desk lamp pools light in the middle of the table. The table catches shadows but is drawn beneath everything, so the tilted loop never dips behind it, and part of its color is self-lit so the colored stage lights do not tint it.
 - Touch: the string is only caught by a press that starts on it (22 px band on touch screens, 14 px with a mouse) and only follows after the finger moves 8 px. Pulling is silent; the pluck sounds on release if pulled more than 18 px. Only a fast swipe across beads plays strum notes. Double-tap zoom is off (pinch zoom still works). Tap a bead to add it. It slides on, squashes, and clicks.
 - Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, rising in pitch.
 - On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
@@ -20,7 +20,8 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 - Beads tab: 12 colors, pearl, 3 glitter, 2 glow, silver spacer.
 - Letters tab: A to Z, 0 to 9, and ! ? &.
 - Charms tab, 25: Lucky 13, star, sparkle, heart, pastel heart, wire heart, mirror ball, jewel, snake, butterfly, cat, seagull, crescent moon, midnight clock, rainbow, evergreen tree, autumn leaf, instant photo, bow and arrow, music note, vinyl record, cassette tape, ticket stub, chihuahua (flat die-cut enamel style), red lips (die-cut).
-- Dangles tab, 15 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (cloud and bolt over a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe.
+- The 13 charms from set three are drawn 1.2 to 1.4 times larger (`BOOST` in `src/beads.js`) after reading small on a phone.
+- Dangles tab, 15 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (a lightning bolt striking a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe.
 
 **Tie-off (mode `tied`)**
 - The string morphs into a knotted loop. Drag to spin it, tap for sparkles.
@@ -98,6 +99,8 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | Stringing surface | Wood (oak by day, walnut by night) | Shauna asked for a surface someone would make a bracelet on. |
 | 2026-10-09 | Tray | Clear plastic bead organizer around single-bead pictures, collapsible | Shauna's reference: how people store pony beads in real life. She meant the container, not the bead images; a pile-of-beads version was tried and reverted. |
 | 2026-10-09 | Table surface | Photo-scanned CC0 wood (Poly Haven Plywood, lightened; Dark Wood at night) | Code-generated wood tiled into bricks, then still looked off. Real scans look right. CC0 needs no credit. Shauna's reference photo is not used (license unknown). |
+| 2026-10-09 | Table wood | Dark Wood in both themes | Shauna's pick from the six CC0 scans. |
+| 2026-10-09 | Dark mode on the table | Dim room with a warm desk lamp | Shauna's idea. |
 | 2026-10-09 | Favicon | A tiny bracelet: a ring of colored beads on a cord | Shauna asked. |
 | 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |

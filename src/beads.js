@@ -8,7 +8,7 @@ export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow
   lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
-  note: 0.8, vinyl: 1.0, cassette: 1.06, ticket: 1.1, chihuahua: 1.06, lips: 1.0,
+  note: 1.04, vinyl: 1.25, cassette: 1.3, ticket: 1.34, chihuahua: 1.38, lips: 1.3,
   teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
 
 // Charms that hang below the string from a ring instead of sitting on it.
@@ -49,6 +49,9 @@ export const DANGLES = named([
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
+// The third charm set read small on a phone, so those charms are drawn larger. Widths in UNIT match.
+const BOOST = { note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
+  teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 
 /* ---------- Geometry (built once, at size 1, string axis = x) ---------- */
@@ -482,15 +485,9 @@ const CHARM_BUILDERS = {
   },
   teacup(g) {
     const c = hanger(g), china = mat('china', () => plastic(0xfdfbff, { roughness: 0.2 }));
-    // A little storm cloud over the cup, with a bolt striking the tea.
-    const cloud = mat('stormCloud', () => plastic(0x9aa0b8, { roughness: 0.45 }));
-    for (const [x, y, r] of [[-0.12, -0.2, 0.11], [0.02, -0.15, 0.14], [0.15, -0.21, 0.1], [0.02, -0.25, 0.11]]) {
-      const puff = part(G('puff', () => new THREE.SphereGeometry(1, 18, 12)), cloud, x, y, 0);
-      puff.scale.set(r * 1.2, r, r);
-      c.add(puff);
-    }
-    const bolt = part(boltGeo(), goldMat(), 0.04, -0.32, 0.02);
-    bolt.scale.setScalar(0.7);
+    // A lightning bolt striking down into the tea.
+    const bolt = part(boltGeo(), goldMat(), 0.02, -0.33, 0.02);
+    bolt.scale.setScalar(1.35);
     c.add(bolt);
     c.add(mesh(G('cup', () => new THREE.LatheGeometry([[0.3, -0.58], [0.29, -0.66], [0.25, -0.78], [0.17, -0.86], [0, -0.87]].map(V2), 36)),
       mat('chinaDouble', () => plastic(0xfdfbff, { roughness: 0.2, side: THREE.DoubleSide }))));
@@ -785,17 +782,16 @@ const CHARM_BUILDERS = {
     for (const y of [-0.42, -0.6, -0.78]) c.add(part(G('cardBtn', () => new THREE.SphereGeometry(0.032, 10, 8)), mat('cardBtn', () => plastic(0x5b3a1c)), 0, y, 0.125));
   },
   scarf(g) {
+    // A knit scarf folded over the ring: two long ends of different lengths, with fringe.
     const c = hanger(g), wool = knit('scarf', 0xcf1730);
-    const loop = part(G('scarfLoop', () => new THREE.TorusGeometry(0.17, 0.09, 12, 28)), wool, 0, -0.2);
-    loop.scale.set(1.1, 0.85, 1);
-    c.add(loop);
-    for (const [x, y, len, rot, z] of [[-0.09, -0.66, 0.66, 0.12, 0.04], [0.1, -0.58, 0.5, -0.16, -0.03]]) {
-      const tail = new THREE.Group();
-      tail.position.set(x, y, z);
-      tail.rotation.z = rot;
-      tail.add(mesh(G('scarfTail' + len, () => new RoundedBoxGeometry(0.18, len, 0.06, 2, 0.02)), wool));
-      for (let i = 0; i < 4; i++) tail.add(part(G('fringe', () => new THREE.BoxGeometry(0.024, 0.1, 0.02)), wool, -0.066 + i * 0.044, -len / 2 - 0.05));
-      c.add(tail);
+    c.add(part(G('scarfFold', () => new THREE.CylinderGeometry(0.075, 0.075, 0.3, 18).rotateZ(Math.PI / 2)), wool, 0, -0.12));
+    for (const [x, len, z, rot] of [[-0.06, 0.84, 0.05, 0.16], [0.07, 0.7, -0.05, -0.26]]) {
+      const end = new THREE.Group();
+      end.position.set(x, -0.12, z);
+      end.rotation.z = rot;
+      end.add(part(G('scarfEnd' + len, () => new RoundedBoxGeometry(0.24, len, 0.07, 2, 0.025)), wool, 0, -len / 2));
+      for (let i = 0; i < 5; i++) end.add(part(G('scarfFringe', () => new THREE.CylinderGeometry(0.012, 0.012, 0.11, 6)), wool, -0.088 + i * 0.044, -len - 0.05));
+      c.add(end);
     }
   },
   boot(g) {
@@ -834,7 +830,17 @@ const CHARM_BUILDERS = {
 export function makeBead(d) {
   const group = new THREE.Group();
   if (CHARM_BUILDERS[d.k]) {
-    CHARM_BUILDERS[d.k](group);
+    const boost = BOOST[d.k] || 1;
+    if (DANGLE.has(d.k) || boost === 1) {
+      CHARM_BUILDERS[d.k](group);
+      // Hanging charms grow from their hang point, so the ring stays the same size.
+      if (boost !== 1) group.userData.hang.children.forEach((c) => { if (c.type === 'Group') c.scale.multiplyScalar(boost); });
+    } else {
+      const inner = new THREE.Group();
+      CHARM_BUILDERS[d.k](inner);
+      inner.scale.setScalar(boost);
+      group.add(inner);
+    }
     return group;
   }
   switch (d.k) {

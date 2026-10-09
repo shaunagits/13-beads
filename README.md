@@ -24,7 +24,7 @@ npm run dev
 | `src/beads.js` | The bead and charm catalog, and the code that builds each one in 3D. |
 | `src/audio.js` | Musical sounds: every sound is a note in one key, voiced by an acoustic guitar model by default. |
 | `src/style.css` | Layout and colors, light and dark. |
-| `src/assets/` | Tabletop textures: CC0 scans from Poly Haven (Plywood, lightened; Dark Wood). |
+| `src/assets/` | Tabletop texture: CC0 scan from Poly Haven (Dark Wood). |
 
 The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tied` (the finished loop), and `stack` (the wall).
 
