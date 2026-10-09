@@ -22,7 +22,7 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 - Letters tab: A to Z, 0 to 9, and ! ? &.
 - Charms tab, 26 (adds heart sunglasses): Lucky 13, star, sparkle, heart, pastel heart, wire heart, mirror ball, jewel, snake, butterfly, cat, seagull, crescent moon, midnight clock, rainbow, evergreen tree, autumn leaf, instant photo, bow and arrow, music note, vinyl record, cassette tape, ticket stub, chihuahua (flat die-cut enamel style), red lips (die-cut).
 - The 13 charms from set three are drawn 1.2 to 1.4 times larger (`BOOST` in `src/beads.js`) after reading small on a phone.
-- Dangles tab, 15 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (a lightning bolt striking a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe.
+- Dangles tab, 16 hanging charms (adds a mini bracelet, from Shauna's sticker drawing): guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (a lightning bolt striking a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe.
 
 **Tie-off (mode `tied`)**
 - The string morphs into a knotted loop. Drag to spin it, tap for sparkles.
@@ -106,6 +106,8 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | "Lover" charm | Not built | Shauna wanted it only if it could look like the real logo; that version will not be made. |
 | 2026-10-09 | Shauna's sticker drawings | Use as reference for code-built charms, not pasted in | She drew them from online clip art; the generic subjects (heart sunglasses, disco ball, heart hands, bracelet) are fine as ideas. Heart sunglasses built from sticker 21. |
 | 2026-10-09 | Starter bracelet | "13 BEADS" in letter beads, mirroring the logo; replaces "ENCORE". Start over button restores it | Shauna asked. |
+| 2026-10-09 | Charms from Shauna's drawings | Mini bracelet built; heart hands not built in code | Shauna: only if they look good. Heart hands are organic and need a real model. |
+| 2026-10-09 | Start over | Resets the string only, never the wall | Shauna. |
 | 2026-10-09 | Favicon | A tiny bracelet: a ring of colored beads on a cord | Shauna asked. |
 | 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |

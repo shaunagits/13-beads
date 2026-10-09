@@ -9,10 +9,10 @@ export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
   shades: 1.6, note: 1.04, vinyl: 1.25, cassette: 1.3, ticket: 1.34, chihuahua: 1.38, lips: 1.3,
-  teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
+  minibead: 0.36, teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
 
 // Charms that hang below the string from a ring instead of sitting on it.
-export const DANGLE = new Set(['guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe', 'teacup', 'rod', 'redwood', 'feather', 'hat', 'discube', 'globe']);
+export const DANGLE = new Set(['guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe', 'minibead', 'teacup', 'rod', 'redwood', 'feather', 'hat', 'discube', 'globe']);
 
 export const COLORS = [
   ['Hot pink', 330, 90, 58], ['Red', 355, 85, 52], ['Orange', 24, 95, 56], ['Yellow', 48, 98, 56],
@@ -45,12 +45,12 @@ export const CHARMS = named([
 export const DANGLES = named([
   ['Acoustic guitar', 'guitar'], ['Microphone', 'mic'], ['Cowboy boot', 'boot'], ['Cardigan', 'cardigan'], ['Red scarf', 'scarf'],
   ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'], ['Storm in a teacup', 'teacup'], ['Lightning rod', 'rod'],
-  ['Redwood tree', 'redwood'], ['Showgirl feather', 'feather'], ['Cowboy hat', 'hat'], ['Disco cube', 'discube'], ['Snow globe', 'globe'],
+  ['Redwood tree', 'redwood'], ['Showgirl feather', 'feather'], ['Cowboy hat', 'hat'], ['Disco cube', 'discube'], ['Snow globe', 'globe'], ['Mini bracelet', 'minibead'],
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
 // The third charm set read small on a phone, so those charms are drawn larger. Widths in UNIT match.
-const BOOST = { shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
+const BOOST = { minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 
@@ -625,6 +625,26 @@ const CHARM_BUILDERS = {
       g.add(side);
     }
     g.add(part(G('shadeBridge', () => tubeOf([[-0.1, 0.14], [0, 0.2], [0.1, 0.14]], 0.04, false, 16)), frame));
+  },
+  minibead(g) {
+    // A tiny friendship bracelet: a ring of pastel pony beads with two letter cubes, hanging from the jump ring.
+    const c = hanger(g), ring = new THREE.Group();
+    ring.position.y = -0.48;
+    ring.rotation.x = 0.25;
+    const cols = [0xff8cc6, 0xffd36b, 0x8fe3c8, 0x9fc4ff, 0xc9a6ff];
+    const N = 14, R = 0.34;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2 + Math.PI / 2;
+      const isLetter = i === 6 || i === 8;
+      const b = isLetter
+        ? part(G('miniCube', () => new RoundedBoxGeometry(0.14, 0.14, 0.11, 2, 0.03)), mat('miniCube', () => plastic(0xfbf9ff, { roughness: 0.28 })))
+        : part(G('miniPony', () => new THREE.CylinderGeometry(0.085, 0.085, 0.13, 16).rotateZ(Math.PI / 2)), mat('mini' + (i % 5), () => plastic(cols[i % 5])));
+      b.position.set(Math.cos(a) * R, Math.sin(a) * R, 0);
+      b.rotation.z = a + Math.PI / 2;
+      ring.add(b);
+    }
+    ring.add(mesh(G('miniCord', () => new THREE.TorusGeometry(R, 0.012, 6, 48)), mat('miniCord', () => plastic(0xe6ddf2, { roughness: 0.6 }))));
+    c.add(ring);
   },
   globe(g) {
     const c = hanger(g);
