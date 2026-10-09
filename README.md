@@ -22,7 +22,7 @@ npm run dev
 | `index.html` | Page structure: header, stage, the bead tray panel, and the controls that float on the canvas for the tie-off and wall screens (`#hud`, shown per mode with `data-show`). |
 | `src/main.js` | The 3D scene, string physics, pointer and tilt input, the tie-off animation, the wall (stand, lighting moods, depth of field), and photo export. |
 | `src/beads.js` | The bead and charm catalog, and the code that builds each one in 3D. |
-| `src/audio.js` | Synthesized sounds, chosen by what each bead is made of. |
+| `src/audio.js` | Musical sounds: every sound is a note in one key, voiced by an acoustic guitar model by default. |
 | `src/style.css` | Layout and colors, light and dark. |
 
 The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tied` (the finished loop), and `stack` (the wall).
@@ -32,7 +32,7 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 1. Add an entry to `BEADS`, `CHARMS`, or `DANGLES` in `src/beads.js`.
 2. Give it a width in `UNIT`. Hanging charms also go in the `DANGLE` set.
 3. Add a builder for its shape in `CHARM_BUILDERS`. Hanging charms start with `hanger(g)`.
-4. Optionally map it to a sound material in `KIND` in `src/audio.js`.
+4. Optionally give it a sound role in `KIND` in `src/audio.js`: `bell` (adds a bell an octave up), `low` (an octave down), or `soft` (a soft swell).
 
 ## Design rules
 

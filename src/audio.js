@@ -6,9 +6,10 @@
 // - Materials change the voice, not the key: charms add a bell an octave up, wood drops an octave, soft charms swell.
 // - Strumming plays the current chord as an arpeggio. Plucking the cord plays its bass note.
 // - Hanging a bracelet on the wall resolves to the home chord.
-// - One instrument voices it all (music box, kalimba, or synth pluck), through an echo and a small room.
+// - One instrument voices it all (acoustic guitar by default; music box, kalimba, and synth pluck are built in),
+//   through an echo and a small room.
 let ac = null, bus = null, roomSend = null, echoSend = null, muted = false, armed = false;
-let instrument = 'musicbox';
+let instrument = 'guitar';
 
 export const arm = () => { armed = true; };
 export const setMuted = (m) => { muted = m; };
@@ -121,7 +122,53 @@ const VOICES = {
     }
     flt.connect(env); env.connect(o);
   },
+  // Acoustic guitar: a plucked steel string (Karplus-Strong with a pick-position comb and pitch-dependent decay)
+  // through the resonances of a wooden body.
+  guitar: (a, f, v, t, pan) => {
+    const o = out(a, { pan, vol: 0.25 * v, room: 0.9, echo: 0.55 });
+    const src = a.createBufferSource();
+    src.buffer = stringBuffer(a, f);
+    let node = src;
+    for (const [freq, gain, q] of [[105, 7, 1.6], [210, 4, 1.4], [420, 2.5, 1.2], [2600, 2, 0.8]]) {
+      const b = a.createBiquadFilter();
+      b.type = 'peaking'; b.frequency.value = freq; b.gain.value = gain; b.Q.value = q;
+      node.connect(b); node = b;
+    }
+    const top = a.createBiquadFilter();
+    top.type = 'lowpass'; top.frequency.value = 7000;
+    node.connect(top); top.connect(o);
+    src.start(t);
+  },
 };
+// One plucked string note, rendered into a buffer. Fractional delay keeps high notes in tune.
+function stringBuffer(a, f) {
+  const sr = a.sampleRate, len = Math.floor(sr * 2.4), d = new Float32Array(len);
+  // The averaging filter adds half a sample of delay, so take it off the loop length.
+  const N = sr / f - 0.5, Ni = Math.floor(N), frac = N - Ni, size = Ni + 2;
+  const line = new Float32Array(size);
+  // Excitation: soft noise, then a comb at the pick position (about one seventh along the string).
+  const pick = Math.max(1, Math.round(N * 0.14));
+  let lp = 0;
+  const ex = new Float32Array(size);
+  for (let i = 0; i < size; i++) { lp += ((Math.random() * 2 - 1) - lp) * 0.55; ex[i] = lp; }
+  for (let i = 0; i < size; i++) line[i] = ex[i] - (i >= pick ? ex[i - pick] : 0) * 0.9;
+  // Low notes ring for about 3 seconds, high notes for about 1.
+  const t60 = Math.max(0.9, 3.2 - (f - 150) / 400), g = Math.pow(10, -3 / (t60 * f));
+  let w = 0, prev = 0;
+  for (let i = 0; i < len; i++) {
+    // Read the delay line with linear interpolation for the fractional part of the period.
+    const r0 = (w - Ni + size) % size, r1 = (r0 - 1 + size) % size;
+    const y = line[r0] * (1 - frac) + line[r1] * frac;
+    const filtered = (y + prev) * 0.5 * g;
+    prev = y;
+    line[w] = filtered;
+    w = (w + 1) % size;
+    d[i] = y;
+  }
+  const buf = a.createBuffer(1, len, sr);
+  buf.getChannelData(0).set(d);
+  return buf;
+}
 // A soft bell layered an octave up for metal and glass charms.
 function bell(a, f, v, t, pan) {
   const o = out(a, { pan, vol: 0.05 * v, room: 1.2, echo: 1 });
@@ -196,7 +243,9 @@ export function tick(pitch = 1, vol = 0.14) {
 export function chime() {
   const a = ctx();
   if (!a) return;
-  [0, 4, 7, 12, 16, 19].forEach((s, i) => play(a, s + 12, 0.75, i * BEAT / 4, -0.5 + i * 0.2));
+  // The guitar strums the chord; the other instruments roll it as an arpeggio.
+  const gap = instrument === 'guitar' ? 0.03 : BEAT / 4;
+  [0, 4, 7, 12, 16, 19].forEach((s, i) => play(a, s + (instrument === 'guitar' ? 0 : 12), 0.75, i * gap, -0.5 + i * 0.2));
   bell(a, hz(31), 0.8, a.currentTime + BEAT * 1.5, 0);
 }
 // Strumming across the beads: an arpeggio of the current chord.

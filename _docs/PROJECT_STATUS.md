@@ -1,10 +1,11 @@
 # Project status
 
-Last updated: 2026-10-08 (second session). Everything below is on `main` and in production, except the items marked **(preview)**, which are on the `polish-wall-sound` branch waiting for Shauna's review.
+Last updated: 2026-10-09. Everything below is committed, merged to `main`, and deployed to production.
 
 ## What exists
 
 **Stringing (mode `line`)**
+- Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Tie it off" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
 - 3D string with sag and bounce. Tap a bead to add it. It slides on, squashes, and clicks.
 - Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, rising in pitch.
 - On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
@@ -22,9 +23,9 @@ Last updated: 2026-10-08 (second session). Everything below is on `main` and in 
 - Controls float on the canvas: Untie (top left), camera icon for Save photo (top right), "Add to my wall" (bottom center), and a hint note that fades after a few seconds.
 
 **The wall (mode `stack`)**
-- Limewash plaster wall (soft cloudy tone shifts, fine grain, trowel ridges, all generated in code), slim dark wood floating shelf, gold three-tier T-bar stand, neon-style script sign. **(preview)** The plant is gone, and the stand and shelf cast no shadows.
-- Each wall color has its own night tint. **(preview)**
-- Controls float on the canvas: Decorate and Save photo icons grouped top right, "Make another" (bottom center, dark ink button), and a short hint note that fades. The "on display" label moved to a badge on the header's wall button. **(preview)**
+- Limewash plaster wall (soft cloudy tone shifts, fine grain, trowel ridges, all generated in code), slim dark wood floating shelf, gold three-tier T-bar stand, neon-style script sign. The plant is gone, and the stand and shelf cast no shadows.
+- Each wall color has its own night tint.
+- Controls float on the canvas: Decorate and Save photo icons grouped top right, "Make another" (bottom center, dark ink button), and a short hint note that fades. The "on display" label moved to a badge on the header's wall button.
 - Decorate popover: wall color (white by default, pink, or sage) and the neon sign word (defaults to "13 beads", up to 12 letters, numbers, spaces, or ! ? &, shrinks to fit). Saved under `13beads.wall`.
 - Take any bracelet off: press and hold it (phone), or hold or right-click (computer). A confirm popover appears beside it.
 - Keyboard: Tab reaches each bracelet (an invisible button over it, with a focus ring around the bracelet). Arrow keys move between them. Enter or Delete opens the confirm. Popovers keep Tab inside, close on Escape, and return focus.
@@ -33,9 +34,9 @@ Last updated: 2026-10-08 (second session). Everything below is on `main` and in 
 - Day mood in light mode (window light across the wall). Evening mood in dark mode (lamp glow, lit neon).
 - Slight depth-of-field blur behind the bracelets.
 
-**Header (preview)**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Tilt, Sound, and Your wall (with a count badge).
+**Header**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Tilt, Sound, and Your wall (with a count badge).
 
-**Sound (`src/audio.js`, preview)**: musical. Every sound is a note in D major. Stringing beads plays a melody over I, V, vi, IV (four beads per chord), restarting after a 2 second pause, so each bracelet plays its own tune. Charms add a bell an octave up, wood charms drop an octave, fabric charms swell softly. Strumming arpeggiates the current chord, plucking the cord plays its bass note, and hanging a bracelet resolves to the home chord. One instrument voices everything (music box by default; kalimba and synth pluck are built in, chosen with `setInstrument`), through a tempo-synced ping-pong echo and a small room.
+**Sound (`src/audio.js`)**: musical. Every sound is a note in D major. Stringing beads plays a melody over I, V, vi, IV (four beads per chord), restarting after a 2 second pause, so each bracelet plays its own tune. Charms add a bell an octave up, wood charms drop an octave, fabric charms swell softly. Strumming arpeggiates the current chord, plucking the cord plays its bass note, and hanging a bracelet resolves to the home chord. One instrument voices everything (acoustic guitar by default: a plucked steel string with a pick-position comb, pitch-dependent decay, and wooden body resonances; music box, kalimba, and synth pluck are built in, chosen with `setInstrument`), through a tempo-synced ping-pong echo and a small room.
 
 **Games site**: `games.shauna.digital` is live from the `games` repository, with 13 Beads mounted at `/13-beads`.
 
@@ -88,6 +89,8 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-08 | Back to games | Muted "‹ Games" link at the start of the header | Shauna: visible but not obvious or intrusive. |
 | 2026-10-08 | Sound | Musical: every sound is a note in one key, stringing plays a melody | Shauna rejected both the original sounds and a realistic rebuild, and asked for music notes. |
 | 2026-10-08 | Daytime neon on white | Fine for now | Shauna. |
+| 2026-10-09 | Instrument | Acoustic guitar by default | Shauna asked for a guitar option. Music box, kalimba, and synth pluck stay available in code. |
+| 2026-10-09 | Stringing screen | Same on-canvas treatment as the wall and tie-off screens | Shauna approved the simplification pass. |
 
 ## Wrong turns worth knowing
 

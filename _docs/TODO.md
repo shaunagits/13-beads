@@ -4,8 +4,7 @@ Top item is the next thing to do.
 
 ## Next
 
-1. **Shauna reviews the `polish-wall-sound` preview** (wall texture, simpler controls, Games link, new sounds), then merge to `main`.
-2. **Shauna tests on her real phone** and reports what feels off: touch, sound, tilt, wall performance, Save photo, press-and-hold to take a bracelet off, the Decorate popover. If the wall is slow, turn off depth of field first.
+1. **Shauna tests on her real phone** (production) and reports what feels off: touch, sound, tilt, wall performance, Save photo, press-and-hold to take a bracelet off, the Decorate popover, the guitar sounds, and the new stringing screen controls. If the wall is slow, turn off depth of field first.
 3. **Heart hands model.** Shauna scans her own sculpture using `_docs/findings/2026-10-08-heart-hands-model.md`, or finds an openly licensed model. Then load it and add it to the wall as a second display piece.
 4. **Drag-to-decorate the wall.** Let the player place and move items. Starter items discussed: fairy lights, instant photos on a wire, a pennant, a disco ball.
 5. **Fairy lights.** The one wall upgrade from the 2026-10-08 list that was not built.

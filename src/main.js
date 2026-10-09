@@ -14,7 +14,7 @@ const $ = (id) => document.getElementById(id);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const HINT = 'Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.';
+const HINT = 'Tap a bead below to add it. On the string: tap to remove, drag to reorder, or pluck it.';
 const TIED_HINT = 'Drag to spin it. Tap for sparkles.';
 // Wall decoration: a few curated colors, and the word on the neon sign.
 const WALL_COLORS = {
@@ -157,12 +157,11 @@ function setBeads(list) {
 let noteTimer = 0;
 function say(m) {
   $('status').textContent = m;
-  if (mode === 'line') return;
   const n = $('note');
   n.textContent = m;
   n.classList.remove('gone');
   clearTimeout(noteTimer);
-  if (mode === 'tied' || stack.length) noteTimer = setTimeout(() => n.classList.add('gone'), m === STACK_HINT || m === TIED_HINT ? 7000 : 3500);
+  if (mode !== 'stack' || stack.length) noteTimer = setTimeout(() => n.classList.add('gone'), m === STACK_HINT || m === TIED_HINT || m === HINT ? 7000 : 3500);
 }
 function save() { try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
 function sync() { $('count').textContent = beads.length + ' / ' + MAX; save(); }
@@ -214,10 +213,10 @@ function stringPhrase(text) {
 function setMode(m) {
   mode = m;
   $('buildPanel').hidden = m !== 'line';
-  $('hud').hidden = m === 'line';
+  $('hud').hidden = false;
   $('hud').dataset.mode = m;
   $('stackBtn').setAttribute('aria-pressed', m === 'stack' ? 'true' : 'false');
-  $('status').hidden = m !== 'line';
+
   $('count').hidden = m !== 'line';
   closePop(false);
   closeCustom(false);
@@ -1291,6 +1290,7 @@ async function start() {
   sync();
   rebuildStack();
   syncStack();
+  say(HINT);
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start();

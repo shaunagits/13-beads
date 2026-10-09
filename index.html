@@ -38,7 +38,7 @@
     </header>
 
     <div class="stage" id="stage"><canvas id="cv" aria-label="Your bracelet string"></canvas><span class="count" id="count" aria-label="Beads on the string">0 / 26</span>
-      <div class="hud" id="hud" hidden>
+      <div class="hud" id="hud" data-mode="line">
         <button class="icon-btn solo" id="untie" type="button" data-show="tied" aria-label="Untie" title="Untie">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6 4 11l5 5M4.5 11H14a5.5 5.5 0 0 1 0 11h-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -46,10 +46,28 @@
           <button class="icon-btn" id="customBtn" type="button" data-show="stack" aria-label="Decorate the wall" title="Decorate the wall" aria-haspopup="dialog" aria-expanded="false" aria-controls="custom">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="4" y="3.5" width="14" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M18 6.5h1.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H12v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="10" y="15" width="4" height="6" rx="1.2" fill="currentColor"/></svg>
           </button>
-          <button class="icon-btn" id="photoBtn" type="button" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.4" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+          <button class="icon-btn" id="undo" type="button" data-show="line" aria-label="Undo" title="Undo">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8.5 5.5 4 10l4.5 4.5M4.5 10H14a5.5 5.5 0 0 1 0 11h-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="icon-btn" id="clear" type="button" data-show="line" aria-label="Clear the string" title="Clear the string">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.8h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10.3 11v5.5M13.7 11v5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="icon-btn" id="photoBtn" type="button" data-show="tied stack" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.4" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
         </div>
         <div class="ring-btns" id="ringBtns" data-show="stack" role="group" aria-label="Bracelets on the wall"></div>
+        <div class="side" data-show="line" role="group" aria-label="Which end new beads go on">
+          <button class="seg" type="button" data-side="L" aria-pressed="false" aria-label="Add to the left end" title="Add to the left end">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4.5 5v14M19 12H8.5M12.5 7.5 8 12l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="seg" type="button" data-side="R" aria-pressed="true" aria-label="Add to the right end" title="Add to the right end">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19.5 5v14M5 12h10.5M11.5 7.5 16 12l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
         <p class="note" id="note" aria-live="polite"></p>
+        <button class="fab" id="tie" type="button" data-show="line">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 12c-3-4.5-8-4-8-.5S9 16 12 12Zm0 0c3-4.5 8-4 8-.5S15 16 12 12Zm0 0-3 7m3-7 3 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Tie it off
+        </button>
         <button class="fab" id="another" type="button" data-show="stack"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Make another</button>
         <button class="fab" id="wear" type="button" data-show="tied"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Add to my wall</button>
         <div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="popTitle" hidden>
@@ -75,12 +93,14 @@
         </div>
       </div>
     </div>
-    <p class="status" id="status" aria-live="polite">Tap a bead to string it. On the string: tap to pull off, drag to reorder, or pluck and strum the string itself.</p>
+    <p class="status" id="status" hidden></p>
 
     <div class="panel" id="buildPanel">
       <form class="phrase" id="phraseForm">
-        <input id="phrase" type="text" maxlength="26" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type a phrase" aria-label="Phrase to spell in letter beads">
-        <button class="btn" type="submit">String it</button>
+        <input id="phrase" type="text" maxlength="26" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type a phrase to spell it" aria-label="Phrase to spell in letter beads" enterkeyhint="done">
+        <button class="phrase-go" type="submit" aria-label="String it" title="String it">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h13M13 6.5 18.5 12 13 17.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </form>
       <div class="row">
         <div class="tabs" role="tablist">
@@ -89,18 +109,8 @@
           <button class="tab" type="button" role="tab" data-tab="charms" aria-selected="false">Charms</button>
           <button class="tab" type="button" role="tab" data-tab="dangles" aria-selected="false">Dangles</button>
         </div>
-        <div class="side" role="group" aria-label="Which end of the string to add beads to">
-          <span class="side-label">Add to</span>
-          <button class="seg" type="button" data-side="L" aria-pressed="false">Left</button>
-          <button class="seg" type="button" data-side="R" aria-pressed="true">Right</button>
-        </div>
       </div>
       <div class="tray" id="tray"></div>
-      <div class="actions">
-        <button class="btn" id="undo" type="button">Undo</button>
-        <button class="btn" id="clear" type="button">Clear</button>
-        <button class="btn primary" id="tie" type="button">Tie it off</button>
-      </div>
     </div>
 
   </div>
