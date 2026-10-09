@@ -22,6 +22,7 @@ npm run dev
 | `index.html` | Page structure: header, stage, the bead tray panel, and the controls that float on the canvas for the tie-off and wall screens (`#hud`, shown per mode with `data-show`). |
 | `src/main.js` | The 3D scene, string physics, pointer and tilt input, the tie-off animation, the wall (stand, lighting moods, depth of field), and photo export. |
 | `src/beads.js` | The bead and charm catalog, and the code that builds each one in 3D. |
+| `src/theme.js` | Light or dark: follows the device until the player uses the header toggle, then remembers their pick. Other code reads `isDark()` and listens with `onTheme()`. |
 | `src/audio.js` | Musical sounds: every sound is a note in one key, voiced by an acoustic guitar model by default. |
 | `src/style.css` | Layout and colors, light and dark. |
 | `src/assets/` | Tabletop texture: CC0 scan from Poly Haven (Dark Wood). |
@@ -38,7 +39,7 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 ## Design rules
 
 - `vite.config.js` sets `base: './'` so the game works both at a domain root and under `/13-beads`. Keep asset paths relative.
-- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), and `13beads.wall` (wall color and neon sign word).
+- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), `13beads.wall` (wall color and neon sign word), and `13beads.theme` (light or dark, set by the header toggle).
 
 ## Project docs
 

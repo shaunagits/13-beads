@@ -6,6 +6,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
+import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
@@ -97,13 +98,12 @@ table.material.depthWrite = false;
 table.renderOrder = -1;
 table.position.z = -46.5;
 scene.add(table);
-let tableDark = null;
+let tableLoaded = false;
 // The tabletop texture is a photo-scanned wood surface (CC0, Poly Haven "Dark Wood"), in both light and dark mode.
 const tableLoader = new THREE.TextureLoader();
 function buildTable() {
-  const dark = darkScheme.matches;
-  if (dark === tableDark) return;
-  tableDark = dark;
+  if (tableLoaded) return;
+  tableLoaded = true;
   tableLoader.load(tableUrl, (t) => {
     t.colorSpace = THREE.SRGBColorSpace;
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -117,7 +117,6 @@ function buildTable() {
     table.material.needsUpdate = true;
   });
 }
-const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
 const strand = new THREE.Group();
 scene.add(strand);
@@ -169,7 +168,6 @@ function readTheme() {
   stringMat.color.set(0xe6ddf2);
   buildTable();
 }
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
 
 function resize() {
   const r = cv.getBoundingClientRect();
@@ -422,14 +420,13 @@ scene.add(deskLamp);
 board.add(neonGlow, lamp);
 
 // Day in light mode, evening in dark mode. Leaving the wall restores the stage lighting.
-const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 function placeSun() {
   const M = Math.max(W, H);
   if (mode === 'stack') sun.position.set(-0.95 * M, 0.75 * M, 0.85 * M);
   else sun.position.set(-0.3 * M, 0.55 * M, 1.1 * M);
 }
 function applyMood() {
-  const onWall = mode === 'stack', night = onWall && darkQuery.matches;
+  const onWall = mode === 'stack', night = onWall && isDark();
   placeSun();
   sun.color.set(!onWall ? 0xffffff : night ? 0x8fa2ff : 0xfff0dc);
   sun.intensity = !onWall ? 1.7 : night ? 0.4 : 2.1;
@@ -438,7 +435,7 @@ function applyMood() {
   wall.material.color.set(night ? (WALL_COLORS[decor.color] || WALL_COLORS.white).night : 0xffffff);
   windowLight.visible = onWall && !night;
   // The craft table: evenly lit by day; in dark mode the room dims and a warm desk lamp pools light in the middle.
-  const deskNight = !onWall && darkQuery.matches;
+  const deskNight = !onWall && isDark();
   if (table.material.map) {
     table.material.emissiveIntensity = deskNight ? 0.03 : 0.5;
     table.material.color.setScalar(deskNight ? 0.4 : 0.62);
@@ -452,7 +449,7 @@ function applyMood() {
   neon.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
   neon.material.needsUpdate = true;
 }
-darkQuery.addEventListener('change', applyMood);
+onTheme(applyMood);
 
 // Depth of field on the wall: bracelets stay sharp, the wall behind falls slightly soft, like a phone photo.
 let composer = null, bokeh = null, composerKey = '';
@@ -1412,6 +1409,14 @@ $('stackBtn').addEventListener('click', () => {
   kLin = 0;
   setMode('stack');
 });
+function syncThemeBtn() {
+  const dark = isDark();
+  $('themeBtn').setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+  $('themeBtn').title = dark ? 'Light mode' : 'Dark mode';
+}
+syncThemeBtn();
+onTheme(syncThemeBtn);
+$('themeBtn').addEventListener('click', () => { arm(); toggleTheme(); tick(isDark() ? 0.8 : 1.2, 0.1); });
 let muted = false;
 $('sound').addEventListener('click', () => {
   muted = !muted;

@@ -19,7 +19,7 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 **Catalog (`src/beads.js`)**
 - Beads tab: 12 colors, pearl, 3 glitter, 2 glow, silver spacer.
 - Letters tab: A to Z, 0 to 9, and ! ? &.
-- Charms tab, 25: Lucky 13, star, sparkle, heart, pastel heart, wire heart, mirror ball, jewel, snake, butterfly, cat, seagull, crescent moon, midnight clock, rainbow, evergreen tree, autumn leaf, instant photo, bow and arrow, music note, vinyl record, cassette tape, ticket stub, chihuahua (flat die-cut enamel style), red lips (die-cut).
+- Charms tab, 26 (adds heart sunglasses): Lucky 13, star, sparkle, heart, pastel heart, wire heart, mirror ball, jewel, snake, butterfly, cat, seagull, crescent moon, midnight clock, rainbow, evergreen tree, autumn leaf, instant photo, bow and arrow, music note, vinyl record, cassette tape, ticket stub, chihuahua (flat die-cut enamel style), red lips (die-cut).
 - The 13 charms from set three are drawn 1.2 to 1.4 times larger (`BOOST` in `src/beads.js`) after reading small on a phone.
 - Dangles tab, 15 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (a lightning bolt striking a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe.
 
@@ -39,7 +39,7 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 - Day mood in light mode (window light across the wall). Evening mood in dark mode (lamp glow, lit neon).
 - Slight depth-of-field blur behind the bracelets.
 
-**Header**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Tilt, Sound, and Your wall (with a count badge).
+**Header**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Light/Dark (moon or sun), Tilt, Sound, and Your wall (with a count badge). The theme follows the device until the player taps the toggle; the pick is saved under `13beads.theme`.
 
 **Sound (`src/audio.js`)**: musical. Every sound is a note in D major. Stringing beads plays a melody over I, V, vi, IV (four beads per chord), restarting after a 2 second pause, so each bracelet plays its own tune. Charms add a bell an octave up, wood charms drop an octave, fabric charms swell softly. Strumming arpeggiates the current chord, plucking the cord plays its bass note, and hanging a bracelet resolves to the home chord. One instrument voices everything (acoustic guitar by default: a plucked steel string with a pick-position comb, pitch-dependent decay, and wooden body resonances; music box, kalimba, and synth pluck are built in, chosen with `setInstrument`), through a tempo-synced ping-pong echo and a small room.
 
@@ -101,6 +101,9 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | Table surface | Photo-scanned CC0 wood (Poly Haven Plywood, lightened; Dark Wood at night) | Code-generated wood tiled into bricks, then still looked off. Real scans look right. CC0 needs no credit. Shauna's reference photo is not used (license unknown). |
 | 2026-10-09 | Table wood | Dark Wood in both themes | Shauna's pick from the six CC0 scans. |
 | 2026-10-09 | Dark mode on the table | Dim room with a warm desk lamp | Shauna's idea. |
+| 2026-10-09 | Light/Dark toggle | Icon in the header; follows the device until used, then remembered | Shauna asked. |
+| 2026-10-09 | "Lover" charm | Not built | Shauna wanted it only if it could look like the real logo; that version will not be made. |
+| 2026-10-09 | Shauna's sticker drawings | Use as reference for code-built charms, not pasted in | She drew them from online clip art; the generic subjects (heart sunglasses, disco ball, heart hands, bracelet) are fine as ideas. Heart sunglasses built from sticker 21. |
 | 2026-10-09 | Favicon | A tiny bracelet: a ring of colored beads on a cord | Shauna asked. |
 | 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |

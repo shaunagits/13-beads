@@ -8,7 +8,7 @@ export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow
   lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
-  note: 1.04, vinyl: 1.25, cassette: 1.3, ticket: 1.34, chihuahua: 1.38, lips: 1.3,
+  shades: 1.6, note: 1.04, vinyl: 1.25, cassette: 1.3, ticket: 1.34, chihuahua: 1.38, lips: 1.3,
   teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
 
 // Charms that hang below the string from a ring instead of sitting on it.
@@ -40,7 +40,7 @@ export const CHARMS = named([
   ['Mirror ball', 'mirror'], ['Jewel', 'jewel'], ['Snake', 'snake'], ['Butterfly', 'butterfly'], ['Cat', 'cat'], ['Seagull', 'gull'],
   ['Crescent moon', 'moon'], ['Midnight clock', 'clock'], ['Rainbow', 'rainbow'], ['Evergreen tree', 'tree'], ['Autumn leaf', 'leaf'],
   ['Instant photo', 'photo'], ['Bow and arrow', 'arrow'], ['Music note', 'note'], ['Vinyl record', 'vinyl'], ['Cassette tape', 'cassette'],
-  ['Ticket stub', 'ticket'], ['Chihuahua', 'chihuahua'], ['Red lips', 'lips'],
+  ['Ticket stub', 'ticket'], ['Chihuahua', 'chihuahua'], ['Red lips', 'lips'], ['Heart sunglasses', 'shades'],
 ]);
 export const DANGLES = named([
   ['Acoustic guitar', 'guitar'], ['Microphone', 'mic'], ['Cowboy boot', 'boot'], ['Cardigan', 'cardigan'], ['Red scarf', 'scarf'],
@@ -50,7 +50,7 @@ export const DANGLES = named([
 
 export const defKey = (d) => JSON.stringify(d);
 // The third charm set read small on a phone, so those charms are drawn larger. Widths in UNIT match.
-const BOOST = { note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
+const BOOST = { shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 
@@ -601,6 +601,30 @@ const CHARM_BUILDERS = {
     })), 0, -0.56);
     cube.rotation.set(0.5, 0.65, 0.2);
     c.add(cube);
+  },
+  shades(g) {
+    // Heart-shaped sunglasses: pink frames, tinted lenses, a little bridge.
+    const frame = mat('shadeFrame', () => plastic(0xff7fae, { roughness: 0.2 }));
+    const lens = mat('shadeLens', () => new THREE.MeshPhysicalMaterial({ color: 0xffb6d2, transparent: true, opacity: 0.72, roughness: 0.05, clearcoat: 1, side: THREE.DoubleSide }));
+    const heart = (sc) => {
+      const pts = [];
+      for (let i = 0; i < 48; i++) {
+        const t = (i / 48) * Math.PI * 2;
+        pts.push([(16 * Math.sin(t) ** 3) / 34 * sc, ((13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 34) * sc]);
+      }
+      return pts;
+    };
+    for (const sx of [-1, 1]) {
+      const side = new THREE.Group();
+      side.position.set(sx * 0.33, 0, 0);
+      side.rotation.z = sx * 0.12;
+      side.add(mesh(G('shadeRim', () => tubeOf(heart(0.74), 0.05, true, 96)), frame));
+      const shape = new THREE.Shape();
+      heart(0.74).forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)));
+      side.add(mesh(G('shadeGlass', () => new THREE.ShapeGeometry(shape, 24)), lens));
+      g.add(side);
+    }
+    g.add(part(G('shadeBridge', () => tubeOf([[-0.1, 0.14], [0, 0.2], [0.1, 0.14]], 0.04, false, 16)), frame));
   },
   globe(g) {
     const c = hanger(g);
