@@ -1308,7 +1308,8 @@ function renderThumbs() {
       const holder = new THREE.Group();
       holder.add(o);
       pile.userData.base = holder;
-      heroScale = 0.95; backs = 1; backScale = 0.7;
+      // Dangles lie one to a compartment, so their ring and bail do not clutter the pile.
+      heroScale = 1.04; backs = 0; backScale = 0.7;
     } else {
       pile.userData.base = o;
       if (item.def.k !== 'pony' && item.def.k !== 'letter' && !BEADS.includes(item)) { heroScale = 0.78; backs = 2; backScale = 0.55; }
@@ -1323,7 +1324,7 @@ function renderThumbs() {
       cpy.scale.setScalar(backScale);
       pile.add(cpy);
     }
-    if (o.userData.hang) { base.scale.setScalar(heroScale); base.position.set(0.04, -0.06, 0.3); }
+    if (o.userData.hang) { base.scale.setScalar(heroScale); base.position.set(0, 0.02, 0.3); base.rotation.z = -0.2; }
     else { base.scale.setScalar(heroScale); base.rotation.set(0.35, -0.3, 0.05); base.position.set(0, -0.12, 0.3); }
     pile.add(base);
     s.add(pile);

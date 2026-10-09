@@ -7,10 +7,12 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
   lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
-  mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36 };
+  mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
+  note: 0.8, vinyl: 1.0, cassette: 1.06, ticket: 1.1, chihuahua: 1.06, lips: 1.0,
+  teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
 
 // Charms that hang below the string from a ring instead of sitting on it.
-export const DANGLE = new Set(['guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe']);
+export const DANGLE = new Set(['guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe', 'teacup', 'rod', 'redwood', 'feather', 'hat', 'discube', 'globe']);
 
 export const COLORS = [
   ['Hot pink', 330, 90, 58], ['Red', 355, 85, 52], ['Orange', 24, 95, 56], ['Yellow', 48, 98, 56],
@@ -37,11 +39,13 @@ export const CHARMS = named([
   ['Lucky 13', 'lucky13'], ['Star', 'star'], ['Sparkle', 'sparkle'], ['Heart', 'heart'], ['Pastel heart', 'pheart'], ['Wire heart', 'wheart'],
   ['Mirror ball', 'mirror'], ['Jewel', 'jewel'], ['Snake', 'snake'], ['Butterfly', 'butterfly'], ['Cat', 'cat'], ['Seagull', 'gull'],
   ['Crescent moon', 'moon'], ['Midnight clock', 'clock'], ['Rainbow', 'rainbow'], ['Evergreen tree', 'tree'], ['Autumn leaf', 'leaf'],
-  ['Instant photo', 'photo'], ['Bow and arrow', 'arrow'],
+  ['Instant photo', 'photo'], ['Bow and arrow', 'arrow'], ['Music note', 'note'], ['Vinyl record', 'vinyl'], ['Cassette tape', 'cassette'],
+  ['Ticket stub', 'ticket'], ['Chihuahua', 'chihuahua'], ['Red lips', 'lips'],
 ]);
 export const DANGLES = named([
   ['Acoustic guitar', 'guitar'], ['Microphone', 'mic'], ['Cowboy boot', 'boot'], ['Cardigan', 'cardigan'], ['Red scarf', 'scarf'],
-  ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'],
+  ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'], ['Stormy teacup', 'teacup'], ['Lightning rod', 'rod'],
+  ['Redwood tree', 'redwood'], ['Orange feather', 'feather'], ['Cowboy hat', 'hat'], ['Disco cube', 'discube'], ['Snow globe', 'globe'],
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
@@ -355,7 +359,273 @@ function hanger(group) {
   return charm;
 }
 
+// A small flat lightning bolt, shared by the teacup and the lightning rod.
+const boltGeo = () => G('bolt', () => flat(poly([[0.06, 0.12], [-0.1, -0.04], [0.0, -0.04], [-0.08, -0.22], [0.13, 0.0], [0.03, 0.0], [0.12, 0.12]]), 0.05, 0.015));
 const CHARM_BUILDERS = {
+  /* ---------- Charm set three: music, keepsakes, and new dangles ---------- */
+  note(g) {
+    g.add(mesh(G('note', () => {
+      const head = new THREE.Shape();
+      head.absellipse(-0.13, -0.27, 0.17, 0.12, 0, Math.PI * 2, false, 0.42);
+      const stem = poly([[0.0, -0.25], [0.065, -0.22], [0.065, 0.47], [0.0, 0.47]]);
+      const flag = blob([[0.06, 0.47], [0.17, 0.36], [0.31, 0.2], [0.3, 0.02], [0.24, 0.12], [0.13, 0.26], [0.06, 0.3]]);
+      return flat([head, stem, flag], 0.12, 0.04);
+    }), mat('note', () => plastic(0x1a1626, { roughness: 0.16, iridescence: 0.5, iridescenceIOR: 1.6 }))));
+  },
+  vinyl(g) {
+    const grooves = (tex.grooves ||= canvasTex(256, (x, s) => {
+      x.fillStyle = '#808080';
+      x.fillRect(0, 0, s, s);
+      for (let r = 40; r < s / 2; r += 3) {
+        x.strokeStyle = r % 2 ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.35)';
+        x.lineWidth = 1.2;
+        x.beginPath(); x.arc(s / 2, s / 2, r, 0, Math.PI * 2); x.stroke();
+      }
+    }));
+    g.add(mesh(G('vinyl', () => new THREE.CylinderGeometry(0.46, 0.46, 0.05, 56).rotateX(Math.PI / 2)),
+      mat('vinyl', () => new THREE.MeshPhysicalMaterial({ color: 0x15121c, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.2, bumpMap: grooves, bumpScale: 2 }))));
+    g.add(mesh(G('vinylLabel', () => new THREE.CylinderGeometry(0.16, 0.16, 0.058, 36).rotateX(Math.PI / 2)), mat('vinylLabel', () => plastic(0xff6fae, { roughness: 0.4 }))));
+    g.add(mesh(G('vinylHole', () => new THREE.CylinderGeometry(0.03, 0.03, 0.066, 16).rotateX(Math.PI / 2)), mat('vinylHole', () => plastic(0x15121c))));
+  },
+  cassette(g) {
+    g.add(mesh(G('cassette', () => new RoundedBoxGeometry(0.98, 0.62, 0.16, 3, 0.04)), mat('cassette', () => plastic(0xb9a4ff, { roughness: 0.3 }))));
+    const face = new THREE.Mesh(G('cassetteFace', () => new THREE.PlaneGeometry(0.88, 0.54)), mat('cassetteFace', () => new THREE.MeshBasicMaterial({
+      transparent: true, toneMapped: false, depthWrite: false,
+      map: canvasTex(256, (x, s) => {
+        const u = s / 0.88, rr = (px, py, w, h, r) => { x.beginPath(); x.roundRect(px * u, py * u, w * u, h * u, r * u); };
+        // Paper label across the top.
+        x.fillStyle = '#fff8ee'; rr(0.04, 0.03, 0.8, 0.2, 0.03); x.fill();
+        x.fillStyle = '#ff6fae'; x.fillRect(0.08 * u, 0.15 * u, 0.72 * u, 0.025 * u);
+        x.fillStyle = '#ffc94a'; x.fillRect(0.08 * u, 0.19 * u, 0.72 * u, 0.02 * u);
+        // Window with two reels.
+        x.fillStyle = 'rgba(30,22,48,.92)'; rr(0.2, 0.27, 0.48, 0.16, 0.06); x.fill();
+        for (const cx of [0.3, 0.58]) {
+          x.fillStyle = '#5a3a2a'; x.beginPath(); x.arc(cx * u, 0.35 * u, 0.065 * u, 0, Math.PI * 2); x.fill();
+          x.fillStyle = '#fff'; x.beginPath(); x.arc(cx * u, 0.35 * u, 0.032 * u, 0, Math.PI * 2); x.fill();
+        }
+      }),
+    })));
+    face.position.z = 0.082;
+    const back = face.clone();
+    back.position.z = -0.082;
+    back.rotation.y = Math.PI;
+    g.add(face, back);
+  },
+  ticket(g) {
+    const t = new THREE.Group();
+    t.rotation.z = -0.1;
+    t.add(mesh(G('ticket', () => {
+      const s = new THREE.Shape();
+      s.moveTo(-0.5, -0.27); s.lineTo(0.5, -0.27); s.lineTo(0.5, -0.08);
+      s.absarc(0.5, 0, 0.08, -Math.PI / 2, Math.PI / 2, true);
+      s.lineTo(0.5, 0.27); s.lineTo(-0.5, 0.27); s.lineTo(-0.5, 0.08);
+      s.absarc(-0.5, 0, 0.08, Math.PI / 2, -Math.PI / 2, true);
+      s.closePath();
+      return flat(s, 0.05, 0.015);
+    }), mat('ticket', () => plastic(0xffd36b, { roughness: 0.55, clearcoat: 0.3 }))));
+    const face = new THREE.Mesh(G('ticketFace', () => new THREE.PlaneGeometry(0.82, 0.46)), mat('ticketFace', () => new THREE.MeshBasicMaterial({
+      transparent: true, toneMapped: false, depthWrite: false,
+      map: canvasTex(256, (x, s) => {
+        const h = s * (0.46 / 0.82), top = (s - h) / 2;
+        x.strokeStyle = '#c2401f'; x.lineWidth = 4;
+        x.strokeRect(8, top + 8, s - 16, h - 16);
+        x.setLineDash([6, 6]); x.beginPath(); x.moveTo(s * 0.74, top + 10); x.lineTo(s * 0.74, top + h - 10); x.stroke(); x.setLineDash([]);
+        x.fillStyle = '#c2401f'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.font = `700 ${Math.round(h * 0.22)}px Fredoka, sans-serif`;
+        x.fillText('ADMIT', s * 0.38, top + h * 0.36);
+        x.fillText('ONE', s * 0.38, top + h * 0.66);
+        x.font = `700 ${Math.round(h * 0.3)}px Fredoka, sans-serif`;
+        x.fillText('★', s * 0.87, top + h * 0.52);
+      }),
+    })));
+    face.position.z = 0.043;
+    const back = face.clone();
+    back.position.z = -0.043;
+    back.rotation.y = Math.PI;
+    t.add(face, back);
+    g.add(t);
+  },
+  // Die-cut enamel style, like the Lucky 13 charm: flat layers instead of sculpted 3D.
+  chihuahua(g) {
+    const tan = mat('chiTan', () => plastic(0xd99a5b, { roughness: 0.25 }));
+    g.add(mesh(G('chiHead', () => {
+      const head = blob([[0, 0.2], [0.22, 0.16], [0.31, -0.02], [0.22, -0.2], [0, -0.29], [-0.22, -0.2], [-0.31, -0.02], [-0.22, 0.16]]);
+      const ear = (s) => poly([[s * 0.08, 0.14], [s * 0.46, 0.42], [s * 0.3, -0.02]]);
+      return flat([head, ear(1), ear(-1)], 0.14, 0.04);
+    }), tan));
+    const f = new THREE.Group();
+    const pink = mat('chiEar', () => plastic(0xffa8c4, { roughness: 0.3 }));
+    for (const s of [-1, 1]) {
+      const inner = part(G('chiInner', () => flat(poly([[0.14, 0.13], [0.39, 0.36], [0.28, 0.04]]), 0.03, 0.012)), pink, 0, 0, 0.09);
+      inner.scale.x = s;
+      f.add(inner);
+      f.add(part(G('chiEye', () => new THREE.SphereGeometry(0.068, 16, 12)), mat('chiEye', () => plastic(0x120d18, { roughness: 0.1 })), s * 0.12, 0, 0.1));
+      f.add(part(G('chiGlint', () => new THREE.SphereGeometry(0.016, 8, 6)), mat('chiGlint', () => plastic(0xffffff)), s * 0.12 + 0.025, 0.025, 0.16));
+    }
+    f.add(part(G('chiMuzzle', () => flat(blob([[0, -0.04], [0.13, -0.09], [0.15, -0.18], [0.07, -0.25], [0, -0.26], [-0.07, -0.25], [-0.15, -0.18], [-0.13, -0.09]]), 0.04, 0.015)),
+      mat('chiMuzzle', () => plastic(0xf6e2c4, { roughness: 0.3 })), 0, 0, 0.09));
+    const nose = part(G('chiNose', () => new THREE.SphereGeometry(0.045, 14, 10)), mat('chiEye', () => plastic(0x120d18, { roughness: 0.1 })), 0, -0.1, 0.13);
+    nose.scale.set(1.3, 0.9, 0.8);
+    f.add(nose);
+    const back = f.clone();
+    back.scale.z = -1;
+    g.add(f, back);
+  },
+  lips(g) {
+    g.add(mesh(G('lips', () => {
+      const upper = blob([[0, 0.07], [0.1, 0.17], [0.24, 0.15], [0.38, 0.06], [0.48, -0.01], [0.3, -0.03], [0.12, -0.02], [0, 0.01],
+        [-0.12, -0.02], [-0.3, -0.03], [-0.48, -0.01], [-0.38, 0.06], [-0.24, 0.15], [-0.1, 0.17]]);
+      const lower = blob([[0, -0.05], [0.2, -0.055], [0.4, -0.045], [0.46, -0.055], [0.32, -0.18], [0.14, -0.25], [0, -0.26],
+        [-0.14, -0.25], [-0.32, -0.18], [-0.46, -0.055], [-0.4, -0.045], [-0.2, -0.055]]);
+      return flat([upper, lower], 0.12, 0.05);
+    }), mat('lips', () => plastic(0xd10f2f, { roughness: 0.12, clearcoat: 1, sheen: 0.4, sheenColor: new THREE.Color(0xff8090) }))));
+  },
+  teacup(g) {
+    const c = hanger(g), china = mat('china', () => plastic(0xfdfbff, { roughness: 0.2 }));
+    // A little storm cloud over the cup, with a bolt striking the tea.
+    const cloud = mat('stormCloud', () => plastic(0x9aa0b8, { roughness: 0.45 }));
+    for (const [x, y, r] of [[-0.12, -0.2, 0.11], [0.02, -0.15, 0.14], [0.15, -0.21, 0.1], [0.02, -0.25, 0.11]]) {
+      const puff = part(G('puff', () => new THREE.SphereGeometry(1, 18, 12)), cloud, x, y, 0);
+      puff.scale.set(r * 1.2, r, r);
+      c.add(puff);
+    }
+    const bolt = part(boltGeo(), goldMat(), 0.04, -0.32, 0.02);
+    bolt.scale.setScalar(0.7);
+    c.add(bolt);
+    c.add(mesh(G('cup', () => new THREE.LatheGeometry([[0.3, -0.58], [0.29, -0.66], [0.25, -0.78], [0.17, -0.86], [0, -0.87]].map(V2), 36)),
+      mat('chinaDouble', () => plastic(0xfdfbff, { roughness: 0.2, side: THREE.DoubleSide }))));
+    c.add(part(G('tea', () => new THREE.CircleGeometry(0.28, 32).rotateX(-Math.PI / 2)), mat('tea', () => plastic(0xa35a26, { roughness: 0.15 })), 0, -0.62));
+    c.add(part(G('cupRim', () => new THREE.TorusGeometry(0.3, 0.014, 8, 40).rotateX(Math.PI / 2)), goldMat(), 0, -0.58));
+    c.add(part(G('cupHandle', () => new THREE.TorusGeometry(0.08, 0.025, 8, 20)), china, 0.31, -0.7));
+    c.add(part(G('saucer', () => new THREE.LatheGeometry([[0, -0.89], [0.3, -0.89], [0.42, -0.86], [0.43, -0.87], [0.3, -0.92], [0, -0.92]].map(V2), 40)), china, 0, 0));
+  },
+  rod(g) {
+    const c = hanger(g);
+    c.add(part(G('rodTip', () => new THREE.ConeGeometry(0.045, 0.16, 14)), silverMat(), 0, -0.12));
+    c.add(part(G('rodPole', () => new THREE.CylinderGeometry(0.024, 0.024, 0.86, 12)), silverMat(), 0, -0.6));
+    c.add(part(G('rodBall', () => new THREE.SphereGeometry(0.1, 24, 16)), mat('rodBall', () => new THREE.MeshPhysicalMaterial({
+      color: 0x6fc8ff, transparent: true, opacity: 0.6, roughness: 0.02, clearcoat: 1, metalness: 0.1,
+    })), 0, -0.46));
+    c.add(part(G('rodBase', () => new RoundedBoxGeometry(0.22, 0.07, 0.12, 2, 0.02)), silverMat(), 0, -1.04));
+    const bolt = part(boltGeo(), goldMat(), 0.24, -0.02, 0.03);
+    bolt.rotation.z = 0.5;
+    c.add(bolt);
+  },
+  redwood(g) {
+    const c = hanger(g);
+    // Tall and narrow, with a long red trunk below the crown.
+    const tiers = [[0.08, 0.2, -0.16, 0x2d7a52], [0.12, 0.22, -0.28, 0x2a7350], [0.15, 0.24, -0.41, 0x24694a], [0.17, 0.24, -0.54, 0x1f5b3a], [0.18, 0.22, -0.66, 0x1a4f32]];
+    for (const [r, h, y, col] of tiers) c.add(part(G('rwCone' + r, () => new THREE.ConeGeometry(r, h, 18)), mat('rw' + col, () => plastic(col, { roughness: 0.35 })), 0, y));
+    c.add(part(G('rwTrunk', () => new THREE.CylinderGeometry(0.05, 0.085, 0.5, 14)), mat('rwTrunk', () => plastic(0xa8432a, { roughness: 0.45 })), 0, -0.98));
+  },
+  feather(g) {
+    const c = hanger(g);
+    // A showgirl plume: a curved quill with soft strands fanning out from it, fuller toward the tip.
+    const spineAt = (t) => [0.16 * t * t, -0.05 - t * 1.0];
+    const spine = [];
+    for (let i = 0; i <= 12; i++) spine.push([...spineAt(i / 12), 0]);
+    c.add(mesh(G('quill', () => tubeOf(spine, 0.013, false, 30)), mat('quill', () => plastic(0xfff1dc, { roughness: 0.4 }))));
+    const deep = mat('plumeDeep', () => new THREE.MeshPhysicalMaterial({ color: 0xff5f0f, roughness: 0.7, sheen: 1, sheenColor: new THREE.Color(0xffc890) }));
+    const light = mat('plumeLight', () => new THREE.MeshPhysicalMaterial({ color: 0xff9a3a, roughness: 0.7, sheen: 1, sheenColor: new THREE.Color(0xffe0b8) }));
+    const strands = G('plumeStrands', () => {
+      const parts = [];
+      for (let i = 0; i < 26; i++) {
+        const t = 0.04 + (i / 25) * 0.92, [sx, sy] = spineAt(t);
+        const len = 0.12 + 0.3 * Math.sin(Math.PI * Math.min(1, t * 1.15));
+        for (const side of [-1, 1]) {
+          const curl = side * (0.5 + 0.4 * t);
+          const pts = [[sx, sy, 0], [sx + side * len * 0.5, sy - len * 0.25, (i % 3 - 1) * 0.03],
+            [sx + side * len * 0.85, sy - len * 0.6, (i % 2 ? 0.04 : -0.04)], [sx + side * len * 0.8 + curl * 0.05, sy - len * 0.95, 0]];
+          parts.push({ geo: tubeOf(pts, 0.016 - t * 0.006, false, 12), light: i % 2 === 0 });
+        }
+      }
+      return parts;
+    });
+    for (const st of strands) c.add(mesh(st.geo, st.light ? light : deep));
+    // A soft filled plume behind the strands gives it body.
+    const vane = G('plumeVane', () => {
+      const right = [], left = [];
+      for (let i = 0; i <= 30; i++) {
+        const t = i / 30, [sx, sy] = spineAt(t), w = (0.1 + 0.27 * Math.sin(Math.PI * Math.min(1, t * 1.15))) * (i % 2 ? 0.9 : 1);
+        right.push([sx + w * 0.95, sy - w * 0.5]); left.push([sx - w * 0.95, sy - w * 0.5]);
+      }
+      return flat(poly([[0, -0.05], ...right, ...left.reverse()]), 0.02, 0.02);
+    });
+    c.add(part(vane, mat('plumeVane', () => new THREE.MeshPhysicalMaterial({ color: 0xff7a24, roughness: 0.85, sheen: 1, sheenColor: new THREE.Color(0xffd0a0), side: THREE.DoubleSide })), 0, 0, -0.03));
+  },
+  hat(g) {
+    const c = hanger(g), felt = mat('hatFelt', () => new THREE.MeshPhysicalMaterial({ color: 0xf27bb7, roughness: 0.7, sheen: 1, sheenColor: new THREE.Color(0xffd0ea), side: THREE.DoubleSide }));
+    const h = new THREE.Group();
+    h.rotation.x = 0.22;
+    // Crown: an oval with a crease along the top.
+    h.add(mesh(G('hatCrown2', () => {
+      const geom = new THREE.LatheGeometry([[0, -0.08], [0.1, -0.07], [0.17, -0.1], [0.21, -0.22], [0.23, -0.42], [0, -0.42]].map(V2), 36);
+      const pos = geom.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        if (y > -0.16) pos.setY(i, y - 0.06 * Math.max(0, 1 - Math.abs(x) / 0.16));
+        pos.setZ(i, z * 0.82);
+      }
+      geom.computeVertexNormals();
+      return geom;
+    }), felt));
+    // Brim: curled up hard at the sides, dipping slightly front and back.
+    h.add(mesh(G('hatBrim2', () => {
+      const geom = new THREE.LatheGeometry([[0.22, -0.41], [0.4, -0.43], [0.56, -0.42], [0.58, -0.43], [0.4, -0.46], [0.22, -0.45]].map(V2), 64);
+      const pos = geom.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), z = pos.getZ(i), r = Math.hypot(x, z), side = Math.abs(x) / Math.max(r, 1e-6);
+        const out = Math.max(0, (r - 0.24) / 0.34);
+        pos.setY(i, pos.getY(i) + 0.26 * Math.pow(side, 3) * out * out - 0.03 * (1 - side) * out);
+        pos.setZ(i, z * 0.78);
+      }
+      geom.computeVertexNormals();
+      return geom;
+    }), felt));
+    h.add(part(G('hatBand2', () => new THREE.TorusGeometry(1, 0.1, 8, 40).rotateX(Math.PI / 2).scale(0.23, 0.22, 0.19)), goldMat(), 0, -0.39));
+    const star = part(starGeo(), goldMat(), 0, -0.37, 0.19);
+    star.scale.setScalar(0.12);
+    h.add(star);
+    c.add(h);
+  },
+  discube(g) {
+    const c = hanger(g);
+    const tiles = (tex.tiles ||= canvasTex(128, (x, s) => {
+      x.fillStyle = '#8a8a96'; x.fillRect(0, 0, s, s);
+      const n = 6, w = s / n;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        const v = 225 + Math.floor(Math.random() * 30);
+        x.fillStyle = `rgb(${v},${v},${v + 5})`;
+        x.fillRect(i * w + 1.5, j * w + 1.5, w - 3, w - 3);
+      }
+    }));
+    const cube = part(G('discube', () => new THREE.BoxGeometry(0.54, 0.54, 0.54)), mat('discube', () => new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, map: tiles, metalness: 0.7, roughness: 0.1, envMapIntensity: 2, emissive: 0xffffff, emissiveMap: tiles, emissiveIntensity: 0.35,
+    })), 0, -0.56);
+    cube.rotation.set(0.5, 0.65, 0.2);
+    c.add(cube);
+  },
+  globe(g) {
+    const c = hanger(g);
+    c.add(part(G('globeCap', () => new THREE.CylinderGeometry(0.05, 0.06, 0.06, 14)), goldMat(), 0, -0.15));
+    c.add(part(G('globeBase', () => new THREE.CylinderGeometry(0.24, 0.3, 0.16, 32)), mat('globeBase', () => plastic(0x6b3fa0, { roughness: 0.3 })), 0, -0.92));
+    c.add(part(G('globeTrim', () => new THREE.TorusGeometry(0.245, 0.018, 8, 36).rotateX(Math.PI / 2)), goldMat(), 0, -0.84));
+    const snow = mat('snow', () => plastic(0xffffff, { roughness: 0.5 }));
+    const ground = part(G('globeGround', () => new THREE.SphereGeometry(0.27, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), snow, 0, -0.74);
+    ground.scale.y = 0.35;
+    c.add(ground);
+    c.add(part(G('globeTree', () => new THREE.ConeGeometry(0.1, 0.26, 16)), mat('rw0x2d7a52', () => plastic(0x2d7a52, { roughness: 0.35 })), 0, -0.6));
+    let sd = 3;
+    for (let i = 0; i < 16; i++) {
+      sd = (sd * 16807) % 2147483647; const a = (sd / 2147483647) * Math.PI * 2;
+      sd = (sd * 16807) % 2147483647; const r = 0.08 + (sd / 2147483647) * 0.17;
+      sd = (sd * 16807) % 2147483647; const y = -0.36 - (sd / 2147483647) * 0.3;
+      c.add(part(G('flake', () => new THREE.SphereGeometry(0.014, 6, 5)), snow, Math.cos(a) * r, y, Math.sin(a) * r));
+    }
+    c.add(part(G('globeGlass', () => new THREE.SphereGeometry(0.32, 36, 24)), mat('globeGlass', () => new THREE.MeshPhysicalMaterial({
+      color: 0xdff2ff, transparent: true, opacity: 0.13, roughness: 0.02, clearcoat: 1, depthWrite: false, envMapIntensity: 0.6,
+    })), 0, -0.52));
+  },
   pheart(g) {
     g.add(mesh(heartGeo(), mat('pheart', () => plastic(0xc9b2ff, { iridescence: 1, iridescenceIOR: 1.5, sheen: 1, sheenColor: new THREE.Color(0xffc8e8) }))));
   },

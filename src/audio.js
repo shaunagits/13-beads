@@ -217,8 +217,9 @@ const KIND = {
   letter: 'main', pearl: 'main',
   jewel: 'bell', coupe: 'bell', star: 'bell', moon: 'bell', sparkle: 'bell', wheart: 'bell', arrow: 'bell', spacer: 'bell',
   mirror: 'bell', snake: 'bell', clock: 'bell', ladder: 'bell', mic: 'bell', leaf: 'bell',
-  guitar: 'low', chair: 'low', boot: 'low',
-  cardigan: 'soft', scarf: 'soft', gull: 'soft',
+  note: 'bell', teacup: 'bell', rod: 'bell', discube: 'bell', globe: 'bell',
+  guitar: 'low', chair: 'low', boot: 'low', redwood: 'low',
+  cardigan: 'soft', scarf: 'soft', gull: 'soft', feather: 'soft', hat: 'soft', ticket: 'soft',
 };
 const play = (a, semi, v = 1, at = 0, pan = (Math.random() - 0.5) * 0.5) => VOICES[instrument](a, hz(semi) * vary(0.002), v * vary(0.08), a.currentTime + at, pan);
 
