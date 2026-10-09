@@ -220,3 +220,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .side .seg { width: 36px; height: 30px; padding: 0; display: grid; place-items: center; }
 .icon-btn:disabled { opacity: .35; }
 .hud .side { left: 10px; bottom: 17px; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); }
+
+/* A quiet line at the very bottom: back to the arcade, and the credit. */
+.credit { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 2px; }
+.credit a { display: inline-flex; align-items: center; gap: 2px; min-height: 32px; color: var(--muted); text-decoration: none; font: 500 12.5px var(--body); }
+.credit a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }

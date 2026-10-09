@@ -49,8 +49,8 @@ export const DANGLES = named([
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
-// The third charm set read small on a phone, so those charms are drawn larger. Widths in UNIT match.
-const BOOST = { minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
+// Charms that read small on a phone are drawn larger. All hanging charms share roughly one size. Widths in UNIT match.
+const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35, chair: 1.35, ladder: 1.3, minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 
@@ -1039,7 +1039,8 @@ export function makeBead(d) {
       hang.add(bail);
       const charm = new THREE.Group();
       charm.position.y = -0.2;
-      charm.scale.setScalar(0.92);
+      // Matches the size of the other hanging charms.
+      charm.scale.setScalar(1.24);
       const dark = mat('gDark', () => plastic(0x3d2110, { roughness: 0.35 }));
       const gold = mat('star', () => new THREE.MeshPhysicalMaterial({ color: 0xffc533, metalness: 0.6, roughness: 0.22, clearcoat: 1 }));
       charm.add(mesh(guitarBodyGeo(), mat('gBody', () => plastic(0xffffff, { map: woodTex(), roughness: 0.25 }))));

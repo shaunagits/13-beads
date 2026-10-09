@@ -40,7 +40,9 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 - Day mood in light mode (window light across the wall). Evening mood in dark mode (lamp glow, lit neon).
 - Slight depth-of-field blur behind the bracelets.
 
-**Header**: a muted "‹ Games" link back to games.shauna.digital (chevron only on phones), the wordmark, then icon buttons for Light/Dark (moon or sun), Tilt, Sound, and Your wall (with a count badge). The theme follows the device until the player taps the toggle; the pick is saved under `13beads.theme`.
+**Header**: the wordmark, then icon buttons for Light/Dark (moon or sun), Tilt, Sound, and Your wall (with a count badge). The theme follows the device until the player taps the toggle; the pick is saved under `13beads.theme`.
+
+**Footer**: one quiet line at the bottom of every screen: "‹ More games" (games.shauna.digital) on the left, "Made by Shauna" (shauna.digital) on the right.
 
 **Sound (`src/audio.js`)**: musical. Every sound is a note in D major. Stringing beads plays a melody over I, V, vi, IV (four beads per chord), restarting after a 2 second pause, so each bracelet plays its own tune. Charms add a bell an octave up, wood charms drop an octave, fabric charms swell softly. Strumming arpeggiates the current chord, plucking the cord plays its bass note, and hanging a bracelet resolves to the home chord. One instrument voices everything (acoustic guitar by default: a plucked steel string with a pick-position comb, pitch-dependent decay, and wooden body resonances; music box, kalimba, and synth pluck are built in, chosen with `setInstrument`), through a tempo-synced ping-pong echo and a small room.
 
@@ -108,6 +110,8 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | Starter bracelet | "13 BEADS" in letter beads, mirroring the logo; replaces "ENCORE". Start over button restores it | Shauna asked. |
 | 2026-10-09 | Charms from Shauna's drawings | Mini bracelet built; heart hands not built in code | Shauna: only if they look good. Heart hands are organic and need a real model. |
 | 2026-10-09 | Start over | Resets the string only, never the wall | Shauna. |
+| 2026-10-09 | Credit and back link | Both kept, moved from the header to a footer line | Different jobs: back to the arcade, and credit to Shauna. Frees the header on small phones. |
+| 2026-10-09 | Hanging charm size | All dangles drawn at one size (about 1.3 to 1.4 times the original) | The first eight looked tiny next to the newer ones. Supersedes the 1.02 decision. |
 | 2026-10-09 | Favicon | A tiny bracelet: colored beads on the lower two thirds of a cord loop, top left bare | Shauna asked. A full ring of beads read as a wreath. |
 | 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |
