@@ -1,6 +1,6 @@
 # 13 Beads
 
-A craft room in the browser. String a friendship bracelet, spell a phrase, tie it off, and put it on display on your wall.
+A craft room in the browser. String a friendship bracelet, spell a phrase, finish it, and put it on display on your wall.
 
 Built with Vite and Three.js. No backend and no accounts: everything a player makes is saved in their browser's local storage.
 

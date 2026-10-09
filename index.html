@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>13 Beads</title>
-  <meta name="description" content="String a friendship bracelet in your browser. Pick your beads, spell your phrase, tie it off.">
+  <meta name="description" content="String a friendship bracelet in your browser. Pick your beads, spell your phrase, and hang it on your wall.">
   <meta property="og:title" content="13 Beads">
   <meta property="og:description" content="String a friendship bracelet in your browser.">
   <meta name="theme-color" content="#130e21">
@@ -39,7 +39,7 @@
 
     <div class="stage" id="stage"><canvas id="cv" aria-label="Your bracelet string"></canvas><span class="count" id="count" aria-label="Beads on the string">0 / 26</span>
       <div class="hud" id="hud" data-mode="line">
-        <button class="icon-btn solo" id="untie" type="button" data-show="tied" aria-label="Untie" title="Untie">
+        <button class="icon-btn solo" id="untie" type="button" data-show="tied" aria-label="Back to stringing" title="Back to stringing">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6 4 11l5 5M4.5 11H14a5.5 5.5 0 0 1 0 11h-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="corner">
@@ -66,7 +66,7 @@
         <p class="note" id="note" aria-live="polite"></p>
         <button class="fab" id="tie" type="button" data-show="line">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 12c-3-4.5-8-4-8-.5S9 16 12 12Zm0 0c3-4.5 8-4 8-.5S15 16 12 12Zm0 0-3 7m3-7 3 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Tie it off
+          Finish bracelet
         </button>
         <button class="fab" id="another" type="button" data-show="stack"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Make another</button>
         <button class="fab" id="wear" type="button" data-show="tied"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Add to my wall</button>

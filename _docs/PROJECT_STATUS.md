@@ -5,9 +5,9 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 ## What exists
 
 **Stringing (mode `line`)**
-- Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Tie it off" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
+- Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Finish bracelet" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
 - 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture.
-- The string lies over a solid wood tabletop generated in code (one continuous slab of grain, no planks or seams; oak in light mode, walnut in dark), which catches the string and bead shadows.
+- The string lies over a solid wood tabletop generated in code: pale raw wood with soft warm patches and fine broken grain lines (walnut tones in dark mode), modeled on a reference photo Shauna shared. No planks or seams. It catches shadows but is drawn beneath everything, so the tilted loop never dips behind it, and part of its color is self-lit so the colored stage lights do not tint it.
 - Touch: the string is only caught by a press that starts on it (22 px band on touch screens, 14 px with a mouse) and only follows after the finger moves 8 px. Pulling is silent; the pluck sounds on release if pulled more than 18 px. Only a fast swipe across beads plays strum notes. Double-tap zoom is off (pinch zoom still works). Tap a bead to add it. It slides on, squashes, and clicks.
 - Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, rising in pitch.
 - On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
@@ -97,7 +97,8 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | String feel | Real rope simulation and a thread texture, same thickness | Shauna: it looked and felt like a rigid wire. Thickness kept for visibility. |
 | 2026-10-09 | Stringing surface | Wood (oak by day, walnut by night) | Shauna asked for a surface someone would make a bracelet on. |
 | 2026-10-09 | Tray | Clear plastic bead organizer around single-bead pictures, collapsible | Shauna's reference: how people store pony beads in real life. She meant the container, not the bead images; a pile-of-beads version was tried and reverted. |
-| 2026-10-09 | Table surface | One continuous wood slab | Planks with seams and joints tiled into a brick pattern. |
+| 2026-10-09 | Table surface | One continuous slab of pale raw wood with fine broken grain | Planks tiled into a brick pattern. Grain matched to Shauna's reference photo (generated in code; the photo itself is not used). |
+| 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |
 | 2026-10-09 | Charm set three | Music note, vinyl, cassette, ticket stub, chihuahua, red lips; dangles: storm in a teacup, lightning rod, redwood, showgirl feather, cowboy hat, disco cube, snow globe | Shauna's picks. Organic subjects (chihuahua, lips) use the flat die-cut enamel style of Lucky 13 instead of sculpted primitives. |
 | 2026-10-09 | Song snippets | Not built | Shauna asked about playing part of a real song. A recognizable snippet carries the protected part (melody, hook). Alternative offered: an original easter-egg melody behind a secret phrase. |

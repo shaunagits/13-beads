@@ -34,7 +34,7 @@ try {
 const STACK_HINT = matchMedia('(pointer: coarse)').matches
   ? 'Tap a bracelet to jingle it. Hold to take it off.'
   : 'Click a bracelet to jingle it. Hold or right-click to take it off.';
-const EMPTY_WALL = 'Nothing on display yet. Tie off a bracelet and hang it on the stand.';
+const EMPTY_WALL = 'Nothing on display yet. Finish a bracelet and hang it here.';
 const STACK_MAX = 12;
 
 /* ---------- State ---------- */
@@ -91,6 +91,9 @@ scene.add(backdrop);
 // The craft table under the string: a solid wood slab, built when the theme is known (oak by day, walnut by night).
 const table = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: 0 }));
 table.receiveShadow = true;
+// Drawn first and never hides anything: the tied loop tilts toward the viewer and would otherwise dip behind it.
+table.material.depthWrite = false;
+table.renderOrder = -1;
 table.position.z = -46.5;
 scene.add(table);
 let tableDark = null;
@@ -98,24 +101,35 @@ function woodTableTexture(dark) {
   const S = 1024, c = document.createElement('canvas');
   c.width = c.height = S;
   const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
-  const light = dark ? [112, 74, 50] : [226, 196, 156], deep = dark ? [74, 46, 31] : [192, 150, 104];
-  // One continuous tabletop: no planks or seams, just grain, so nothing repeats into a pattern.
-  const warp = [0, 1, 2].map((o) => noiseField(2 << o, 120 + o)), streaks = [0, 1].map((o) => noiseField(4 << o, 150 + o));
-  const tone = [0, 1].map((o) => noiseField(2 << o, 170 + o)), fine = noiseField(160, 140);
+  // Raw, lightly finished wood: a pale base with soft warm patches, gently drifting bands,
+  // and fine broken grain lines and pores, rather than even stripes.
+  const base = dark ? [108, 74, 50] : [232, 209, 178], warm = dark ? [120, 72, 42] : [218, 160, 112], line = dark ? [52, 32, 22] : [128, 88, 58];
+  const warp = [0, 1, 2].map((o) => noiseField(2 << o, 120 + o));
+  const patch = [0, 1, 2].map((o) => noiseField(3 << o, 170 + o));
+  const streakA = noiseField(6, 150), streakB = noiseField(12, 151), pores = noiseField(24, 152), speck = noiseField(256, 140);
   for (let j = 0; j < S; j++) {
     const v = j / S;
     for (let i = 0; i < S; i++) {
       const u = i / S;
-      // Fine grain lines running across the table, drifting gently.
-      const w = fbm(warp, u, v);
-      const ring = 0.5 + 0.5 * Math.sin((v * 70 + w * 4.5) * TAU);
-      // Long streaks: noise stretched along the grain.
-      const st = fbm(streaks, u, (v * 16) % 1);
-      const k = Math.min(1, Math.max(0, Math.pow(ring, 6) * 0.35 + (st - 0.5) * 0.8 + 0.32 + (fine(u, v) - 0.5) * 0.1));
-      // Broad, soft variation in tone across the slab.
-      const shade = 0.95 + (fbm(tone, u, v) - 0.5) * 0.14;
+      const w = fbm(warp, u, v) - 0.5, vv = (v + w * 0.035 + 1) % 1;
+      // Warm patches, stretched along the grain.
+      const pt = Math.max(0, fbm(patch, u, (vv * 3) % 1) - 0.45) * 2.2;
+      // Faint broad bands.
+      const band = 0.5 + 0.5 * Math.sin((vv * 18 + w * 2) * TAU);
+      // Thin, broken grain lines: noise stretched hard along the grain, kept only where it peaks.
+      const la = Math.max(0, streakA(u, (vv * 48) % 1) - 0.76) / 0.24;
+      const lb = Math.max(0, streakB(u, (vv * 80) % 1) - 0.82) / 0.18;
+      const lp = Math.max(0, pores(u, (vv * 120) % 1) - 0.87) / 0.13;
+      // Softer, wider mid-tone streaks between the fine lines.
+      const soft = Math.max(0, streakA((u + 0.37) % 1, (vv * 14) % 1) - 0.6) * 0.5;
+      const ln = Math.min(1, la * 0.8 + lb * 0.55 + lp * 0.45 + soft);
+      const tone = 1 + (band - 0.5) * 0.05 + (speck(u, v) - 0.5) * 0.06;
       const o = (j * S + i) * 4;
-      for (let ch = 0; ch < 3; ch++) px[o + ch] = (light[ch] + (deep[ch] - light[ch]) * k) * shade;
+      for (let ch = 0; ch < 3; ch++) {
+        let c = base[ch] + (warm[ch] - base[ch]) * Math.min(1, pt);
+        c = c + (line[ch] - c) * ln * 0.75;
+        px[o + ch] = c * tone;
+      }
       px[o + 3] = 255;
     }
   }
@@ -132,6 +146,11 @@ function buildTable() {
   tableDark = dark;
   if (table.material.map) table.material.map.dispose();
   table.material.map = woodTableTexture(dark);
+  // Part of the color comes from the texture itself, so the moving colored lights do not tint the table.
+  table.material.emissive.set(0xffffff);
+  table.material.emissiveMap = table.material.map;
+  table.material.emissiveIntensity = 0.5;
+  table.material.color.setScalar(0.62);
   table.material.needsUpdate = true;
 }
 const darkScheme = matchMedia('(prefers-color-scheme: dark)');
@@ -1375,7 +1394,7 @@ $('clear').addEventListener('click', () => {
 });
 $('tie').addEventListener('click', () => {
   arm();
-  if (!beads.length) { say('String at least one bead before tying off.'); return; }
+  if (!beads.length) { say('Add at least one bead first.'); return; }
   clearInterval(phraseTimer);
   beads.forEach((b) => { b.drag = null; });
   setMode('tied');
