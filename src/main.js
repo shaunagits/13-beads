@@ -1354,6 +1354,26 @@ $('undo').addEventListener('click', () => {
   sync();
   tick(0.8, 0.12);
 });
+// The starter bracelet mirrors the logo: 1 3, a hot pink bead, B E A D S, framed with sparkles, gold glitter, and pearls.
+const STARTER = (() => {
+  const L = (ch) => ({ k: 'letter', ch }), pink = { k: 'pony', h: 330, s: 90, l: 58 }, gold = { k: 'glitter', h: 44 };
+  return [{ k: 'pearl' }, gold, { k: 'sparkle' }, L('1'), L('3'), pink, ...'BEADS'.split('').map(L), { k: 'sparkle' }, gold, { k: 'pearl' }];
+})();
+// Beads slide on one by one, each playing the next note of the tune.
+function stringStarter(delay = 0) {
+  clearInterval(phraseTimer);
+  if (reduce) { STARTER.forEach((d) => addBead(d, true, 'R')); sync(); return; }
+  STARTER.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R', i); }, delay + i * 130));
+}
+$('restart').addEventListener('click', () => {
+  arm();
+  pushUndo();
+  beads.forEach(drop);
+  beads = [];
+  sync();
+  stringStarter(250);
+  say('Fresh start. Undo brings your last bracelet back.');
+});
 $('clear').addEventListener('click', () => {
   arm();
   if (!beads.length) return;
@@ -1439,12 +1459,7 @@ async function start() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('13beads.strand') || 'null'); } catch (e) { /* optional */ }
   if (Array.isArray(saved) && saved.length) setBeads(saved);
-  else {
-    const P = (h, s, l) => ({ k: 'pony', h, s, l });
-    const demo = [P(174, 75, 42), P(330, 90, 58), { k: 'star' }, ...'ENCORE'.split('').map((ch) => ({ k: 'letter', ch })), { k: 'star' }, P(330, 90, 58), P(174, 75, 42)];
-    if (reduce) demo.forEach((d) => addBead(d, true, 'R'));
-    else demo.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R'); }, 350 + i * 130));
-  }
+  else stringStarter(350);
   sync();
   rebuildStack();
   syncStack();

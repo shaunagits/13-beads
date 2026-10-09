@@ -5,13 +5,14 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 ## What exists
 
 **Stringing (mode `line`)**
-- Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Finish bracelet" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
+- Controls float on the canvas like the other screens: bead count (top left), Start over, Undo, and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Finish bracelet" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
 - 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture.
 - The string lies over a wood tabletop made from a photo-scanned CC0 texture, Poly Haven "Dark Wood" (`src/assets/table-dark.jpg`), in both themes. The cord is pale lavender in both themes so it shows on the dark wood, and the bead counter has a dark backing. In dark mode the room dims and a warm desk lamp pools light in the middle of the table. The table catches shadows but is drawn beneath everything, so the tilted loop never dips behind it, and part of its color is self-lit so the colored stage lights do not tint it.
 - Touch: the string is only caught by a press that starts on it (22 px band on touch screens, 14 px with a mouse) and only follows after the finger moves 8 px. Pulling is silent; the pluck sounds on release if pulled more than 18 px. Only a fast swipe across beads plays strum notes. Double-tap zoom is off (pinch zoom still works). Tap a bead to add it. It slides on, squashes, and clicks.
 - Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, rising in pitch.
 - On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
 - Limit of 26 beads. Undo and Clear.
+- Starter bracelet (first visit, and the Start over button): pearl, gold glitter, sparkle, 1 3, hot pink bead, B E A D S, sparkle, gold glitter, pearl. It mirrors the wordmark. Start over is undoable; it does not touch the wall.
 - Tilt leans the string and hanging charms. iPhone shows a Tilt button because it needs a tap for permission.
 
 **Bead case**: the tray sits in a clear plastic organizer (recessed compartments with clear walls), one bead picture per compartment. The Beads, Letters, Charms, and Dangles tabs are inside the case. Its top edge is a lid button that folds the case away ("Show beads" brings it back), which gives the string more room.
@@ -104,6 +105,7 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | Light/Dark toggle | Icon in the header; follows the device until used, then remembered | Shauna asked. |
 | 2026-10-09 | "Lover" charm | Not built | Shauna wanted it only if it could look like the real logo; that version will not be made. |
 | 2026-10-09 | Shauna's sticker drawings | Use as reference for code-built charms, not pasted in | She drew them from online clip art; the generic subjects (heart sunglasses, disco ball, heart hands, bracelet) are fine as ideas. Heart sunglasses built from sticker 21. |
+| 2026-10-09 | Starter bracelet | "13 BEADS" in letter beads, mirroring the logo; replaces "ENCORE". Start over button restores it | Shauna asked. |
 | 2026-10-09 | Favicon | A tiny bracelet: a ring of colored beads on a cord | Shauna asked. |
 | 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |
