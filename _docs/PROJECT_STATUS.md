@@ -109,6 +109,7 @@ Shauna tested production on her iPhone during session 2: layout, the string (gra
 | 2026-10-09 | Start over | Resets the string only, never the wall | Shauna. |
 | 2026-10-09 | Credit and back link | Both kept, moved from the header to a footer line | Different jobs: back to the arcade, and credit to Shauna. Frees the header on small phones. |
 | 2026-10-09 | Hanging charm size | All dangles drawn at one size (about 1.3 to 1.4 times the original) | The first eight looked tiny next to the newer ones. Supersedes the 1.02 decision. |
+| 2026-10-09 | Send feedback link | Not added for now; footer stays as is | Shauna: not necessary right now. |
 | 2026-10-09 | Favicon | A tiny bracelet: colored beads on the lower two thirds of a cord loop, top left bare | Shauna asked. A full ring of beads read as a wreath. |
 | 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |

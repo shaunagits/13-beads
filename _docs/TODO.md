@@ -21,5 +21,4 @@ Top item is the next thing to do.
 
 ## Waiting on Shauna
 
-- "Send feedback" link beside the footer credit: does shauna.digital have a contact form to point it at?
 - Order of trading links and unlocks, once the wall is further along.
