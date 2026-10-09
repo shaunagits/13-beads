@@ -6,7 +6,7 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 
 **Stringing (mode `line`)**
 - Controls float on the canvas like the other screens: bead count (top left), Undo and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Tie it off" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it), the tabs, and the tray.
-- 3D string with sag and bounce. Tap a bead to add it. It slides on, squashes, and clicks.
+- 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture. Tap a bead to add it. It slides on, squashes, and clicks.
 - Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, rising in pitch.
 - On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
 - Limit of 26 beads. Undo and Clear.
@@ -91,6 +91,7 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-08 | Daytime neon on white | Fine for now | Shauna. |
 | 2026-10-09 | Instrument | Acoustic guitar by default | Shauna asked for a guitar option. Music box, kalimba, and synth pluck stay available in code. |
 | 2026-10-09 | Stringing screen | Same on-canvas treatment as the wall and tie-off screens | Shauna approved the simplification pass. |
+| 2026-10-09 | String feel | Real rope simulation and a thread texture, same thickness | Shauna: it looked and felt like a rigid wire. Thickness kept for visibility. |
 
 ## Wrong turns worth knowing
 

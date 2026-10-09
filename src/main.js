@@ -41,7 +41,7 @@ const STACK_MAX = 12;
 let beads = [], fallers = [], undoStack = [];
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
-let sagDyn = 0, sagVel = 0, sway = 0, swayVel = 0, T = 0, last = 0;
+let T = 0, last = 0;
 let phraseTimer = null, lastTubeKey = '';
 let parX = 0, parY = 0, parTX = 0, parTY = 0;
 let pluck = null, spin = null, spinY = 0, spinX = 0, spinVY = 0, spinVX = 0, hop = 9;
@@ -90,7 +90,23 @@ scene.add(backdrop);
 
 const strand = new THREE.Group();
 scene.add(strand);
-const stringMat = new THREE.MeshStandardMaterial({ color: 0x7f7398, roughness: 0.85 });
+// A twisted thread texture, so the cord reads as cord rather than wire.
+function twistTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 32;
+  const x = c.getContext('2d');
+  x.fillStyle = '#ffffff';
+  x.fillRect(0, 0, 64, 32);
+  x.strokeStyle = 'rgba(0,0,0,.28)'; x.lineWidth = 5;
+  for (let i = -2; i < 6; i++) { x.beginPath(); x.moveTo(i * 16, 32); x.lineTo(i * 16 + 32, 0); x.stroke(); }
+  x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 2;
+  for (let i = -2; i < 6; i++) { x.beginPath(); x.moveTo(i * 16 + 6, 32); x.lineTo(i * 16 + 38, 0); x.stroke(); }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const stringMat = new THREE.MeshStandardMaterial({ color: 0x7f7398, roughness: 0.7, map: twistTexture() });
 const tube = new THREE.Mesh(new THREE.BufferGeometry(), stringMat);
 tube.castShadow = true;
 strand.add(tube);
@@ -783,6 +799,91 @@ function pointAt(p, c, s) {
   return { x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f), a: Math.atan2(b.y - a.y, b.x - a.x) };
 }
 
+/* ---------- The string: a chain of linked points with gravity (Verlet rope) ---------- */
+// The rope's length grows with the bead count, so a fuller string hangs lower. Beads add weight where they sit,
+// a finger grabs the nearest point and pulls it, and tilting the phone tips gravity.
+const RX = new Float32Array(N + 1), RY = new Float32Array(N + 1), OX = new Float32Array(N + 1), OY = new Float32Array(N + 1);
+const RW = new Float32Array(N + 1);
+let ropeKey = '', ropeSeg = 0;
+function ropeShape(n) {
+  return { ay: H * 0.16, sag: lerp(0.14, 1, Math.min(1, n / MAX)) * Math.min(H * 0.6, W * 0.6) };
+}
+function ropeLength(n) {
+  const { ay, sag } = ropeShape(n);
+  let L = 0, px = -12, py = ay;
+  for (let i = 1; i <= 60; i++) {
+    const t = i / 60, x = lerp(-12, W + 12, t), y = ay + sag * 4 * t * (1 - t);
+    L += Math.hypot(x - px, y - py); px = x; py = y;
+  }
+  return L;
+}
+function resetRope(n) {
+  const { ay, sag } = ropeShape(n);
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    RX[i] = OX[i] = lerp(-12, W + 12, t);
+    RY[i] = OY[i] = ay + sag * 4 * t * (1 - t);
+  }
+  ropeSeg = ropeLength(n) / N;
+}
+// Push the rope at a point (0 to 1 along it), in pixels per second.
+function kickRope(f, vx, vy) {
+  const c = Math.round(clamp(f, 0, 1) * N), k = (reduce ? 0.3 : 1) / 120;
+  for (let i = Math.max(1, c - 6); i <= Math.min(N - 1, c + 6); i++) {
+    const fall = 1 - Math.abs(i - c) / 7;
+    OX[i] -= vx * fall * k; OY[i] -= vy * fall * k;
+  }
+}
+function stepRope(dt, n) {
+  const key = W + 'x' + H;
+  if (key !== ropeKey) { ropeKey = key; resetRope(n); }
+  const ay = H * 0.16;
+  // Ease the length toward its target, so adding beads lowers the string smoothly.
+  ropeSeg += (ropeLength(n) / N - ropeSeg) * Math.min(1, dt * 6);
+  // Weight: each bead loads the point under it.
+  RW.fill(1);
+  for (const b of beads) {
+    if (b.drag || b.s == null) continue;
+    const c = Math.round(clamp(b.s / (lineLen || 1), 0, 1) * N);
+    if (c > 0 && c < N) RW[c] += UNIT[b.def.k] * 2.2;
+  }
+  const g = 1400, gx = Math.sin(tiltS * 0.5) * g, gy = Math.cos(tiltS * 0.5) * g;
+  const SUB = 3, h = dt / SUB, damp = reduce ? 0.9 : 0.992;
+  let gi = -1, fx = 0, fy = 0;
+  if (pluck) {
+    if (pluck.i == null) {
+      let bd = 1e9;
+      for (let i = 1; i < N; i++) { const d = Math.hypot(RX[i] - pluck.x, RY[i] - pluck.y); if (d < bd) { bd = d; pluck.i = i; } }
+    }
+    gi = pluck.i;
+    fx = pluck.x + clamp(pluck.dx, -80, 80); fy = pluck.y + clamp(pluck.dy, -90, 110);
+  }
+  for (let st = 0; st < SUB; st++) {
+    for (let i = 1; i < N; i++) {
+      const vx = (RX[i] - OX[i]) * damp, vy = (RY[i] - OY[i]) * damp;
+      OX[i] = RX[i]; OY[i] = RY[i];
+      RX[i] += vx + gx * h * h; RY[i] += vy + gy * h * h;
+    }
+    if (gi > 0) { RX[gi] += (fx - RX[gi]) * 0.6; RY[gi] += (fy - RY[gi]) * 0.6; OX[gi] = RX[gi]; OY[gi] = RY[gi]; }
+    RX[0] = OX[0] = -12; RY[0] = OY[0] = ay;
+    RX[N] = OX[N] = W + 12; RY[N] = OY[N] = ay;
+    // Keep each link close to its rest length. A little give makes the cord feel elastic.
+    for (let it = 0; it < 14; it++) {
+      for (let i = 0; i < N; i++) {
+        const dx = RX[i + 1] - RX[i], dy = RY[i + 1] - RY[i], d = Math.hypot(dx, dy) || 1e-6;
+        const diff = ((d - ropeSeg) / d) * 0.9;
+        const wa = i === 0 || i === gi ? 0 : 1 / RW[i], wb = i + 1 === N || i + 1 === gi ? 0 : 1 / RW[i + 1], ws = wa + wb;
+        if (!ws) continue;
+        RX[i] += dx * diff * (wa / ws); RY[i] += dy * diff * (wa / ws);
+        RX[i + 1] -= dx * diff * (wb / ws); RY[i + 1] -= dy * diff * (wb / ws);
+      }
+    }
+  }
+  const line = new Array(N + 1);
+  for (let i = 0; i <= N; i++) line[i] = { x: RX[i], y: RY[i] };
+  return line;
+}
+
 function burst() {
   if (reduce) return;
   const R = Math.min(W, H) * 0.33, col = new THREE.Color();
@@ -811,26 +912,11 @@ function frame(now) {
   const k = ease(kLin);
   if (mode === 'tied' && kLin >= 1 && !tiedFired) { tiedFired = true; burst(); chime(); buzz(30); }
 
-  sagVel += (-sagDyn * 130 - sagVel * 9) * dt; sagDyn += sagVel * dt;
   tiltS += (tilt - tiltS) * 0.1;
-  if (pluck) {
-    // Finger on the string: it follows the pull, then springs back when released.
-    sagDyn += (clamp(pluck.dy, -70, 90) - sagDyn) * 0.4; sagVel = 0;
-    sway += (clamp(pluck.dx * 0.4, -36, 36) - sway) * 0.4; swayVel = 0;
-  } else {
-    swayVel += (-(sway - tiltS * 20) * 90 - swayVel * 6) * dt; sway += swayVel * dt;
-  }
-
   const n = beads.length;
   let U = 0;
   for (const b of beads) U += UNIT[b.def.k];
-  const ay = H * 0.16, sagMax = Math.min(H * 0.6, W * 0.6);
-  const sag = lerp(0.14, 1, Math.min(1, n / MAX)) * sagMax + sagDyn;
-  const line = [];
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    line.push({ x: lerp(-12, W + 12, t), y: ay + sag * 4 * t * (1 - t) + sway * Math.sin(TAU * t) });
-  }
+  const line = stepRope(dt, n);
   const lc = cumOf(line);
   lineLen = lc[N];
   const SMAX = clamp(W / 10, 28, 48);
@@ -852,7 +938,7 @@ function frame(now) {
       b.s += b.v * dt;
       if (!b.landed && Math.abs(b.target - b.s) < 5) {
         b.landed = true; b.sq = 0; b.rv += (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 2);
-        sagVel += 80; swayVel += (Math.random() - 0.5) * 60;
+        kickRope(b.s / lineLen, (Math.random() - 0.5) * 60, 110);
         for (const o of beads) o.swv += (Math.random() - 0.5) * 1.6;
         land(b.def.k, b.step); buzz(8);
       }
@@ -890,12 +976,13 @@ function frame(now) {
   strand.scale.setScalar(hopS);
   strand.rotation.set((-0.3 + clamp(spinX, -0.9, 0.9)) * k, ((reduce ? 0 : Math.sin(T * 0.8) * 0.4) + spinY) * k, 0);
 
-  const tubeKey = [sag.toFixed(1), sway.toFixed(1), k.toFixed(3), W, H].join();
+  const tubeKey = [0, 15, 30, 45, 60, 75].map((i) => pts[i].x.toFixed(1) + ',' + pts[i].y.toFixed(1)).join() + k.toFixed(3) + W + 'x' + H;
   if (tubeKey !== lastTubeKey) {
     lastTubeKey = tubeKey;
     const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p.x - cx, cy - p.y, 0)));
     tube.geometry.dispose();
-    tube.geometry = new THREE.TubeGeometry(curve, 110, 1.4, 6, false);
+    tube.geometry = new THREE.TubeGeometry(curve, 140, 1.35, 8, false);
+    stringMat.map.repeat.set(Lm / 9, 1);
   }
   knot.visible = k > 0.5;
   if (knot.visible) {
@@ -1002,6 +1089,7 @@ function strum(p) {
   beads.forEach((b, i) => {
     if (Math.hypot(b.x - p.x, b.y - p.y) > b.S * 0.62 || now - (b.strumAt || 0) < 260) return;
     b.strumAt = now;
+    kickRope(b.s / lineLen, p.vx * 3, 40);
     b.rv += (p.vx >= 0 ? 1 : -1) * 6;
     b.swv += (p.vx >= 0 ? 1 : -1) * 3;
     b.sq = 0;
