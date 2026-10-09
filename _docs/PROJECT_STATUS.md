@@ -20,7 +20,7 @@ Last updated: 2026-10-09. Everything below is committed, merged to `main`, and d
 - Beads tab: 12 colors, pearl, 3 glitter, 2 glow, silver spacer.
 - Letters tab: A to Z, 0 to 9, and ! ? &.
 - Charms tab, 25: Lucky 13, star, sparkle, heart, pastel heart, wire heart, mirror ball, jewel, snake, butterfly, cat, seagull, crescent moon, midnight clock, rainbow, evergreen tree, autumn leaf, instant photo, bow and arrow, music note, vinyl record, cassette tape, ticket stub, chihuahua (flat die-cut enamel style), red lips (die-cut).
-- Dangles tab, 15 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, stormy teacup (cloud and bolt over a teacup), lightning rod, redwood tree, orange feather, pink cowboy hat, disco cube, snow globe.
+- Dangles tab, 15 hanging charms: guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (cloud and bolt over a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe.
 
 **Tie-off (mode `tied`)**
 - The string morphs into a knotted loop. Drag to spin it, tap for sparkles.
@@ -98,8 +98,7 @@ No one has tested these on a real device. Treat each as unknown, not as working.
 | 2026-10-09 | Stringing surface | Wood table (oak by day, walnut by night) | Shauna asked for a surface someone would make a bracelet on. |
 | 2026-10-09 | Tray | Clear plastic bead organizer with piles in compartments | Shauna's reference: how people store pony beads in real life. |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |
-| 2026-10-09 | Charm set three | Music note, vinyl, cassette, ticket stub, chihuahua, red lips; dangles: stormy teacup, lightning rod, redwood, orange feather, cowboy hat, disco cube, snow globe | Shauna's picks. Organic subjects (chihuahua, lips) use the flat die-cut enamel style of Lucky 13 instead of sculpted primitives. |
-| 2026-10-09 | Names of fan references | Generic object names only ("Stormy teacup", "Orange feather") | Keeps idioms, titles, and possible lyric phrases out of the app. |
+| 2026-10-09 | Charm set three | Music note, vinyl, cassette, ticket stub, chihuahua, red lips; dangles: storm in a teacup, lightning rod, redwood, showgirl feather, cowboy hat, disco cube, snow globe | Shauna's picks. Organic subjects (chihuahua, lips) use the flat die-cut enamel style of Lucky 13 instead of sculpted primitives. |
 | 2026-10-09 | Song snippets | Not built | Shauna asked about playing part of a real song. A recognizable snippet carries the protected part (melody, hook). Alternative offered: an original easter-egg melody behind a secret phrase. |
 
 ## Wrong turns worth knowing

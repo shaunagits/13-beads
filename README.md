@@ -36,7 +36,6 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 
 ## Design rules
 
-- Every design is original. No artist names, logos, album artwork, photos of real people, or lyrics.
 - `vite.config.js` sets `base: './'` so the game works both at a domain root and under `/13-beads`. Keep asset paths relative.
 - Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), and `13beads.wall` (wall color and neon sign word).
 

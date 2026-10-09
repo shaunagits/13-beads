@@ -44,8 +44,8 @@ export const CHARMS = named([
 ]);
 export const DANGLES = named([
   ['Acoustic guitar', 'guitar'], ['Microphone', 'mic'], ['Cowboy boot', 'boot'], ['Cardigan', 'cardigan'], ['Red scarf', 'scarf'],
-  ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'], ['Stormy teacup', 'teacup'], ['Lightning rod', 'rod'],
-  ['Redwood tree', 'redwood'], ['Orange feather', 'feather'], ['Cowboy hat', 'hat'], ['Disco cube', 'discube'], ['Snow globe', 'globe'],
+  ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'], ['Storm in a teacup', 'teacup'], ['Lightning rod', 'rod'],
+  ['Redwood tree', 'redwood'], ['Showgirl feather', 'feather'], ['Cowboy hat', 'hat'], ['Disco cube', 'discube'], ['Snow globe', 'globe'],
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
