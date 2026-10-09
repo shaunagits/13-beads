@@ -6,6 +6,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
+import tableLightUrl from './assets/table-light.jpg';
+import tableDarkUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
 const MAX = 26, TAU = Math.PI * 2, N = 90;
@@ -97,61 +99,25 @@ table.renderOrder = -1;
 table.position.z = -46.5;
 scene.add(table);
 let tableDark = null;
-function woodTableTexture(dark) {
-  const S = 1024, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
-  // Raw, lightly finished wood: a pale base with soft warm patches, gently drifting bands,
-  // and fine broken grain lines and pores, rather than even stripes.
-  const base = dark ? [108, 74, 50] : [232, 209, 178], warm = dark ? [120, 72, 42] : [218, 160, 112], line = dark ? [52, 32, 22] : [128, 88, 58];
-  const warp = [0, 1, 2].map((o) => noiseField(2 << o, 120 + o));
-  const patch = [0, 1, 2].map((o) => noiseField(3 << o, 170 + o));
-  const streakA = noiseField(6, 150), streakB = noiseField(12, 151), pores = noiseField(24, 152), speck = noiseField(256, 140);
-  for (let j = 0; j < S; j++) {
-    const v = j / S;
-    for (let i = 0; i < S; i++) {
-      const u = i / S;
-      const w = fbm(warp, u, v) - 0.5, vv = (v + w * 0.035 + 1) % 1;
-      // Warm patches, stretched along the grain.
-      const pt = Math.max(0, fbm(patch, u, (vv * 3) % 1) - 0.45) * 2.2;
-      // Faint broad bands.
-      const band = 0.5 + 0.5 * Math.sin((vv * 18 + w * 2) * TAU);
-      // Thin, broken grain lines: noise stretched hard along the grain, kept only where it peaks.
-      const la = Math.max(0, streakA(u, (vv * 48) % 1) - 0.76) / 0.24;
-      const lb = Math.max(0, streakB(u, (vv * 80) % 1) - 0.82) / 0.18;
-      const lp = Math.max(0, pores(u, (vv * 120) % 1) - 0.87) / 0.13;
-      // Softer, wider mid-tone streaks between the fine lines.
-      const soft = Math.max(0, streakA((u + 0.37) % 1, (vv * 14) % 1) - 0.6) * 0.5;
-      const ln = Math.min(1, la * 0.8 + lb * 0.55 + lp * 0.45 + soft);
-      const tone = 1 + (band - 0.5) * 0.05 + (speck(u, v) - 0.5) * 0.06;
-      const o = (j * S + i) * 4;
-      for (let ch = 0; ch < 3; ch++) {
-        let c = base[ch] + (warm[ch] - base[ch]) * Math.min(1, pt);
-        c = c + (line[ch] - c) * ln * 0.75;
-        px[o + ch] = c * tone;
-      }
-      px[o + 3] = 255;
-    }
-  }
-  x.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 4;
-  return t;
-}
+// The tabletop texture is a photo-scanned wood surface (CC0, Poly Haven): plywood, lightened, by day; dark wood by night.
+const tableLoader = new THREE.TextureLoader();
 function buildTable() {
   const dark = darkScheme.matches;
   if (dark === tableDark) return;
   tableDark = dark;
-  if (table.material.map) table.material.map.dispose();
-  table.material.map = woodTableTexture(dark);
-  // Part of the color comes from the texture itself, so the moving colored lights do not tint the table.
-  table.material.emissive.set(0xffffff);
-  table.material.emissiveMap = table.material.map;
-  table.material.emissiveIntensity = 0.5;
-  table.material.color.setScalar(0.62);
-  table.material.needsUpdate = true;
+  tableLoader.load(dark ? tableDarkUrl : tableLightUrl, (t) => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    if (table.material.map) table.material.map.dispose();
+    table.material.map = t;
+    // Part of the color comes from the texture itself, so the moving colored lights do not tint the table.
+    table.material.emissive.set(0xffffff);
+    table.material.emissiveMap = t;
+    table.material.emissiveIntensity = 0.5;
+    table.material.color.setScalar(0.62);
+    table.material.needsUpdate = true;
+  });
 }
 const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
@@ -1117,7 +1083,7 @@ function frame(now) {
   camera.lookAt(0, 0, 0);
   stageA.position.set(Math.cos(T * 0.45) * W * 0.6, H * 0.2 + Math.sin(T * 0.6) * H * 0.3, 240);
   table.scale.set(W * 1.6, H * 1.6, 1);
-  if (table.material.map) table.material.map.repeat.set(1, 1);
+  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 760, (H * 1.6) / 760);
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
   if (mode === 'stack') updateStack(dt);
   tickMaterials(T);
