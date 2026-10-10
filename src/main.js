@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import qrcode from 'qrcode-generator';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing, layoutCords, cordGap, cordOf, withCord } from './beads.js';
+import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing, layoutCords, cordGap, cordOf, withCord, PRESETS } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import feltUrl from './assets/felt.jpg';
@@ -177,8 +177,18 @@ const tube = new THREE.Mesh(new THREE.BufferGeometry(), stringMat);
 // The second cord, shown only for two-strand bracelets.
 const tube2 = new THREE.Mesh(new THREE.BufferGeometry(), stringMat);
 tube2.visible = false;
+// While stringing on two strands, the cord new beads go on is drawn a little thicker and brighter, and a faint ghost
+// bead shows exactly where the next one will land.
+const activeCordMat = new THREE.MeshStandardMaterial({ roughness: 0.6, map: stringMat.map, emissive: 0xffffff, emissiveIntensity: 0.12 });
+const ghost = new THREE.Group();
+const ghostFill = new THREE.Mesh(new THREE.SphereGeometry(0.36, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }));
+const ghostRing = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.045, 8, 40), new THREE.MeshBasicMaterial({ color: 0xff5fa8, transparent: true, opacity: 0.9, depthWrite: false }));
+ghostRing.position.z = 0.4;
+ghost.add(ghostFill, ghostRing);
+ghost.visible = false;
+let cordPaths = null;
 tube.castShadow = true;
-strand.add(tube, tube2);
+strand.add(tube, tube2, ghost);
 const knot = new THREE.Group();
 knot.add(new THREE.Mesh(new THREE.SphereGeometry(4.2, 16, 12), stringMat));
 for (const sgn of [-1, 1]) {
@@ -610,7 +620,7 @@ function buildRing(list, grid) {
   const R = grid.R, S = Math.min(grid.S, (TAU * R - 10) / Math.max(U, 1));
   const g = new THREE.Group(), loop = new THREE.Group(), hangs = [];
   // Two strands sit one above the other around the cone, meeting at shared beads and at the knot at the back.
-  const half = (TAU * R) / S / 2, gapAt = (u) => (lay.two ? S * 0.56 * cordGap(u, lay.joins, -half, half, 0.75) : 0);
+  const half = (TAU * R) / S / 2, gapAt = (u) => (lay.two ? S * 0.56 * cordGap(u, lay.joins, -half, half, 1.05) : 0);
   list.forEach((d, i) => {
     const o = makeBead(d), u = lay.off[i], phi = (u * S) / R;
     if (o.userData.cup) o.userData.cup.rotation.y = capFacing(list, i) > 0 ? 0 : Math.PI;
@@ -1296,8 +1306,12 @@ function frame(now) {
     }
     // Past the last bead on each end the cords take a while to come together, unless the tied loop leaves no room.
     const room = Math.min(lo, 1 - hi), endT = Math.max((0.5 * S) / Lm, Math.min(room * 0.9, (2.4 * S) / Lm));
-    lo -= endT * 0.8; hi += endT * 0.8;
-    const joins = beads.filter((b) => b.side === 0).map((b) => fr[beads.indexOf(b)]), tw = (0.75 * S) / Lm;
+    // Past an end bead threaded on both cords, the cords stay together all the way out.
+    const firstI = fr.indexOf(Math.min(...fr)), lastI = fr.indexOf(Math.max(...fr));
+    if (beads.length && beads[firstI].side === 0) lo = fr[firstI]; else lo -= endT * 0.8;
+    if (beads.length && beads[lastI].side === 0) hi = fr[lastI]; else hi += endT * 0.8;
+    // A wide parting curve, so loops between shared beads come out round rather than flat.
+    const joins = beads.filter((b) => b.side === 0).map((b) => fr[beads.indexOf(b)]), tw = (1.05 * S) / Lm;
     const gapAt = (f) => gapPx * cordGap(f, joins, lo, hi, tw, endT);
     cordA = []; cordB = [];
     for (let i = 0; i <= N; i++) {
@@ -1307,15 +1321,35 @@ function frame(now) {
       cordB.push({ x: pts[i].x + nx * g, y: pts[i].y + ny * g });
     }
   }
-  const tubeKey = [0, 15, 30, 45, 60, 75].map((i) => pts[i].x.toFixed(1) + ',' + pts[i].y.toFixed(1) + ',' + cordB[i].y.toFixed(1)).join() + k.toFixed(3) + W + 'x' + H + twoCords;
+  // Which cords are highlighted: only while stringing on two strands.
+  const lit = twoCords && mode === 'line' && k === 0 ? [activeCord !== 1, activeCord !== 0] : [false, false];
+  const tubeKey = [0, 15, 30, 45, 60, 75].map((i) => pts[i].x.toFixed(1) + ',' + pts[i].y.toFixed(1) + ',' + cordB[i].y.toFixed(1)).join() + k.toFixed(3) + W + 'x' + H + twoCords + lit;
   if (tubeKey !== lastTubeKey) {
     lastTubeKey = tubeKey;
-    const tubeOf = (path) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(p.x - cx, cy - p.y, 0))), 140, 1.35, 8, false);
+    const tubeOf = (path, r) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(p.x - cx, cy - p.y, 0))), 140, r, 8, false);
     tube.geometry.dispose();
-    tube.geometry = tubeOf(cordA);
+    tube.geometry = tubeOf(cordA, twoCords && k === 0 ? (lit[0] ? 1.75 : 1.1) : 1.35);
     tube2.visible = twoCords;
-    if (twoCords) { tube2.geometry.dispose(); tube2.geometry = tubeOf(cordB); }
+    if (twoCords) { tube2.geometry.dispose(); tube2.geometry = tubeOf(cordB, k === 0 ? (lit[1] ? 1.75 : 1.1) : 1.35); }
     stringMat.map.repeat.set(Lm / 9, 1);
+  }
+  tube.material = lit[0] ? activeCordMat : stringMat;
+  tube2.material = lit[1] ? activeCordMat : stringMat;
+  if (lit[0] || lit[1]) activeCordMat.color.copy(stringMat.color).offsetHSL(0, 0.08, 0.1);
+  cordPaths = twoCords && k === 0 ? { A: cordA, B: cordB, cum, Lm } : null;
+  // The ghost bead: where a bead added now would sit, worked out by laying out the string with one more bead.
+  ghost.visible = false;
+  if (lit[0] || lit[1]) {
+    const probe = withCord({ k: 'pony' }, activeCord), list = defs();
+    if (fits(probe)) {
+      const nl = layoutCords(side === 'L' ? [probe, ...list] : [...list, probe]), at = side === 'L' ? 0 : list.length;
+      const off = nl.off[at] + ((side === 'L' ? -1 : 1) * (nl.U - U)) / 2;
+      const gp = pointAt(nl.side[at] < 0 ? cordA : nl.side[at] > 0 ? cordB : pts, cum, lineLen / 2 + off * sizeCur);
+      ghost.visible = true;
+      ghost.position.set(gp.x - cx, cy - gp.y, 0);
+      ghost.scale.setScalar(S * (reduce ? 1 : 1 + 0.06 * Math.sin(T * 3.2)));
+      ghostRing.material.opacity = reduce ? 0.85 : 0.65 + 0.25 * Math.sin(T * 3.2);
+    }
   }
   knot.visible = k > 0.5;
   if (knot.visible) {
@@ -1445,8 +1479,19 @@ cv.addEventListener('pointerdown', (e) => {
   // The string is only caught by a press that starts right on it, so stray touches leave it alone.
   let rd = 1e9;
   for (let i = 1; i < N; i++) rd = Math.min(rd, Math.hypot(RX[i] - p.x, RY[i] - p.y));
+  // On two strands, a tap on a cord makes it the one new beads go on. A drag still plucks.
+  let cordTap = null;
+  if (cordPaths) {
+    let da = 1e9, db = 1e9;
+    for (let i = 1; i < N; i++) {
+      da = Math.min(da, Math.hypot(cordPaths.A[i].x - p.x, cordPaths.A[i].y - p.y));
+      db = Math.min(db, Math.hypot(cordPaths.B[i].x - p.x, cordPaths.B[i].y - p.y));
+    }
+    rd = Math.min(rd, da, db);
+    if (Math.abs(da - db) > 3) cordTap = da < db ? 0 : 1;
+  }
   const band = matchMedia('(pointer: coarse)').matches ? 22 : 14;
-  if (rd < band) pluck = { x: p.x, y: p.y, dx: 0, dy: 0, armed: false };
+  if (rd < band) pluck = { x: p.x, y: p.y, dx: 0, dy: 0, armed: false, cordTap };
 });
 // Running a finger across the beads strums them: each one rocks and plays a note.
 // Only a quick, deliberate swipe plays notes; a slow drag just rocks the beads quietly.
@@ -1533,6 +1578,7 @@ function release() {
     return;
   }
   if (pluck) {
+    if (!pluck.armed && pluck.cordTap != null && twoCords && mode === 'line') pickCord(pluck.cordTap);
     const pull = Math.hypot(pluck.dx, pluck.dy);
     if (pluck.armed && pull > 18) {
       twang(pull);
@@ -1681,11 +1727,14 @@ function clearLoose() {
 let colorIdx = 0;
 try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0, 0, COLORS.length - 1); } catch (e) { /* optional */ }
 // On two strands the Beads tab starts with two one-tap patterns, in the picked color.
-const patterns = () => (twoCords ? ['cross', 'diamond'].map((p) => {
+const PATTERN_NAMES = { cross: 'Cross', diamond: 'Diamond', bubble: 'Bubble' };
+const patterns = () => (twoCords ? Object.keys(PATTERN_NAMES).map((p) => {
   const c = COLORS[colorIdx];
-  return { name: (p === 'cross' ? 'Cross' : 'Diamond') + ' pattern in ' + c.name.toLowerCase(), pattern: p, def: { k: 'pattern', p, h: c.h, s: c.s, l: c.l } };
+  return { name: PATTERN_NAMES[p] + ' pattern in ' + c.name.toLowerCase(), pattern: p, def: { k: 'pattern', p, h: c.h, s: c.s, l: c.l } };
 }) : []);
-const TABS = { colors: () => [...patterns(), ...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
+// The first compartment strings a ready-made bracelet; each tap brings the next one.
+const SURPRISE = { name: 'Surprise me', surprise: true, def: { k: 'surprise' } };
+const TABS = { colors: () => [SURPRISE, ...patterns(), ...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
 const TINY = new Set(['seed', 'seedg', 'seedl', 'seedx', 'facet', 'gunspacer']);
@@ -1713,8 +1762,9 @@ function thumbRenderer() {
 }
 const tbox = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
 function renderThumbs(items) {
-  const todo = items.filter((it) => !thumbs[defKey(it.def)] && !it.pattern);
+  const todo = items.filter((it) => !thumbs[defKey(it.def)] && !it.pattern && !it.surprise);
   for (const it of items) if (it.pattern && !thumbs[defKey(it.def)]) thumbs[defKey(it.def)] = patternThumb(it.def);
+  if (items.includes(SURPRISE) && !thumbs[defKey(SURPRISE.def)]) thumbs[defKey(SURPRISE.def)] = surpriseThumb();
   if (!todo.length) return;
   const kit = thumbRenderer();
   if (!kit) return;
@@ -1756,6 +1806,10 @@ function patternThumb(d) {
   if (d.p === 'cross') {
     x.beginPath(); x.moveTo(8, 56); x.quadraticCurveTo(56, 14, 104, 56); x.moveTo(8, 56); x.quadraticCurveTo(56, 98, 104, 56); x.stroke();
     for (const [bx, by] of [[30, 56], [82, 56], [56, 34], [56, 78]]) bead(bx, by, 11, col);
+  } else if (d.p === 'bubble') {
+    x.beginPath(); x.ellipse(56, 56, 36, 26, 0, 0, Math.PI * 2); x.stroke();
+    for (let i = 0; i < 5; i++) { const a = Math.PI * (0.18 + (i / 4) * 0.64); bead(56 - Math.cos(a) * 36, 56 - Math.sin(a) * 26, 6, col); bead(56 - Math.cos(a) * 36, 56 + Math.sin(a) * 26, 6, col); }
+    for (const bx of [16, 96]) bead(bx, 56, 11, '#fbf3ea');
   } else {
     x.beginPath(); x.moveTo(6, 56); x.lineTo(56, 28); x.lineTo(106, 56); x.lineTo(56, 84); x.closePath(); x.stroke();
     for (const [bx, by] of [[38, 38], [56, 30], [74, 38], [38, 74], [56, 82], [74, 74]]) bead(bx, by, 7, col);
@@ -1770,9 +1824,11 @@ function addPattern(p) {
   const c = COLORS[colorIdx], col = { h: c.h, s: c.s, l: c.l }, end = side;
   const edge = beads.length ? (end === 'L' ? beads[0] : beads[beads.length - 1]).def : null;
   const joined = edge && cordOf(edge) === 2;
-  const shared = p === 'cross' ? { k: 'seed', ...col, c: 2 } : { k: 'facet', ...col, c: 2 };
+  // Bubble: a pearl on both cords, five seed beads on each cord, then another pearl, for big airy loops.
+  const shared = p === 'cross' ? { k: 'seed', ...col, c: 2 } : p === 'bubble' ? { k: 'pearl', c: 2 } : { k: 'facet', ...col, c: 2 };
   const seed = (cd) => ({ k: 'seed', ...col, c: cd });
-  const run = p === 'cross' ? [seed(0), seed(1)] : [seed(0), seed(0), seed(0), seed(1), seed(1), seed(1)];
+  const each = p === 'cross' ? 1 : p === 'bubble' ? 5 : 3;
+  const run = [...Array(each).fill(0).map(() => seed(0)), ...Array(each).fill(0).map(() => seed(1))];
   const q = [...(joined ? [] : [shared]), ...run, { ...shared }];
   if (!fits(q[q.length - 1], q.slice(0, -1))) { say('That is a full wrist. Pull a bead off to add more.'); return; }
   pushUndo();
@@ -1781,6 +1837,38 @@ function addPattern(p) {
   if (reduce) { q.forEach((d) => addBead(d, true, end)); return; }
   let step = 0;
   phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) clearInterval(phraseTimer); }, 110);
+}
+// A drawing of loose beads in many colors for the Surprise me compartment.
+function surpriseThumb() {
+  const c = document.createElement('canvas'), x = c.getContext('2d'), s = 112;
+  c.width = c.height = s;
+  const spots = [[34, 40, '#ff5fa8'], [62, 30, '#ffd23f'], [84, 50, '#5ab8ff'], [44, 70, '#9b6bff'], [72, 76, '#3fd1b0'], [56, 52, '#ffffff']];
+  for (const [bx, by, fill] of spots) {
+    const g = x.createRadialGradient(bx - 4, by - 4, 1, bx, by, 13);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, fill); g.addColorStop(1, 'rgba(40, 30, 70, .55)');
+    x.fillStyle = g; x.beginPath(); x.arc(bx, by, 12, 0, Math.PI * 2); x.fill();
+  }
+  x.fillStyle = '#ffd23f';
+  x.beginPath();
+  for (let i = 0; i < 8; i++) { const r = i % 2 ? 3 : 9, a = (i * Math.PI) / 4; x.lineTo(90 + Math.cos(a) * r, 22 + Math.sin(a) * r); }
+  x.fill();
+  return c.toDataURL('image/png');
+}
+// Surprise me: replaces the string with the next ready-made bracelet. Undo brings the old string back.
+let surpriseAt = Math.floor(Math.random() * PRESETS.length);
+function surprise() {
+  if (mode !== 'line') return;
+  const p = PRESETS[surpriseAt++ % PRESETS.length];
+  pushUndo();
+  clearInterval(phraseTimer);
+  beads.forEach(drop);
+  beads = [];
+  sync();
+  const list = p.beads.map((d) => (twoCords ? { ...d, c: 0 } : { ...d }));
+  say('Surprise: ' + p.name + '. Undo brings your string back.');
+  if (reduce) { list.forEach((d) => addBead(d, true, 'R')); return; }
+  let step = 0;
+  phraseTimer = setInterval(() => { const d = list.shift(); if (!d || !addBead(d, true, 'R', step++)) clearInterval(phraseTimer); }, 110);
 }
 // Turn the second cord on or off. Turning it off puts every bead back on one cord.
 function setTwo(on, quiet) {
@@ -1842,7 +1930,8 @@ function buildTray(keepScroll) {
     img.alt = '';
     img.src = thumbs[defKey(item.def)] || '';
     btn.appendChild(img);
-    btn.addEventListener('click', () => { arm(); item.pattern ? addPattern(item.pattern) : addBead(item.def); });
+    if (item.surprise) btn.classList.add('surprise');
+    btn.addEventListener('click', () => { arm(); item.surprise ? surprise() : item.pattern ? addPattern(item.pattern) : addBead(item.def); });
     tray.appendChild(btn);
   }
   tray.scrollLeft = keepScroll ? x : 0;
@@ -2105,12 +2194,13 @@ function endTrade() {
 }
 
 document.querySelectorAll('.strands').forEach((b) => b.addEventListener('click', () => { setTwo(b.dataset.cords === '2'); setMenu(false); }));
-document.querySelectorAll('#cordPick .seg').forEach((b) => b.addEventListener('click', () => {
-  activeCord = +b.dataset.cord;
+function pickCord(c) {
+  activeCord = c;
   syncTwoUI();
   tick([1.2, 0.9, 1.5][activeCord], 0.08);
   say(['New beads go on the top cord.', 'New beads go on the bottom cord.', 'New beads go through both cords.'][activeCord]);
-}));
+}
+document.querySelectorAll('#cordPick .seg').forEach((b) => b.addEventListener('click', () => pickCord(+b.dataset.cord)));
 document.querySelectorAll('.surf').forEach((b) => {
   b.setAttribute('aria-pressed', b.dataset.surf === surface ? 'true' : 'false');
   b.addEventListener('click', () => setSurface(b.dataset.surf));

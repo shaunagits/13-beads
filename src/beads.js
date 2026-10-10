@@ -108,6 +108,24 @@ export const DANGLES = named([
 
 export const defKey = (d) => JSON.stringify(d);
 
+/* ---------- Surprise me: ready-made bracelets in era-inspired colors ---------- */
+// Named by mood and color only: no artist name, album or song titles, logos, or lyrics.
+const tint = (name) => { const c = COLORS.find((o) => o.name === name); return { h: c.h, s: c.s, l: c.l }; };
+const B = (k, color) => ({ k, ...tint(color) });
+const mirrorAround = (half, mid) => [...half, ...mid, ...half.slice().reverse()];
+export const PRESETS = [
+  ['Night sky', mirrorAround([B('seed', 'Navy'), B('seed', 'Navy'), B('facet', 'Navy'), B('starb', 'Blue'), B('facet', 'Navy'), B('starb', 'Baby blue'), B('facet', 'Navy'), { k: 'moon2' }], [{ k: 'moon' }])],
+  ['Golden fields', mirrorAround([{ k: 'pearl' }, B('glitter', 'Yellow'), B('pony', 'Cream'), B('pony', 'Cream'), B('glitter', 'Yellow'), { k: 'ball' }, B('pony', 'Cream')], [{ k: 'guitar' }])],
+  ['Purple sparkle', mirrorAround([B('jelly', 'Lavender'), B('glitter', 'Purple'), { k: 'rondelle' }, B('crystal', 'Purple'), { k: 'pearl' }, B('glitter', 'Purple')], [{ k: 'butterfly' }])],
+  ['Scarlet', mirrorAround([B('pony', 'Black'), B('pony', 'Red'), B('pony', 'White'), B('pony', 'Red'), B('metal', 'Red'), B('pony', 'Red')], [{ k: 'scarf' }])],
+  ['Seaside snapshot', mirrorAround([B('pony', 'Baby blue'), B('pony', 'White'), B('round', 'Sky'), B('pony', 'White'), { k: 'spacer' }, B('pony', 'Baby blue')], [{ k: 'photo' }])],
+  ['Silver snake', mirrorAround([B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], [{ k: 'snake' }])],
+  ['Pastel dream', mirrorAround([B('pony', 'Blush'), B('pony', 'Baby blue'), B('pony', 'Lavender'), { k: 'pearl' }, B('jelly', 'Hot pink'), B('pony', 'Blush')], [{ k: 'pheart' }])],
+  ['Woodland', mirrorAround([B('clay', 'Cream'), B('clay', 'Cream'), B('round', 'Teal'), B('matte', 'White'), B('clay', 'Cream'), B('round', 'Teal'), { k: 'pearl' }], [{ k: 'cardigan' }])],
+  ['Stage lights', mirrorAround([B('glitter', 'Orange'), B('pony', 'Teal'), B('glitter', 'Orange'), { k: 'pearl' }, B('glitter', 'Teal'), { k: 'ball' }], [{ k: 'feather' }])],
+  ['Lucky blue', mirrorAround([B('glitter', 'Blue'), B('pony', 'Sky'), B('pony', 'White'), B('glitter', 'Blue'), { k: 'sparkle' }], [{ k: 'lucky13' }])],
+].map(([name, beads]) => ({ name, beads }));
+
 /* ---------- Two strands ---------- */
 // A bead's def can carry c: 1 (it is on the bottom cord) or c: 2 (both cords pass through it). No c is the top
 // cord, so every single-strand bracelet saved before two strands existed is unchanged.

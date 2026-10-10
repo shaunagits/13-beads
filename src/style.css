@@ -188,6 +188,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .tray::-webkit-scrollbar { display: none; }
 /* A compartment: a square well with clear plastic walls. */
+/* The Surprise me compartment carries a small label, since its picture is a jumble of beads. */
+.bead-btn.surprise { position: relative; }
+.bead-btn.surprise::after { content: "Surprise"; position: absolute; left: 0; right: 0; bottom: 3px; font: 700 9.5px var(--body); color: var(--ink); text-align: center; letter-spacing: .02em; }
 .bead-btn {
   width: 60px; height: 60px; padding: 0; display: grid; place-items: center; border-radius: 9px;
   background: linear-gradient(180deg, var(--well-shade), var(--well) 45%, var(--well));
@@ -314,7 +317,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hud .cord-pick { left: 10px; bottom: 17px; gap: 2px; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); }
 .hud .cord-pick[hidden] { display: none !important; }
 .hud.two #tie { left: auto; right: 10px; translate: none; }
-.cord-pick .seg { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; color: var(--ink); }
+.cord-pick .seg { height: 34px; padding: 0 11px; display: grid; place-items: center; color: var(--ink); font-size: 13px; }
 .cord-pick .seg[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
 .hud .side { left: 10px; bottom: 17px; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); }
 
