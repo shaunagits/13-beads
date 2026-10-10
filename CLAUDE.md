@@ -33,6 +33,7 @@ There is no test suite. The check is `npm run build` (must finish with no errors
 
 - No em dashes in any text, especially text players see.
 - No AI or assistant credit in code, commits, or docs.
+- Push finished work straight to `main` so it goes live. Do not ask her to review on a local server first, and do not leave work on preview branches waiting for her.
 - After local changes, give the full run command with the project path.
 - Flag open questions at the end of each reply, and keep repeating unanswered ones until she answers.
 - She cannot create GitHub repositories from a session. She creates empty ones on request.
