@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Width each bead takes up along the string, as a fraction of bead size.
-export const UNIT = { pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
+export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 0.84, starb: 1.0, dice: 0.7, facet: 0.42, marble: 0.84, moon2: 0.72, gunspacer: 0.24, pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
   lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
@@ -19,12 +19,18 @@ export const COLORS = [
   ['Hot pink', 330, 90, 58], ['Red', 355, 85, 52], ['Orange', 24, 95, 56], ['Yellow', 48, 98, 56],
   ['Lime', 95, 75, 50], ['Teal', 174, 75, 42], ['Sky', 198, 90, 60], ['Blue', 226, 80, 54],
   ['Purple', 272, 70, 56], ['Lavender', 262, 75, 76], ['Black', 260, 12, 10], ['White', 260, 15, 94],
+  // Added 2026-10-10 from Shauna's bracelet photos. New colors always go at the end, since trade links name a color
+  // by its place in this list; COLOR_ORDER sets where each one shows on the strip.
+  ['Blush', 14, 60, 80], ['Baby blue', 200, 78, 80], ['Cream', 40, 70, 90], ['Navy', 228, 70, 28],
 ].map(([name, h, s, l]) => ({ name, h, s, l }));
+export const COLOR_ORDER = [0, 12, 1, 2, 3, 14, 4, 5, 6, 13, 7, 15, 8, 9, 10, 11];
 
 // Bead types that come in every strip color. A bead's def is { k, h, s, l }.
 export const COLOR_TYPES = [
   ['pony', 'pony bead'], ['clay', 'clay disc'], ['round', 'round bead'], ['crystal', 'crystal'], ['cube', 'cube bead'],
   ['smiley', 'smiley bead'], ['jelly', 'jelly bead'], ['metal', 'metallic bead'], ['glitter', 'glitter bead'], ['glow', 'glow bead'],
+  ['matte', 'matte bead'], ['starb', 'star bead'], ['dice', 'dice bead'], ['facet', 'small faceted crystal'],
+  ['seed', 'seed bead'], ['seedg', 'frosted glitter seed bead'], ['seedl', 'silver-lined seed bead'],
 ];
 export const colorBeads = (c) => COLOR_TYPES.map(([k, label]) => ({
   name: c.name + ' ' + label, def: { k, h: c.h, s: c.s, l: c.l },
@@ -65,12 +71,19 @@ export const FIXED = [
   { name: 'Gold ball spacer', def: { k: 'ball' } },
   { name: 'Silver daisy spacer', def: { k: 'daisy' } },
   { name: 'Rhinestone rondelle', def: { k: 'rondelle' } },
+  { name: 'Marbled pearl', def: { k: 'marble' } },
+  { name: 'Moonstone bead', def: { k: 'moon2' } },
+  { name: 'Clear seed bead', def: { k: 'seedx', m: 'clear' } },
+  { name: 'Pearl seed bead', def: { k: 'seedx', m: 'pearl' } },
+  { name: 'Gunmetal seed bead', def: { k: 'seedx', m: 'gunmetal' } },
+  { name: 'Frosted square seed bead', def: { k: 'seedx', m: 'square' } },
+  { name: 'Gunmetal spacer', def: { k: 'gunspacer' } },
   { name: 'Gold bead cap', def: { k: 'cap', m: 'gold' } },
   { name: 'Silver bead cap', def: { k: 'cap', m: 'silver' } },
 ];
 // Spacers and caps are the small metal findings. A bead cap's cup faces its nearest real bead: the next one if it is
 // a bead, otherwise the one before. Returns 1 to face the next bead (toward +x), -1 to face the one before.
-export const FINDING = new Set(['spacer', 'ball', 'daisy', 'rondelle', 'cap']);
+export const FINDING = new Set(['spacer', 'ball', 'daisy', 'rondelle', 'cap', 'gunspacer']);
 export function capFacing(list, i) {
   const solid = (d) => d && !FINDING.has(d.k);
   if (solid(list[i + 1])) return 1;
@@ -102,7 +115,8 @@ export const defKey = (d) => JSON.stringify(d);
 //   bead, for example o10A is a round white A.
 //   A type letter plus a color number (0 to b): a colored bead, for example p0 is a hot pink pony bead.
 //   - and a name: any other bead, for example -pearl, -lucky13, or -cap:gold.
-const TYPE_CODE = { pony: 'p', clay: 'c', round: 'r', crystal: 'y', cube: 'q', smiley: 's', jelly: 'j', metal: 'm', glitter: 'g', glow: 'w' };
+const TYPE_CODE = { pony: 'p', clay: 'c', round: 'r', crystal: 'y', cube: 'q', smiley: 's', jelly: 'j', metal: 'm', glitter: 'g', glow: 'w',
+  matte: 'a', starb: 't', dice: 'd', facet: 'v', seed: 'e', seedg: 'f', seedl: 'l' };
 const CODE_TYPE = Object.fromEntries(Object.entries(TYPE_CODE).map(([k, v]) => [v, k]));
 const SYMBOL = { '!': 'x1', '?': 'x2', '&': 'x3', [HEART]: 'x4' }, UNSYMBOL = { x1: '!', x2: '?', x3: '&', x4: HEART };
 // The nearest strip color for a bead saved with its own hue (older bracelets had a few colors outside the strip).
@@ -134,7 +148,7 @@ export function decodeBracelet(code) {
     if (t[0] === '-') {
       const [k, m] = t.slice(1).split(':');
       if (!UNIT[k] || TYPE_CODE[k] || k === 'letter') continue;
-      out.push(m && /^(gold|silver)$/.test(m) ? { k, m } : { k });
+      out.push(m && /^(gold|silver|clear|pearl|gunmetal|square)$/.test(m) ? { k, m } : { k });
       continue;
     }
     if (/^o[01][0-4]/.test(t)) {
@@ -173,6 +187,50 @@ function ponyGeo() {
   const g = new THREE.LatheGeometry(pts, 48);
   g.rotateZ(Math.PI / 2);
   return (geo.pony = g);
+}
+// A seed bead: a tiny squat donut, about a third the size of a pony bead.
+function seedGeo() {
+  if (geo.seed) return geo.seed;
+  const pts = [], rin = 0.08, rout = 0.25, half = 0.14;
+  for (let i = 0; i <= 16; i++) {
+    const t = (i / 16) * Math.PI;
+    pts.push(new THREE.Vector2(rin + (rout - rin) * Math.pow(Math.sin(t), 0.5), -half * Math.cos(t)));
+  }
+  return (geo.seed = new THREE.LatheGeometry(pts, 24).rotateZ(Math.PI / 2));
+}
+// A small faceted rondelle crystal: two shallow cones, few facets, so it flashes as it turns.
+function facetGeo() {
+  if (geo.facet) return geo.facet;
+  const pts = [[0.06, -0.21], [0.15, -0.21], [0.3, -0.07], [0.3, 0.07], [0.15, 0.21], [0.06, 0.21]].map(([x, y]) => new THREE.Vector2(x, y));
+  return (geo.facet = new THREE.LatheGeometry(pts, 12).rotateZ(Math.PI / 2));
+}
+// The marbled pearl's swirl of lilac, pink, and white.
+function marbleTex() {
+  if (tex.marble) return tex.marble;
+  const t = canvasTex(256, (x, s) => {
+    x.fillStyle = '#f6f0fb';
+    x.fillRect(0, 0, s, s);
+    const cols = ['rgba(176,120,230,0.55)', 'rgba(255,170,215,0.45)', 'rgba(140,110,220,0.45)', 'rgba(255,255,255,0.7)'];
+    for (let i = 0; i < 26; i++) {
+      x.strokeStyle = cols[i % cols.length];
+      x.lineWidth = 6 + Math.random() * 18;
+      x.beginPath();
+      let px = Math.random() * s, py = Math.random() * s;
+      x.moveTo(px, py);
+      for (let j = 0; j < 4; j++) { px += (Math.random() - 0.5) * s * 0.7; py += (Math.random() - 0.3) * s * 0.4; x.quadraticCurveTo(px + 30, py - 40, px, py); }
+      x.stroke();
+    }
+  });
+  return (tex.marble = t);
+}
+// Dice pips, one texture per face count, white dots on clear.
+function pipTex(n) {
+  return (tex['pip' + n] ||= canvasTex(96, (x, s) => {
+    const at = { 1: [[0.5, 0.5]], 2: [[0.28, 0.28], [0.72, 0.72]], 3: [[0.26, 0.26], [0.5, 0.5], [0.74, 0.74]], 4: [[0.28, 0.28], [0.72, 0.28], [0.28, 0.72], [0.72, 0.72]],
+      5: [[0.26, 0.26], [0.74, 0.26], [0.5, 0.5], [0.26, 0.74], [0.74, 0.74]], 6: [[0.3, 0.24], [0.3, 0.5], [0.3, 0.76], [0.7, 0.24], [0.7, 0.5], [0.7, 0.76]] }[n];
+    x.fillStyle = '#ffffff';
+    for (const [u, v] of at) { x.beginPath(); x.arc(u * s, v * s, s * 0.085, 0, TAU); x.fill(); }
+  }));
 }
 // A polymer clay disc (heishi): a thin washer with flat faces and a softly rounded rim.
 function clayGeo() {
@@ -1216,6 +1274,92 @@ export function makeBead(d) {
       group.add(face, faceBack);
       break;
     }
+    case 'seed': case 'seedg': case 'seedl': {
+      const c = deep(d.h, d.s, d.l);
+      if (d.k === 'seed') group.add(mesh(seedGeo(), mat(defKey(d), () => plastic(c, { roughness: 0.25 }))));
+      else if (d.k === 'seedg') {
+        // Frosted glitter: soft and matte, with a fine sparkle, like the blush seed beads in Shauna's photo.
+        group.add(mesh(seedGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+          color: hsl(d.h, d.s * 0.75, clamp(d.l + 4, 24, 88)), roughness: 0.7, metalness: 0.2, bumpMap: sparkTex(), bumpScale: 1.4,
+          emissive: 0xffffff, emissiveMap: sparkTex(), emissiveIntensity: 0.35, sheen: 0.6, sheenColor: new THREE.Color(0xffffff),
+        }))));
+      } else {
+        // Silver-lined: clear colored glass with a mirror-bright square hole showing through.
+        group.add(mesh(seedGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+          color: deep(d.h, d.s, clamp(d.l, 30, 80)), transparent: true, opacity: 0.62, roughness: 0.04, clearcoat: 1, depthWrite: false,
+          emissive: hsl(d.h, d.s, d.l * 0.25),
+        }))));
+        group.add(mesh((geo.seedCore ||= new THREE.BoxGeometry(0.26, 0.15, 0.15)), silverMat()));
+      }
+      break;
+    }
+    case 'seedx': {
+      const m = d.m || 'clear';
+      if (m === 'square') {
+        group.add(mesh((geo.seedSq ||= new RoundedBoxGeometry(0.28, 0.4, 0.4, 2, 0.05)), mat('seedSq', () => new THREE.MeshPhysicalMaterial({
+          color: 0xf7f7fb, transparent: true, opacity: 0.72, roughness: 0.55, clearcoat: 0.4, depthWrite: false,
+        }))));
+        group.add(mesh((geo.seedSqCore ||= new THREE.BoxGeometry(0.29, 0.14, 0.14)), silverMat()));
+      } else if (m === 'clear') {
+        group.add(mesh(seedGeo(), mat('seedClear', () => new THREE.MeshPhysicalMaterial({
+          color: 0xf4f6ff, transparent: true, opacity: 0.45, roughness: 0.03, clearcoat: 1, depthWrite: false, iridescence: 0.6, iridescenceIOR: 1.5,
+        }))));
+      } else if (m === 'pearl') {
+        group.add(mesh(seedGeo(), mat('seedPearl', () => new THREE.MeshPhysicalMaterial({
+          color: 0xfff6ec, roughness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.7, sheen: 0.6, sheenColor: new THREE.Color(0xffc8e4),
+        }))));
+      } else {
+        group.add(mesh(seedGeo(), mat('seedGun', () => new THREE.MeshPhysicalMaterial({ color: 0x55565e, metalness: 1, roughness: 0.22, clearcoat: 0.5 }))));
+      }
+      break;
+    }
+    case 'gunspacer':
+      group.add(mesh((geo.gunspacer ||= new THREE.CylinderGeometry(0.2, 0.2, 0.22, 6).rotateZ(Math.PI / 2)),
+        mat('gunspacer', () => new THREE.MeshPhysicalMaterial({ color: 0x4b4c55, metalness: 1, roughness: 0.2, flatShading: true }))));
+      break;
+    case 'matte':
+      // Rubber-coated: soft color with no shine at all.
+      group.add(mesh((geo.round ||= new THREE.SphereGeometry(0.43, 36, 24)), mat(defKey(d), () => new THREE.MeshStandardMaterial({ color: deep(d.h, d.s * 0.95, d.l), roughness: 0.92 }))));
+      break;
+    case 'starb':
+      // A clear plastic star bead, threaded point to point.
+      group.add(mesh(starGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+        color: deep(d.h, d.s, clamp(d.l, 36, 84)), emissive: hsl(d.h, d.s, d.l * 0.25), transparent: true, opacity: 0.72,
+        roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.1,
+      }))));
+      break;
+    case 'dice': {
+      // A see-through colored die with white pips. The cord runs through two opposite faces, so four faces show.
+      group.add(mesh((geo.dice ||= new RoundedBoxGeometry(0.62, 0.62, 0.62, 3, 0.1)), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+        color: deep(d.h, d.s, clamp(d.l, 30, 78)), emissive: hsl(d.h, d.s, d.l * 0.3), transparent: true, opacity: 0.88, roughness: 0.12, clearcoat: 1,
+      }))));
+      const pipMat = (n) => mat('pip' + n, () => new THREE.MeshBasicMaterial({ map: pipTex(n), transparent: true, depthWrite: false, toneMapped: false }));
+      for (const [n, rx, ry, pos] of [[5, 0, 0, [0, 0, 0.312]], [2, 0, Math.PI, [0, 0, -0.312]], [3, -Math.PI / 2, 0, [0, 0.312, 0]], [4, Math.PI / 2, 0, [0, -0.312, 0]]]) {
+        const f = new THREE.Mesh((geo.pipFace ||= new THREE.PlaneGeometry(0.5, 0.5)), pipMat(n));
+        f.rotation.set(rx, ry, 0);
+        f.position.set(...pos);
+        group.add(f);
+      }
+      break;
+    }
+    case 'facet':
+      group.add(mesh(facetGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+        color: deep(d.h, d.s, clamp(d.l + 6, 18, 86)), emissive: hsl(d.h, d.s, d.l * 0.25), transparent: true, opacity: 0.9,
+        roughness: 0.02, metalness: 0.2, clearcoat: 1, iridescence: 0.7, iridescenceIOR: 1.5, flatShading: true,
+      }))));
+      break;
+    case 'marble':
+      group.add(mesh((geo.round ||= new THREE.SphereGeometry(0.43, 36, 24)), mat('marble', () => new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, map: marbleTex(), roughness: 0.16, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, sheen: 0.5, sheenColor: new THREE.Color(0xd9b8ff),
+      }))));
+      break;
+    case 'moon2':
+      // Milky moonstone glass with a soft blue glow inside.
+      group.add(mesh((geo.moon2 ||= new THREE.SphereGeometry(0.36, 32, 22)), mat('moon2', () => new THREE.MeshPhysicalMaterial({
+        color: 0xeef1f8, transparent: true, opacity: 0.86, roughness: 0.12, clearcoat: 1, emissive: 0x9fb4e8, emissiveIntensity: 0.18,
+        sheen: 1, sheenColor: new THREE.Color(0xbcd2ff), iridescence: 0.4,
+      }))));
+      break;
     case 'pearl':
       group.add(mesh((geo.pearl ||= new THREE.SphereGeometry(0.45, 40, 28)), mat('pearl', () => new THREE.MeshPhysicalMaterial({
         color: 0xfff3e8, roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.12, iridescence: 1, iridescenceIOR: 1.7,

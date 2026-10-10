@@ -38,7 +38,7 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 1. Add an entry to `COLOR_TYPES` (a bead type that comes in every color on the color strip), `FIXED` (a bead with one look), `CHARMS`, or `DANGLES` in `src/beads.js`.
 2. Give it a width in `UNIT`. The string holds beads by total width (`BUDGET` in `src/main.js`), not by count. Hanging charms also go in the `DANGLE` set.
 3. Add a builder for its shape: a `case` in `makeBead` for colored beads, or an entry in `CHARM_BUILDERS` for charms. Hanging charms start with `hanger(g)`.
-4. A new colored type also needs a one-letter code in `TYPE_CODE` (same file), so trade links can carry it.
+4. A new colored type also needs a one-letter code in `TYPE_CODE` (same file), so trade links can carry it. A new strip color goes at the end of `COLORS` (links name colors by position), with its place on the strip set in `COLOR_ORDER`.
 5. Optionally give it a sound role in `KIND` in `src/audio.js`: `bell` (adds a bell an octave up), `low` (an octave down), or `soft` (a soft swell).
 
 ## Design rules

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import qrcode from 'qrcode-generator';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { encodeBracelet, decodeBracelet, COLORS, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
+import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import feltUrl from './assets/felt.jpg';
@@ -1625,6 +1625,7 @@ try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0,
 const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
+const TINY = new Set(['seed', 'seedg', 'seedl', 'seedx', 'facet', 'gunspacer']);
 // One small offscreen renderer draws thumbnails as they are needed, so each color is only drawn the first time it is picked.
 let thumbKit = null;
 function thumbRenderer() {
@@ -1665,7 +1666,11 @@ function renderThumbs(items) {
       const fit = 1.2 / Math.max(size.x, size.y);
       o.scale.setScalar(fit);
       o.position.set(-mid.x * fit, -mid.y * fit, 0);
-    } else o.rotation.set(0.25, item.def.k === 'clay' ? -1.05 : -0.3, 0);
+    } else {
+      o.rotation.set(0.25, item.def.k === 'clay' ? -1.05 : -0.3, 0);
+      // Tiny beads are shown larger in their compartment so their finish can be seen.
+      if (TINY.has(item.def.k)) o.scale.setScalar(1.9);
+    }
     if (o.userData.flap) { o.userData.flap[0].rotation.y = -0.35; o.userData.flap[1].rotation.y = 0.35; }
     s.add(o);
     r.render(s, cam);
@@ -1676,8 +1681,8 @@ function renderThumbs(items) {
 function buildSwatches() {
   const strip = $('colorStrip');
   strip.textContent = '';
-  COLORS.forEach((col, i) => {
-    const b = document.createElement('button');
+  COLOR_ORDER.forEach((i) => {
+    const col = COLORS[i], b = document.createElement('button');
     b.type = 'button';
     b.className = 'color-dot';
     b.setAttribute('role', 'radio');
@@ -1689,7 +1694,7 @@ function buildSwatches() {
       if (i === colorIdx) return;
       colorIdx = i;
       try { localStorage.setItem('13beads.color', String(i)); } catch (e) { /* optional */ }
-      strip.querySelectorAll('.color-dot').forEach((o, j) => o.setAttribute('aria-checked', j === i ? 'true' : 'false'));
+      strip.querySelectorAll('.color-dot').forEach((o) => o.setAttribute('aria-checked', o === b ? 'true' : 'false'));
       tick(1 + i * 0.02, 0.08);
       buildTray(true);
     });
