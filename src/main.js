@@ -287,12 +287,14 @@ const usedLen = () => layoutCords(defs()).U;
 const fits = (d, more = []) => beads.length + more.length < MAX_COUNT && layoutCords([...defs(), ...more, d]).U <= BUDGET + 1e-6;
 function sync() {
   const n = beads.length, pct = Math.min(100, Math.round((usedLen() / BUDGET) * 100)), c = $('count');
-  // After Surprise me, the pill names the era for as long as the string is that era's bracelet (or still stringing
-  // it). Any change of the player's own turns it back into the bead count.
-  if (eraLabel) {
-    const key = (d) => defKey(withCord(d, 0)), now = defs().map(key);
-    const prefix = now.length <= eraBeads.length && now.every((k, i) => k === eraBeads[i]);
-    if (!prefix || (!eraStringing && now.length !== eraBeads.length)) eraLabel = '';
+  // After Surprise me, the pill names the era while the player makes the bracelet their own. It goes back to the
+  // bead count once most of that era's beads are gone: the string cleared, Start over, or Undo back past it.
+  if (eraLabel && !eraStringing) {
+    const left = {};
+    for (const d of defs()) { const k = defKey(withCord(d, 0)); left[k] = (left[k] || 0) + 1; }
+    let kept = 0;
+    for (const k of eraBeads) if (left[k] > 0) { left[k]--; kept++; }
+    if (kept < eraBeads.length / 2) eraLabel = '';
   }
   c.firstChild.textContent = eraLabel || n + (n === 1 ? ' bead' : ' beads');
   c.classList.toggle('era', !!eraLabel);
