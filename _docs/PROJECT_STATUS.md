@@ -162,6 +162,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-10 | Switching bead types | Recent group and jump chips | Shauna picked ideas 1 and 2 of four (press and hold to copy a bead, and add three at once, not built). |
 | 2026-10-10 | Surprise me names | Album titles, plus a fan-made note in the footer | Shauna picked option A. Still never the artist's name, logos or title lettering, cover art, or lyrics. Revisit if the game ever becomes paid or sponsored. |
 | 2026-10-10 | Surprise me name | Spelled in letter beads on the bracelet; the count pill label was removed | Shauna: she wants the name in the bracelet with the other styled beads, not in the corner of the screen. |
+| 2026-10-10 | Snake charm | Redrawn as an S-curve (diamond head, tail tapering to a point) lying along the string, replacing the coil | Shauna's reference: a simple S-shaped snake silhouette. Drawn fresh in code, not traced. Width 2.05 units; compartment thumbnails shrink long charms to fit. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |

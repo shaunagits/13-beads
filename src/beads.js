@@ -5,7 +5,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 // Width each bead takes up along the string, as a fraction of bead size.
 export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 0.84, starb: 1.0, dice: 0.7, facet: 0.42, marble: 0.84, moon2: 0.72, gunspacer: 0.24, pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
-  lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
+  lucky13: 1.04, snake: 2.05, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
   shades: 1.6, note: 1.04, vinyl: 1.25, cassette: 1.3, ticket: 1.34, chihuahua: 1.38, lips: 1.3,
@@ -409,30 +409,41 @@ function moonGeo() {
   s.absarc(0.2, 0, 0.42, Math.PI * 2 - b, b, true);
   return (geo.moon = extruded(s, 0.2, 0.86));
 }
+// A snake standing upright in a loose S: the tail tapers to a fine point at the bottom, the body swings side to side
+// three times, and a slim neck rises to the head at the top.
 function snakeGeo() {
   if (geo.snake) return geo.snake;
-  const pts = [];
-  for (let i = 0; i <= 60; i++) {
-    const t = i / 60, ang = t * 2.2 * Math.PI * 2 + 0.6, r = 0.07 + 0.39 * t;
-    pts.push(new THREE.Vector3(Math.cos(ang) * r, Math.sin(ang) * r, 0.05 * Math.sin(t * 9)));
-  }
-  const curve = new THREE.CatmullRomCurve3(pts), seg = 140, rad = 10;
-  const g = new THREE.TubeGeometry(curve, seg, 0.082, rad, false);
-  // Taper the tail (at the coil's center) so the body thickens toward the head.
+  const pts = [[0.04, -0.63], [0.06, -0.5], [-0.04, -0.38], [0.04, -0.25], [0.26, -0.14], [0.1, -0.02], [-0.17, 0.0], [-0.3, 0.11],
+    [-0.15, 0.2], [0.14, 0.2], [0.18, 0.29], [0.04, 0.36], [0.0, 0.45], [-0.005, 0.5]].map(([x, y]) => new THREE.Vector3(x, y, 0));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), seg = 160, rad = 12;
+  const g = new THREE.TubeGeometry(curve, seg, 0.092, rad, false);
+  // Thickness along the body: a fine tail, full through the middle, a little slimmer at the neck.
   const pos = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
   for (let i = 0; i <= seg; i++) {
-    const u = i / seg, f = 0.3 + 0.7 * Math.min(1, u * 2.2);
+    const u = i / seg, f = u < 0.4 ? 0.08 + 0.92 * Math.pow(u / 0.4, 0.7) : u > 0.86 ? 1 - 0.38 * ((u - 0.86) / 0.14) : 1;
     curve.getPointAt(u, c);
     for (let j = 0; j <= rad; j++) {
       const k = i * (rad + 1) + j;
       v.fromBufferAttribute(pos, k).sub(c).multiplyScalar(f).add(c);
-      pos.setXYZ(k, v.x, v.y, v.z);
+      pos.setXYZ(k, v.x, v.y, v.z * 0.85);
     }
   }
   g.computeVertexNormals();
   g.userData.end = curve.getPointAt(1);
-  g.userData.tan = curve.getTangentAt(1);
   return (geo.snake = g);
+}
+// The snake's head: a rounded diamond, wider than the neck, pointing up.
+function snakeHeadGeo() {
+  if (geo.snakeHead2) return geo.snakeHead2;
+  const sh = new THREE.Shape();
+  sh.moveTo(0, -0.05);
+  sh.quadraticCurveTo(0.085, -0.02, 0.075, 0.035);
+  sh.quadraticCurveTo(0.05, 0.11, 0, 0.15);
+  sh.quadraticCurveTo(-0.05, 0.11, -0.075, 0.035);
+  sh.quadraticCurveTo(-0.085, -0.02, 0, -0.05);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 4, curveSegments: 16 });
+  g.translate(0, 0, -0.025);
+  return (geo.snakeHead2 = g);
 }
 function wingGeo(upper) {
   const key = upper ? 'wingU' : 'wingL';
@@ -1615,26 +1626,27 @@ export function makeBead(d) {
         color: 0x0fae72, metalness: 0.55, roughness: 0.26, clearcoat: 1, clearcoatRoughness: 0.1,
         iridescence: 0.25, iridescenceIOR: 1.4, bumpMap: scaleTex(), bumpScale: 0.7,
       }));
+      // The S lies along the string, head pointing along the bracelet.
+      const body = new THREE.Group();
+      body.rotation.z = -Math.PI / 2;
+      body.scale.setScalar(1.75);
+      group.add(body);
       const g = snakeGeo();
-      group.add(mesh(g, skin));
+      body.add(mesh(g, skin));
       const head = new THREE.Group();
-      const skull = mesh((geo.snakeHead ||= new THREE.SphereGeometry(0.1, 24, 16)), mat('snakeHead', () => new THREE.MeshPhysicalMaterial({
-        color: 0x0fae72, metalness: 0.55, roughness: 0.24, clearcoat: 1, iridescence: 0.25, iridescenceIOR: 1.4,
-      })));
-      skull.scale.set(1.55, 1.05, 0.85);
-      head.add(skull);
+      head.add(mesh(snakeHeadGeo(), skin));
       const eyeMat = mat('snakeEye', () => new THREE.MeshStandardMaterial({ color: 0xffd23a, emissive: 0xffb300, emissiveIntensity: 0.9, roughness: 0.2 }));
-      for (const sy of [-1, 1]) {
-        const eye = new THREE.Mesh((geo.eye ||= new THREE.SphereGeometry(0.026, 12, 8)), eyeMat);
-        eye.position.set(0.06, sy * 0.06, 0.06);
-        head.add(eye);
+      for (const z of [0.058, -0.058]) {
+        for (const sx of [-1, 1]) {
+          const eye = new THREE.Mesh((geo.eye ||= new THREE.SphereGeometry(0.026, 12, 8)), eyeMat);
+          eye.position.set(sx * 0.035, 0.055, z);
+          eye.scale.z = 0.5;
+          head.add(eye);
+        }
       }
-      const tongue = new THREE.Mesh((geo.tongue ||= new THREE.BoxGeometry(0.12, 0.022, 0.012)), mat('tongue', () => plastic(0xe0193f)));
-      tongue.position.set(0.19, 0, 0);
-      head.add(tongue);
       head.position.copy(g.userData.end);
-      head.rotation.z = Math.atan2(g.userData.tan.y, g.userData.tan.x);
-      group.add(head);
+      head.position.y -= 0.02;
+      body.add(head);
       break;
     }
     case 'butterfly': {

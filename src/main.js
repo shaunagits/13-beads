@@ -1814,6 +1814,13 @@ function renderThumbs(items) {
       o.rotation.set(0.25, item.def.k === 'clay' ? -1.05 : -0.3, 0);
       // Tiny beads are shown larger in their compartment so their finish can be seen.
       if (TINY.has(item.def.k)) o.scale.setScalar(1.9);
+      else {
+        // Long charms (the snake) are shrunk to fit their compartment.
+        o.updateMatrixWorld(true);
+        tbox.setFromObject(o).getSize(size);
+        const big = Math.max(size.x, size.y);
+        if (big > 1.25) o.scale.setScalar(1.25 / big);
+      }
     }
     if (o.userData.flap) { o.userData.flap[0].rotation.y = -0.35; o.userData.flap[1].rotation.y = 0.35; }
     s.add(o);
