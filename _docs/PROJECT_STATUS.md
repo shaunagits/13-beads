@@ -4,6 +4,8 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## What exists
 
+**Design board**: a private Claude design canvas, "13 Beads screens" (https://claude.ai/artifact/Qk83C6ApFhPk5JgtKghznm), made 2026-10-10. Editable light-mode mockups of Stringing, Finished, Wall, the More menu, Share, and Decorate, built from the real styles in `src/style.css` with pictures of the 3D views, beside dark and desktop screenshots of the live game. Changes made there do not reach the game until they are built into the code.
+
 **Stringing (mode `line`)**
 - A 3D cord simulated as a weighted rope (Verlet chain with gravity): beads weigh it down, a pluck bends it at the finger, phone tilt tips gravity. Drawn zoomed out a little (`ZOOM = 0.82` in `frame` in `src/main.js`): beads are about 18 percent smaller than the cord has room for.
 - Tabletop: gray felt like a bead mat by default (`src/assets/felt.jpg` and `felt-normal.jpg`, CC0 ambientCG "Fabric 034"), or dark wood (`src/assets/table-dark.jpg`, CC0 Poly Haven "Dark Wood"). Picked in the More menu (Table: Felt / Wood), saved as `13beads.table`. The cord is lavender gray on felt and pale on wood. In dark mode the room dims under a warm desk lamp. The table is drawn beneath everything and is partly self-lit so stage lights do not tint it much.
