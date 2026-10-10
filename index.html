@@ -85,6 +85,7 @@
           See it finished
         </button>
         <button class="fab" id="another" type="button" data-show="stack"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Make another</button>
+        <p class="gift-note" id="giftNote" hidden></p>
         <div class="fab-row" data-show="tied">
           <button class="fab ghost" id="untie" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20l4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg> Keep editing</button>
           <button class="fab" id="wear" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg> Add to my wall</button>
@@ -98,14 +99,20 @@
           </div>
         </div>
         <form class="pop custom" id="shareCard" role="dialog" aria-modal="true" aria-labelledby="shareTitle" hidden>
-          <p class="pop-title" id="shareTitle">Make a share card</p>
+          <p class="pop-title" id="shareTitle">Share this bracelet</p>
           <label class="sign-field" for="cardNote">Gift tag note (optional)
             <input id="cardNote" type="text" maxlength="40" autocomplete="off" placeholder="For Maya, from Shauna">
           </label>
-          <div class="pop-actions">
-            <button class="btn" id="cardCancel" type="button">Cancel</button>
+          <div class="share-actions">
             <button class="btn primary" type="submit">Save card</button>
+            <button class="btn" id="sendLink" type="button">Send link</button>
+            <button class="btn" id="showQr" type="button" aria-expanded="false" aria-controls="qrBox">QR code</button>
           </div>
+          <div class="qr-box" id="qrBox" hidden>
+            <canvas id="qrCanvas" width="232" height="232" aria-label="QR code for this bracelet"></canvas>
+            <p class="sign-help">Scan to get this bracelet.</p>
+          </div>
+          <button class="btn quiet" id="cardCancel" type="button">Close</button>
         </form>
         <div class="pop custom" id="custom" role="dialog" aria-modal="true" aria-labelledby="customTitle" hidden>
           <p class="pop-title" id="customTitle">Decorate your wall</p>

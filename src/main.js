@@ -1,7 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { COLORS, colorBeads, FIXED, LETTERS, letterBeads, LETTER_STYLES, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
+import qrcode from 'qrcode-generator';
+import { encodeBracelet, decodeBracelet, COLORS, colorBeads, FIXED, LETTERS, letterBeads, LETTER_STYLES, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
@@ -215,7 +216,9 @@ function say(m) {
   st.textContent = '';
   requestAnimationFrame(() => { st.textContent = m; });
 }
-function save() { try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
+// While a received bracelet is showing, the player's own string is set aside and not overwritten.
+let trade = null;
+function save() { if (trade) return; try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
 const usedLen = () => beads.reduce((a, b) => a + UNIT[b.def.k], 0);
 const fits = (d, extra = 0) => beads.length < MAX_COUNT && usedLen() + extra + UNIT[d.k] <= BUDGET + 1e-6;
 function sync() {
@@ -275,6 +278,8 @@ function stringPhrase(text) {
   phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) clearInterval(phraseTimer); }, 120);
 }
 function setMode(m) {
+  // Leaving a received bracelet any way other than hanging it puts the player's own string back.
+  if (trade && m !== 'tied') endTrade();
   mode = m;
   $('buildPanel').hidden = m !== 'line';
   $('hud').hidden = false;
@@ -591,13 +596,15 @@ function buildRingButtons() {
 }
 function wear() {
   if (!beads.length) return;
+  const back = trade ? trade.saved : [];
+  if (trade) { trade = null; tradeUI(); }
   stack.push(defs());
   if (stack.length > 24) stack.shift();
   saveStack();
   rebuildStack();
   if (rings[0] && !reduce) { rings[0].drop = H * 0.8; rings[0].landed = false; whoosh(); }
   pushUndo();
-  setBeads([]);
+  setBeads(back);
   sync();
   kLin = 0;
   setMode('stack');
@@ -815,9 +822,40 @@ function openShare() {
   $('photoBtn').setAttribute('aria-expanded', 'true');
   $('cardNote').focus({ preventScroll: true });
 }
+function tradeLink() {
+  const note = $('cardNote').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+  return location.origin + location.pathname + '#t=' + encodeBracelet(defs()) + (note ? '&n=' + encodeURIComponent(note) : '');
+}
+$('sendLink').addEventListener('click', async () => {
+  const url = tradeLink(), btn = $('sendLink');
+  // Phones open the share sheet; computers copy the link.
+  if (matchMedia('(pointer: coarse)').matches && navigator.share) {
+    try { await navigator.share({ title: '13 Beads', text: 'I made you a bracelet.', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); btn.textContent = 'Link copied'; } catch (e) { btn.textContent = 'Copy failed'; }
+  say(btn.textContent + '.');
+  setTimeout(() => { btn.textContent = 'Send link'; }, 2200);
+});
+$('showQr').addEventListener('click', () => {
+  const box = $('qrBox'), open = box.hidden;
+  box.hidden = !open;
+  $('showQr').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (!open) return;
+  const qr = qrcode(0, 'M');
+  qr.addData(tradeLink());
+  qr.make();
+  const n = qr.getModuleCount(), c = $('qrCanvas'), x = c.getContext('2d'), q = 2, cell = Math.floor(c.width / (n + q * 2)), off = Math.floor((c.width - cell * n) / 2);
+  x.fillStyle = '#fff';
+  x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = '#1c1830';
+  for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) if (qr.isDark(r, col)) x.fillRect(off + col * cell, off + r * cell, cell, cell);
+});
+$('cardNote').addEventListener('input', () => { if (!$('qrBox').hidden) { $('qrBox').hidden = true; $('showQr').click(); } });
 function closeShare(restore = true) {
   if ($('shareCard').hidden) return;
   $('shareCard').hidden = true;
+  $('qrBox').hidden = true;
+  $('showQr').setAttribute('aria-expanded', 'false');
   $('photoBtn').setAttribute('aria-expanded', 'false');
   if (restore) $('photoBtn').focus({ preventScroll: true });
 }
@@ -1692,6 +1730,49 @@ document.querySelectorAll('.letter-chip').forEach((b) => b.addEventListener('cli
   buildTray(true);
 }));
 
+/* ---------- Receiving a bracelet from a trade link ---------- */
+function readTrade() {
+  const m = /[#&]t=([^&]*)/.exec(location.hash);
+  if (!m) return null;
+  const n = /[#&]n=([^&]*)/.exec(location.hash);
+  let note = '';
+  try { note = n ? decodeURIComponent(n[1]).replace(/\s+/g, ' ').trim().slice(0, 40) : ''; } catch (e) { /* bad note */ }
+  // Clear the code from the address bar, so a reload does not receive the bracelet again.
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* optional */ }
+  const list = decodeBracelet(m[1]);
+  return list.length ? { list, note } : null;
+}
+function tradeUI() {
+  const g = $('giftNote');
+  g.hidden = !trade;
+  if (trade) g.textContent = trade.note ? 'A bracelet for you: ' + trade.note : 'A bracelet for you';
+  $('untie').lastChild.textContent = trade ? ' Back to mine' : ' Keep editing';
+  $('wear').lastChild.textContent = trade ? ' Hang it on my wall' : ' Add to my wall';
+}
+// The received bracelet is strung bead by bead in front of the player, then ties itself off.
+function receiveTrade(list, note, saved) {
+  trade = { saved, note };
+  clearInterval(phraseTimer);
+  beads.forEach((b) => strand.remove(b.obj));
+  beads = [];
+  tradeUI();
+  const done = () => { if (trade && mode === 'line') { beads.forEach((b) => { b.drag = null; }); setMode('tied'); } };
+  if (reduce) { list.forEach((d) => addBead(d, true, 'R')); sync(); done(); return; }
+  list.forEach((d, i) => setTimeout(() => { if (trade && mode === 'line') addBead(d, true, 'R', i); }, 500 + i * 140));
+  setTimeout(done, 500 + list.length * 140 + 900);
+}
+function endTrade() {
+  const t = trade;
+  trade = null;
+  tradeUI();
+  clearInterval(phraseTimer);
+  setBeads(t.saved);
+  undoStack.length = 0;
+  redoStack.length = 0;
+  syncUndo();
+  sync();
+}
+
 /* ---------- Boot ---------- */
 async function start() {
   // Letter beads are drawn with the display font, so wait briefly for it.
@@ -1707,11 +1788,13 @@ async function start() {
 
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('13beads.strand') || 'null'); } catch (e) { /* optional */ }
+  const got = readTrade();
   if (Array.isArray(saved) && saved.length) setBeads(saved);
-  else stringStarter(350);
+  else if (!got) stringStarter(350);
   sync();
   rebuildStack();
   syncStack();
+  if (got) receiveTrade(got.list, got.note, Array.isArray(saved) ? saved : []);
   say(HINT);
   requestAnimationFrame((t) => { last = t; frame(t); });
 }

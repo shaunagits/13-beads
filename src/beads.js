@@ -74,6 +74,52 @@ export const DANGLES = named([
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
+
+/* ---------- Trade links: a bracelet written as a short code that fits in a link or QR code ---------- */
+// One token per bead, joined with dots. Tokens name beads by kind, never by list position, so adding new beads
+// later never changes old links.
+//   A to Z, 0 to 9: white letter beads. x1 x2 x3: ! ? &. A leading _ makes it a black letter bead.
+//   A type letter plus a color number (0 to b): a colored bead, for example p0 is a hot pink pony bead.
+//   - and a name: any other bead, for example -pearl, -lucky13, or -cap:gold.
+const TYPE_CODE = { pony: 'p', clay: 'c', round: 'r', crystal: 'y', cube: 'q', smiley: 's', jelly: 'j', metal: 'm', glitter: 'g', glow: 'w' };
+const CODE_TYPE = Object.fromEntries(Object.entries(TYPE_CODE).map(([k, v]) => [v, k]));
+const SYMBOL = { '!': 'x1', '?': 'x2', '&': 'x3' }, UNSYMBOL = { x1: '!', x2: '?', x3: '&' };
+// The nearest strip color for a bead saved with its own hue (older bracelets had a few colors outside the strip).
+function nearestColor(d) {
+  const s = d.s == null ? 85 : d.s, l = d.l == null ? 55 : d.l;
+  let best = 0, bd = 1e9;
+  COLORS.forEach((c, i) => {
+    const dh = Math.min(Math.abs(c.h - d.h), 360 - Math.abs(c.h - d.h)) * (Math.min(s, c.s) / 100);
+    const dist = dh * dh + (c.s - s) * (c.s - s) * 0.3 + (c.l - l) * (c.l - l) * 2;
+    if (dist < bd) { bd = dist; best = i; }
+  });
+  return best;
+}
+export function encodeBracelet(list) {
+  return list.map((d) => {
+    if (d.k === 'letter') return (d.st === 'black' ? '_' : '') + (SYMBOL[d.ch] || d.ch);
+    if (TYPE_CODE[d.k]) return TYPE_CODE[d.k] + nearestColor(d).toString(16);
+    return '-' + d.k + (d.m ? ':' + d.m : '');
+  }).join('.');
+}
+export function decodeBracelet(code) {
+  const out = [];
+  for (const t of String(code || '').split('.').slice(0, 120)) {
+    if (!t) continue;
+    if (t[0] === '-') {
+      const [k, m] = t.slice(1).split(':');
+      if (!UNIT[k] || TYPE_CODE[k] || k === 'letter') continue;
+      out.push(m && /^(gold|silver)$/.test(m) ? { k, m } : { k });
+      continue;
+    }
+    const black = t[0] === '_', body = black ? t.slice(1) : t;
+    const ch = UNSYMBOL[body] || body;
+    if (/^[A-Z0-9!?&]$/.test(ch)) { out.push(black ? { k: 'letter', ch, st: 'black' } : { k: 'letter', ch }); continue; }
+    const k = CODE_TYPE[t[0]], i = parseInt(t.slice(1), 16);
+    if (k && COLORS[i]) out.push({ k, h: COLORS[i].h, s: COLORS[i].s, l: COLORS[i].l });
+  }
+  return out;
+}
 // Charms that read small on a phone are drawn larger. All hanging charms share roughly one size. Widths in UNIT match.
 const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35, chair: 1.35, ladder: 1.3, minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
