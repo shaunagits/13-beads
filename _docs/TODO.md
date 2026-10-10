@@ -6,7 +6,7 @@ Top item is the next thing to do.
 
 1. **Phone checks.** On a real phone: shake to spill (tap Tilt first on iPhone; tune the 17 m/s² threshold in `listenShake` if needed), trade links end to end with a QR scan, the share sheet for Save card and Send link, cone spinning and press-and-hold, and Tilt.
 2. **Era presets ("Surprise me").** Approved in principle. Shauna likes the concept but is unsure how the control could stay out of the way; placement and naming are open. Each preset strings era colors and matching charms; Undo restores. Keep the artist's name, logos, cover art, and lyrics out of the app.
-3. **Two strands** (in progress): step 1 two cords tied in one knot, each bead goes on the top or bottom cord; step 2 shared beads through both cords, with one-tap Diamond and Cross patterns. Wall shows a double ring; trade links carry both cords.
+3. **Two strands follow-ups**, after Shauna tries it: more patterns (ladder, daisy), letting a pattern use a second color, and whether the cord picker needs a first-time hint.
 4. **Heart hands model.** Shauna scans her sculpture (`_docs/findings/2026-10-08-heart-hands-model.md`) or finds an openly licensed model.
 5. **Wall decorating.** Only if it can be done well: fairy lights, photos on a wire, drag-to-place items, around the cones.
 

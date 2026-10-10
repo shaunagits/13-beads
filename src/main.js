@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import qrcode from 'qrcode-generator';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
+import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing, layoutCords, cordGap, cordOf, withCord } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import feltUrl from './assets/felt.jpg';
@@ -52,6 +52,8 @@ const STACK_MAX = 12;
 /* ---------- State ---------- */
 let beads = [], fallers = [], undoStack = [], redoStack = [];
 let letterStyle = 'white', letterShape = 'round';
+// Two strands: a second cord hangs below the first. New beads go on the active cord: 0 top, 1 bottom, 2 both.
+let twoCords = false, activeCord = 0, cordPx = 0;
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
@@ -172,8 +174,11 @@ function twistTexture() {
 }
 const stringMat = new THREE.MeshStandardMaterial({ color: 0x7f7398, roughness: 0.7, map: twistTexture() });
 const tube = new THREE.Mesh(new THREE.BufferGeometry(), stringMat);
+// The second cord, shown only for two-strand bracelets.
+const tube2 = new THREE.Mesh(new THREE.BufferGeometry(), stringMat);
+tube2.visible = false;
 tube.castShadow = true;
-strand.add(tube);
+strand.add(tube, tube2);
 const knot = new THREE.Group();
 knot.add(new THREE.Mesh(new THREE.SphereGeometry(4.2, 16, 12), stringMat));
 for (const sgn of [-1, 1]) {
@@ -250,6 +255,8 @@ function setBeads(list) {
   beads.forEach((b) => strand.remove(b.obj));
   // Saved strings keep every bead, even ones from before the length budget.
   beads = list.filter((d) => d && UNIT[d.k]).slice(0, MAX_COUNT).map((d) => mk(d, true));
+  // A bracelet made on two cords opens with both cords showing.
+  if (beads.some((b) => cordOf(b.def))) setTwo(true, true);
 }
 // Messages are not shown on screen (a pop-up note covered the string). They still go to a hidden live region,
 // so screen readers announce them.
@@ -261,8 +268,9 @@ function say(m) {
 // While a received bracelet is showing, the player's own string is set aside and not overwritten.
 let trade = null;
 function save() { if (trade) return; try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
-const usedLen = () => beads.reduce((a, b) => a + UNIT[b.def.k], 0);
-const fits = (d, extra = 0) => beads.length < MAX_COUNT && usedLen() + extra + UNIT[d.k] <= BUDGET + 1e-6;
+// On two cords, the length that counts is the longer cord, so the bracelet still fits one wrist.
+const usedLen = () => layoutCords(defs()).U;
+const fits = (d, more = []) => beads.length + more.length < MAX_COUNT && layoutCords([...defs(), ...more, d]).U <= BUDGET + 1e-6;
 function sync() {
   const n = beads.length, pct = Math.min(100, Math.round((usedLen() / BUDGET) * 100)), c = $('count');
   c.firstChild.textContent = n + (n === 1 ? ' bead' : ' beads');
@@ -277,6 +285,8 @@ function syncUndo() { $('undo').disabled = !undoStack.length; $('redo').disabled
 
 function addBead(def, noUndo, end = side, step = null) {
   if (mode !== 'line') return false;
+  // On two strands a bead goes on the active cord, unless it already says which (the patterns do).
+  if (twoCords) def = withCord(def, 'c' in def ? def.c : activeCord);
   if (!fits(def)) { say('That is a full wrist. Pull a bead off to add more.'); return false; }
   if (!noUndo) pushUndo();
   const b = mk(def, reduce, end);
@@ -307,15 +317,16 @@ function stringPhrase(text) {
   }
   if (!list.length) { say('Type letters, numbers, or ! ? & to spell a phrase.'); return; }
   // Count how much of the phrase fits in the room left on the string.
-  let room = 0, len = 0;
-  while (room < list.length && fits(list[room], len)) len += UNIT[list[room++].k];
+  let room = 0;
+  const tagged = list.map((d) => (twoCords ? withCord(d, activeCord) : d));
+  while (room < tagged.length && fits(tagged[room], tagged.slice(0, room))) room++;
   if (room <= 0) { say('That is a full wrist. Pull a bead off to add more.'); return; }
   if (list.length > room) say('Only ' + room + ' beads fit, so the phrase was cut short.');
   pushUndo();
   clearInterval(phraseTimer);
   const end = side;
   // On the left end the last letter goes on first, so the phrase still reads left to right.
-  const q = list.slice(0, room);
+  const q = tagged.slice(0, room);
   if (end === 'L') q.reverse();
   if (reduce) { q.forEach((d) => addBead(d, true, end)); return; }
   let step = 0;
@@ -595,25 +606,33 @@ function syncStack() {
 // A bracelet lying around a cone: the beads stand in a level ring, letters facing out, the front of the
 // phrase toward the viewer. Its height on the cone is set each frame.
 function buildRing(list, grid) {
-  let U = 0;
-  for (const d of list) U += UNIT[d.k];
+  const lay = layoutCords(list), U = lay.U;
   const R = grid.R, S = Math.min(grid.S, (TAU * R - 10) / Math.max(U, 1));
   const g = new THREE.Group(), loop = new THREE.Group(), hangs = [];
-  let acc = (-U * S) / 2;
+  // Two strands sit one above the other around the cone, meeting at shared beads and at the knot at the back.
+  const half = (TAU * R) / S / 2, gapAt = (u) => (lay.two ? S * 0.56 * cordGap(u, lay.joins, -half, half, 0.75) : 0);
   list.forEach((d, i) => {
-    const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
-    acc += w;
+    const o = makeBead(d), u = lay.off[i], phi = (u * S) / R;
     if (o.userData.cup) o.userData.cup.rotation.y = capFacing(list, i) > 0 ? 0 : Math.PI;
     o.scale.setScalar(S);
-    o.position.set(R * Math.sin(phi), 0, R * Math.cos(phi));
+    o.position.set(R * Math.sin(phi), -lay.side[i] * gapAt(u), R * Math.cos(phi));
     o.rotation.y = phi;
     if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
     loop.add(o);
   });
-  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72).rotateX(Math.PI / 2), stringMat);
-  loop.add(cord);
+  if (!lay.two) loop.add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72).rotateX(Math.PI / 2), stringMat));
+  else {
+    for (const sd of [-1, 1]) {
+      const path = [];
+      for (let i = 0; i <= 96; i++) {
+        const phi = -Math.PI + (i / 96) * TAU;
+        path.push(new THREE.Vector3(R * Math.sin(phi), -sd * gapAt((phi * R) / S), R * Math.cos(phi)));
+      }
+      loop.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path, true), 120, 0.8, 6, true), stringMat));
+    }
+  }
   g.add(loop);
-  return { g, loop, R, S, hangs, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, sx: 0, sy: 0, rx: R, ry: R * 0.4, cone: null, wob: 0, wobv: 0 };
+  return { g, loop, R, S, hangs, two: lay.two, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, sx: 0, sy: 0, rx: R, ry: R * 0.4, cone: null, wob: 0, wobv: 0 };
 }
 // Oldest bracelets sit lowest on the first cone; newer ones stack on top, then fill the next cone.
 function rebuildStack() {
@@ -622,18 +641,23 @@ function rebuildStack() {
   rings.forEach((r) => r.g.parent && r.g.parent.remove(r.g));
   buildStand(grid);
   rings = stack.slice(-grid.cap).reverse().map((list) => buildRing(list.filter((d) => d && UNIT[d.k]), grid));
-  const n = rings.length;
-  rings.forEach((r, i) => {
-    const j = n - 1 - i, c = Math.min(coneGroups.length - 1, Math.floor(j / grid.per)), level = j % grid.per;
+  const n = rings.length, lift = [];
+  // Oldest first, so each bracelet knows how tall the ones below it are.
+  for (let i = n - 1; i >= 0; i--) {
+    const r = rings[i], j = n - 1 - i, c = Math.min(coneGroups.length - 1, Math.floor(j / grid.per)), level = j % grid.per;
     const cg = coneGroups[c];
     // Rest where the cone is just narrower than the bracelet, then one bead height higher per bracelet below.
+    // A two-strand bracelet is about one more bead height tall.
     const y0 = ((cg.Rb - grid.R * 0.94) / (cg.Rb - cg.Rt)) * (cg.Hc - cg.Rt) + 7 + grid.S * 0.6;
+    const extra = r.two ? grid.S * 0.56 : 0;
+    const below = lift[c] || 0;
     r.cone = cg;
     r.level = level;
-    r.y0 = y0 + level * grid.gap;
+    r.y0 = y0 + level * grid.gap + below + extra / 2;
+    lift[c] = below + extra;
     r.g.position.y = r.y0;
     cg.spinner.add(r.g);
-  });
+  }
   buildRingButtons();
 }
 const tmpV = new THREE.Vector3();
@@ -1197,8 +1221,7 @@ function frame(now) {
 
   tiltS += (tilt - tiltS) * 0.1;
   const n = beads.length;
-  let U = 0;
-  for (const b of beads) U += UNIT[b.def.k];
+  const lay = layoutCords(defs()), U = lay.U;
   const line = stepRope(dt, n);
   const lc = cumOf(line);
   lineLen = lc[N];
@@ -1210,12 +1233,10 @@ function frame(now) {
   const sizeT = U ? Math.min(SMAX, ((lineLen - 2 * edge) / U) * ZOOM) : SMAX;
   sizeCur += (sizeT - sizeCur) * (reduce ? 1 : 0.2);
 
-  let acc = (lineLen - U * sizeCur) / 2;
-  for (const b of beads) {
-    const w = UNIT[b.def.k] * sizeCur;
-    b.target = acc + w / 2;
-    b.off = acc + w / 2 - lineLen / 2;
-    acc += w;
+  beads.forEach((b, i) => {
+    b.off = lay.off[i] * sizeCur;
+    b.target = lineLen / 2 + b.off;
+    b.side = lay.side[i];
     if (b.s == null) b.s = b.target;
     if (!b.drag) {
       b.v += ((b.target - b.s) * 240 - b.v * 21) * dt;
@@ -1234,7 +1255,7 @@ function frame(now) {
     b.sw = clamp(b.sw + b.swv * dt, -1.3, 1.3);
     b.pv = b.v;
     b.sq += dt;
-  }
+  });
 
   // Tied bracelet: the string morphs into a loop.
   const R = Math.min(W, H) * 0.33, cx = W / 2, cy = H / 2 + R * 0.06, C = TAU * R;
@@ -1260,12 +1281,40 @@ function frame(now) {
   strand.scale.setScalar(hopS);
   strand.rotation.set((-0.3 + clamp(spinX, -0.9, 0.9)) * k, ((reduce ? 0 : Math.sin(T * 0.8) * 0.4) + spinY) * k, 0);
 
-  const tubeKey = [0, 15, 30, 45, 60, 75].map((i) => pts[i].x.toFixed(1) + ',' + pts[i].y.toFixed(1)).join() + k.toFixed(3) + W + 'x' + H;
+  // Two strands: each cord is the rope's path pushed up (top cord) or down (bottom cord) by half the gap between
+  // them. The cords meet at the ends and at every bead threaded on both, and part in between.
+  const fracOf = (b) => lerp(b.s / lineLen, 0.5 + (b.off * (Sc / sizeCur)) / C, k);
+  let cordA = pts, cordB = pts;
+  const gapPx = twoCords ? S * 0.56 : 0;
+  cordPx = gapPx;
+  if (twoCords) {
+    const fr = beads.map(fracOf), wf = (b) => (UNIT[b.def.k] * S) / Lm / 2;
+    let lo = 0.32, hi = 0.68;
+    if (beads.length) {
+      lo = Math.min(...beads.map((b, i) => fr[i] - wf(b)));
+      hi = Math.max(...beads.map((b, i) => fr[i] + wf(b)));
+    }
+    // Past the last bead on each end the cords take a while to come together, unless the tied loop leaves no room.
+    const room = Math.min(lo, 1 - hi), endT = Math.max((0.5 * S) / Lm, Math.min(room * 0.9, (2.4 * S) / Lm));
+    lo -= endT * 0.8; hi += endT * 0.8;
+    const joins = beads.filter((b) => b.side === 0).map((b) => fr[beads.indexOf(b)]), tw = (0.75 * S) / Lm;
+    const gapAt = (f) => gapPx * cordGap(f, joins, lo, hi, tw, endT);
+    cordA = []; cordB = [];
+    for (let i = 0; i <= N; i++) {
+      const a = pts[Math.max(0, i - 1)], c2 = pts[Math.min(N, i + 1)], tl = Math.hypot(c2.x - a.x, c2.y - a.y) || 1;
+      const nx = -(c2.y - a.y) / tl, ny = (c2.x - a.x) / tl, g = gapAt(cum[i] / Lm);
+      cordA.push({ x: pts[i].x - nx * g, y: pts[i].y - ny * g });
+      cordB.push({ x: pts[i].x + nx * g, y: pts[i].y + ny * g });
+    }
+  }
+  const tubeKey = [0, 15, 30, 45, 60, 75].map((i) => pts[i].x.toFixed(1) + ',' + pts[i].y.toFixed(1) + ',' + cordB[i].y.toFixed(1)).join() + k.toFixed(3) + W + 'x' + H + twoCords;
   if (tubeKey !== lastTubeKey) {
     lastTubeKey = tubeKey;
-    const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p.x - cx, cy - p.y, 0)));
+    const tubeOf = (path) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(p.x - cx, cy - p.y, 0))), 140, 1.35, 8, false);
     tube.geometry.dispose();
-    tube.geometry = new THREE.TubeGeometry(curve, 140, 1.35, 8, false);
+    tube.geometry = tubeOf(cordA);
+    tube2.visible = twoCords;
+    if (twoCords) { tube2.geometry.dispose(); tube2.geometry = tubeOf(cordB); }
     stringMat.map.repeat.set(Lm / 9, 1);
   }
   knot.visible = k > 0.5;
@@ -1277,7 +1326,7 @@ function frame(now) {
   const defList = defs();
   beads.forEach((b, i) => { if (b.obj.userData.cup) b.obj.userData.cup.rotation.y = capFacing(defList, i) > 0 ? 0 : Math.PI; });
   for (const b of beads) {
-    const f = lerp(b.s / lineLen, 0.5 + (b.off * (Sc / sizeCur)) / C, k), p = pointAt(pts, cum, f * Lm);
+    const f = fracOf(b), p = pointAt(b.side < 0 ? cordA : b.side > 0 ? cordB : pts, cum, f * Lm);
     b.S = S;
     const o = b.obj;
     if (b.drag) {
@@ -1455,6 +1504,15 @@ cv.addEventListener('pointermove', (e) => {
   let idx = 0;
   for (const o of others) if (o.x < p.x) idx++;
   if (beads.indexOf(b) !== idx) { others.splice(idx, 0, b); beads = others; tick(1.3, 0.08); }
+  // On two strands, dragging a bead above or below the middle moves it to the top or bottom cord; letting go
+  // right between them threads it on both.
+  if (twoCords) {
+    let ri = 1, bd = 1e9;
+    for (let i = 1; i < N; i++) { const d = Math.abs(RX[i] - p.x); if (d < bd) { bd = d; ri = i; } }
+    const dy = p.y - RY[ri], band = Math.max(5, cordPx * 0.4);
+    const c = dy > band ? 1 : dy < -band ? 0 : 2;
+    if (c !== cordOf(b.def)) { b.def = withCord(b.def, c); tick(c === 2 ? 1.5 : c ? 0.9 : 1.2, 0.06); }
+  }
 });
 function release() {
   if (spin) {
@@ -1622,7 +1680,12 @@ function clearLoose() {
 // The Beads tab shows one compartment per bead type, in the color picked on the color strip.
 let colorIdx = 0;
 try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0, 0, COLORS.length - 1); } catch (e) { /* optional */ }
-const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
+// On two strands the Beads tab starts with two one-tap patterns, in the picked color.
+const patterns = () => (twoCords ? ['cross', 'diamond'].map((p) => {
+  const c = COLORS[colorIdx];
+  return { name: (p === 'cross' ? 'Cross' : 'Diamond') + ' pattern in ' + c.name.toLowerCase(), pattern: p, def: { k: 'pattern', p, h: c.h, s: c.s, l: c.l } };
+}) : []);
+const TABS = { colors: () => [...patterns(), ...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
 const TINY = new Set(['seed', 'seedg', 'seedl', 'seedx', 'facet', 'gunspacer']);
@@ -1650,7 +1713,8 @@ function thumbRenderer() {
 }
 const tbox = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
 function renderThumbs(items) {
-  const todo = items.filter((it) => !thumbs[defKey(it.def)]);
+  const todo = items.filter((it) => !thumbs[defKey(it.def)] && !it.pattern);
+  for (const it of items) if (it.pattern && !thumbs[defKey(it.def)]) thumbs[defKey(it.def)] = patternThumb(it.def);
   if (!todo.length) return;
   const kit = thumbRenderer();
   if (!kit) return;
@@ -1677,6 +1741,67 @@ function renderThumbs(items) {
     thumbs[defKey(item.def)] = c.toDataURL('image/png');
     s.remove(o);
   }
+}
+// Pattern compartments: a small 2D drawing of the pattern, since it is several beads.
+function patternThumb(d) {
+  const c = document.createElement('canvas'), x = c.getContext('2d'), s = 112;
+  c.width = c.height = s;
+  const col = `hsl(${d.h} ${d.s}% ${Math.min(d.l, 70)}%)`, dark = `hsl(${d.h} ${d.s}% ${Math.max(8, d.l - 26)}%)`;
+  x.strokeStyle = 'rgba(120, 110, 150, .7)'; x.lineWidth = 2;
+  const bead = (bx, by, r, fill) => {
+    const g = x.createRadialGradient(bx - r * 0.35, by - r * 0.35, r * 0.1, bx, by, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, fill); g.addColorStop(1, dark);
+    x.fillStyle = g; x.beginPath(); x.arc(bx, by, r, 0, Math.PI * 2); x.fill();
+  };
+  if (d.p === 'cross') {
+    x.beginPath(); x.moveTo(8, 56); x.quadraticCurveTo(56, 14, 104, 56); x.moveTo(8, 56); x.quadraticCurveTo(56, 98, 104, 56); x.stroke();
+    for (const [bx, by] of [[30, 56], [82, 56], [56, 34], [56, 78]]) bead(bx, by, 11, col);
+  } else {
+    x.beginPath(); x.moveTo(6, 56); x.lineTo(56, 28); x.lineTo(106, 56); x.lineTo(56, 84); x.closePath(); x.stroke();
+    for (const [bx, by] of [[38, 38], [56, 30], [74, 38], [38, 74], [56, 82], [74, 74]]) bead(bx, by, 7, col);
+    for (const bx of [18, 94]) bead(bx, 56, 12, col);
+  }
+  return c.toDataURL('image/png');
+}
+// Cross: a bead on both cords, one on each cord, then another on both, like a little plus sign.
+// Diamond: a crystal on both cords, three seed beads on each cord, then another crystal on both.
+function addPattern(p) {
+  if (mode !== 'line' || !twoCords) return;
+  const c = COLORS[colorIdx], col = { h: c.h, s: c.s, l: c.l }, end = side;
+  const edge = beads.length ? (end === 'L' ? beads[0] : beads[beads.length - 1]).def : null;
+  const joined = edge && cordOf(edge) === 2;
+  const shared = p === 'cross' ? { k: 'seed', ...col, c: 2 } : { k: 'facet', ...col, c: 2 };
+  const seed = (cd) => ({ k: 'seed', ...col, c: cd });
+  const run = p === 'cross' ? [seed(0), seed(1)] : [seed(0), seed(0), seed(0), seed(1), seed(1), seed(1)];
+  const q = [...(joined ? [] : [shared]), ...run, { ...shared }];
+  if (!fits(q[q.length - 1], q.slice(0, -1))) { say('That is a full wrist. Pull a bead off to add more.'); return; }
+  pushUndo();
+  clearInterval(phraseTimer);
+  if (end === 'L') q.reverse();
+  if (reduce) { q.forEach((d) => addBead(d, true, end)); return; }
+  let step = 0;
+  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) clearInterval(phraseTimer); }, 110);
+}
+// Turn the second cord on or off. Turning it off puts every bead back on one cord.
+function setTwo(on, quiet) {
+  if (on === twoCords && quiet) return syncTwoUI();
+  if (!on && beads.some((b) => cordOf(b.def))) {
+    if (!quiet) pushUndo();
+    beads.forEach((b) => { b.def = withCord(b.def, 0); });
+    sync();
+  }
+  twoCords = on;
+  if (on && !quiet) { activeCord = 0; say('Two strands. Pick the top cord, the bottom cord, or both, at the bottom left.'); }
+  syncTwoUI();
+  // The Beads tab shows the patterns only on two strands.
+  if (curTab === 'colors') buildTray(true);
+  if (!quiet) tick(on ? 1.2 : 0.9, 0.08);
+}
+function syncTwoUI() {
+  document.querySelectorAll('.strands').forEach((o) => o.setAttribute('aria-pressed', (o.dataset.cords === '2') === twoCords ? 'true' : 'false'));
+  $('cordPick').hidden = !twoCords;
+  $('hud').classList.toggle('two', twoCords);
+  document.querySelectorAll('#cordPick .seg').forEach((o) => o.setAttribute('aria-checked', +o.dataset.cord === activeCord ? 'true' : 'false'));
 }
 function buildSwatches() {
   const strip = $('colorStrip');
@@ -1717,7 +1842,7 @@ function buildTray(keepScroll) {
     img.alt = '';
     img.src = thumbs[defKey(item.def)] || '';
     btn.appendChild(img);
-    btn.addEventListener('click', () => { arm(); addBead(item.def); });
+    btn.addEventListener('click', () => { arm(); item.pattern ? addPattern(item.pattern) : addBead(item.def); });
     tray.appendChild(btn);
   }
   tray.scrollLeft = keepScroll ? x : 0;
@@ -1979,6 +2104,13 @@ function endTrade() {
   sync();
 }
 
+document.querySelectorAll('.strands').forEach((b) => b.addEventListener('click', () => { setTwo(b.dataset.cords === '2'); setMenu(false); }));
+document.querySelectorAll('#cordPick .seg').forEach((b) => b.addEventListener('click', () => {
+  activeCord = +b.dataset.cord;
+  syncTwoUI();
+  tick([1.2, 0.9, 1.5][activeCord], 0.08);
+  say(['New beads go on the top cord.', 'New beads go on the bottom cord.', 'New beads go through both cords.'][activeCord]);
+}));
 document.querySelectorAll('.surf').forEach((b) => {
   b.setAttribute('aria-pressed', b.dataset.surf === surface ? 'true' : 'false');
   b.addEventListener('click', () => setSurface(b.dataset.surf));

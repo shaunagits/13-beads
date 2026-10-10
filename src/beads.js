@@ -108,6 +108,57 @@ export const DANGLES = named([
 
 export const defKey = (d) => JSON.stringify(d);
 
+/* ---------- Two strands ---------- */
+// A bead's def can carry c: 1 (it is on the bottom cord) or c: 2 (both cords pass through it). No c is the top
+// cord, so every single-strand bracelet saved before two strands existed is unchanged.
+export const cordOf = (d) => (d && (d.c === 1 || d.c === 2) ? d.c : 0);
+export const withCord = (d, c) => { const o = { ...d }; delete o.c; if (c === 1 || c === 2) o.c = c; return o; };
+// Where each bead sits along the bracelet, in bead units from its middle, and which cord it is on (-1 top, 1 bottom,
+// 0 both). Between two shared beads each cord carries its own run of beads, centered, and that stretch is as long as
+// the longer run, plus a little room for the cords to part around a shared bead.
+const PART = 0.22;
+export function layoutCords(list) {
+  const n = list.length, off = new Array(n), side = new Array(n).fill(0), joins = [];
+  const two = list.some((d) => cordOf(d));
+  let acc = 0;
+  if (!two) {
+    list.forEach((d, i) => { const w = UNIT[d.k] || 0; off[i] = acc + w / 2; acc += w; });
+  } else {
+    let run = { a: [], b: [] }, afterShared = false;
+    const len = (ids) => ids.reduce((t, i) => t + UNIT[list[i].k], 0);
+    const flush = (nearShared) => {
+      const la = len(run.a), lb = len(run.b), L = Math.max(la, lb) + ((la || lb) && nearShared ? PART : 0);
+      for (const [ids, l, sd] of [[run.a, la, -1], [run.b, lb, 1]]) {
+        let x = acc + (L - l) / 2;
+        for (const i of ids) { const w = UNIT[list[i].k]; off[i] = x + w / 2; side[i] = sd; x += w; }
+      }
+      acc += L;
+      run = { a: [], b: [] };
+    };
+    list.forEach((d, i) => {
+      const c = cordOf(d);
+      if (c === 2) {
+        flush(true);
+        const w = UNIT[d.k] || 0;
+        off[i] = acc + w / 2; joins.push(off[i]); acc += w;
+        afterShared = true;
+      } else (c === 1 ? run.b : run.a).push(i);
+    });
+    flush(afterShared);
+  }
+  const mid = acc / 2;
+  return { U: acc, off: off.map((o) => o - mid), side, joins: joins.map((j) => j - mid), two };
+}
+// How far apart the two cords are at a point, from 0 (pressed together) to 1 (fully apart). They meet at each
+// shared bead and at the ends (lo, hi), and part over a distance t on either side.
+// Toward the ends they come together more gradually (tEnd), the way two cords meet at a knot.
+export function cordGap(u, joins, lo, hi, t, tEnd = t) {
+  if (u <= lo || u >= hi) return 0;
+  let x = Math.min(1, Math.min(u - lo, hi - u) / tEnd);
+  for (const j of joins) x = Math.min(x, Math.abs(u - j) / t);
+  return x * x * (3 - 2 * x);
+}
+
 /* ---------- Trade links: a bracelet written as a short code that fits in a link or QR code ---------- */
 // One token per bead, joined with dots. Tokens name beads by kind, never by list position, so adding new beads
 // later never changes old links.
@@ -132,38 +183,45 @@ function nearestColor(d) {
   return best;
 }
 export function encodeBracelet(list) {
-  return list.map((d) => {
-    if (d.k === 'letter') {
-      const c = SYMBOL[d.ch] || d.ch;
-      if (!d.sh && (!d.st || d.st === 'black') && d.ch !== HEART) return (d.st === 'black' ? '_' : '') + c;
-      return 'o' + (d.sh === 'round' ? 1 : 0) + Math.max(0, LETTER_STYLE_ORDER.indexOf(d.st || 'white')) + c;
-    }
-    if (TYPE_CODE[d.k]) return TYPE_CODE[d.k] + nearestColor(d).toString(16);
-    return '-' + d.k + (d.m ? ':' + d.m : '');
-  }).join('.');
+  return list.map((d) => encodeOne(d) + (cordOf(d) ? '~' + cordOf(d) : '')).join('.');
+}
+function encodeOne(d) {
+  if (d.k === 'letter') {
+    const c = SYMBOL[d.ch] || d.ch;
+    if (!d.sh && (!d.st || d.st === 'black') && d.ch !== HEART) return (d.st === 'black' ? '_' : '') + c;
+    return 'o' + (d.sh === 'round' ? 1 : 0) + Math.max(0, LETTER_STYLE_ORDER.indexOf(d.st || 'white')) + c;
+  }
+  if (TYPE_CODE[d.k]) return TYPE_CODE[d.k] + nearestColor(d).toString(16);
+  return '-' + d.k + (d.m ? ':' + d.m : '');
 }
 export function decodeBracelet(code) {
   const out = [];
-  for (const t of String(code || '').split('.').slice(0, 120)) {
-    if (!t) continue;
-    if (t[0] === '-') {
-      const [k, m] = t.slice(1).split(':');
-      if (!UNIT[k] || TYPE_CODE[k] || k === 'letter') continue;
-      out.push(m && /^(gold|silver|clear|pearl|gunmetal|square)$/.test(m) ? { k, m } : { k });
-      continue;
-    }
-    if (/^o[01][0-4]/.test(t)) {
-      const ch = UNSYMBOL[t.slice(3)] || t.slice(3);
-      if (isLetterChar(ch)) out.push(letterDef(ch, LETTER_STYLE_ORDER[+t[2]], t[1] === '1' ? 'round' : ''));
-      continue;
-    }
-    const black = t[0] === '_', body = black ? t.slice(1) : t;
-    const ch = UNSYMBOL[body] || body;
-    if (/^[A-Z0-9!?&]$/.test(ch)) { out.push(black ? { k: 'letter', ch, st: 'black' } : { k: 'letter', ch }); continue; }
-    const k = CODE_TYPE[t[0]], i = parseInt(t.slice(1), 16);
-    if (k && COLORS[i]) out.push({ k, h: COLORS[i].h, s: COLORS[i].s, l: COLORS[i].l });
+  for (const tc of String(code || '').split('.').slice(0, 120)) {
+    if (!tc) continue;
+    // A ~1 or ~2 on the end puts the bead on the bottom cord or on both.
+    const [t, cs] = tc.split('~'), at = out.length;
+    decodeOne(t, out);
+    if (out.length > at && (cs === '1' || cs === '2')) out[at].c = +cs;
   }
   return out;
+}
+function decodeOne(t, out) {
+  if (t[0] === '-') {
+    const [k, m] = t.slice(1).split(':');
+    if (!UNIT[k] || TYPE_CODE[k] || k === 'letter') return;
+    out.push(m && /^(gold|silver|clear|pearl|gunmetal|square)$/.test(m) ? { k, m } : { k });
+    return;
+  }
+  if (/^o[01][0-4]/.test(t)) {
+    const ch = UNSYMBOL[t.slice(3)] || t.slice(3);
+    if (isLetterChar(ch)) out.push(letterDef(ch, LETTER_STYLE_ORDER[+t[2]], t[1] === '1' ? 'round' : ''));
+    return;
+  }
+  const black = t[0] === '_', body = black ? t.slice(1) : t;
+  const ch = UNSYMBOL[body] || body;
+  if (/^[A-Z0-9!?&]$/.test(ch)) { out.push(black ? { k: 'letter', ch, st: 'black' } : { k: 'letter', ch }); return; }
+  const k = CODE_TYPE[t[0]], i = parseInt(t.slice(1), 16);
+  if (k && COLORS[i]) out.push({ k, h: COLORS[i].h, s: COLORS[i].s, l: COLORS[i].l });
 }
 // Charms that read small on a phone are drawn larger. All hanging charms share roughly one size. Widths in UNIT match.
 const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35, chair: 1.35, ladder: 1.3, minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
@@ -1257,6 +1315,8 @@ const CHARM_BUILDERS = {
 
 /* ---------- Factory ---------- */
 export function makeBead(d) {
+  // Which cord a bead is on does not change how it looks.
+  if (d.c != null) { d = { ...d }; delete d.c; }
   const group = new THREE.Group();
   if (CHARM_BUILDERS[d.k]) {
     const boost = BOOST[d.k] || 1;

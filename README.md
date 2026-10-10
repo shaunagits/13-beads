@@ -33,6 +33,10 @@ npm run dev
 
 The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tied` (the finished loop), and `stack` (the wall).
 
+## Two strands
+
+A bead's def can carry `c` (1 bottom cord, 2 both cords). `layoutCords` and `cordGap` in `src/beads.js` place beads and shape the two cords; `main.js` draws both cords as offsets from the single rope simulation, and `buildRing` does the same around a wall cone.
+
 ## Add a bead or charm
 
 1. Add an entry to `COLOR_TYPES` (a bead type that comes in every color on the color strip), `FIXED` (a bead with one look), `CHARMS`, or `DANGLES` in `src/beads.js`.

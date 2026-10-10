@@ -14,6 +14,15 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 - Starter bracelet (first visit, and Start over): pearl, gold glitter, sparkle, 1 3, hot pink, B E A D S, sparkle, gold glitter, pearl. Round white letters; an older saved cube starter still counts as the untouched starter (`LEGACY_STARTER` in `src/main.js`).
 - Shake to spill: on a phone, two hard jolts within half a second pour 18 loose beads onto the table (mostly the picked color, some letters, the odd charm). Tap one to string it; untouched, they roll back into the case after 12 seconds. iPhone gets motion access from the Tilt button tap. Off with reduced motion. Tested only with simulated motion events.
 
+**Two strands** (More menu: Strands One / Two)
+- A second cord hangs below the first. A Top / Bottom / Both picker sits at the bottom left of the canvas (the "See it finished" button moves to the right); new beads, typed phrases, and spilled beads go on the picked cord. "Both" threads a bead on both cords, and the cords meet there.
+- On two strands the Beads tab starts with two one-tap patterns in the picked color: Cross (a seed bead on both cords, one on each cord, one on both) and Diamond (a small faceted crystal on both cords, three seed beads on each cord, another crystal on both). A pattern skips its first shared bead when the string already ends on one.
+- Drag a bead above or below the middle of the string to move it to the top or bottom cord; let go right between them to thread it on both.
+- Saved as `c` on each bead: no `c` is the top cord, `c: 1` the bottom, `c: 2` both, so single-strand bracelets are unchanged. `layoutCords` in `src/beads.js` places beads: between two shared beads each cord carries its own run, centered, and the stretch is as long as the longer run. The length budget counts the longer cord. `cordGap` sets how far apart the cords are (they meet at shared beads and toward the ends).
+- The cords are drawn as offsets from the one simulated rope, so plucking, tilt, and the tied loop work as before. In the tied loop the top cord is the inner ring. On the wall the cords sit one above the other around the cone, and a two-strand bracelet takes extra height in the stack.
+- Opening a two-strand bracelet (saved string, Edit from the wall, trade link, undo) turns two strands on. Turning two strands off puts every bead back on one cord (undoable).
+- Trade links: a bead token ending in `~1` or `~2` is on the bottom cord or both.
+
 **Bead case** (clear plastic organizer, lid folds it away; tabs Beads, Letters, Charms, Dangles)
 - Beads tab: a 16-color strip (saved as `13beads.color`; blush, baby blue, cream, and navy were added at the end of `COLORS` and placed by `COLOR_ORDER`), then one compartment per type in that color: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow, matte, star bead, dice, small faceted crystal, seed bead, frosted glitter seed bead, silver-lined seed bead. Then pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, marbled pearl, moonstone, clear, pearl, and gunmetal seed beads, frosted square seed bead, gunmetal spacer, gold and silver bead caps. Seed beads are about a third of a pony bead wide (about 89 fit). Tiny beads are drawn larger in their compartments (`TINY` in `src/main.js`). A cap turns its cup toward the nearest bead. Mid-tone colors are drawn deeper (`deep` in `src/beads.js`) so beads match their dots.
 - Letters tab: a row with the shape switch (Round, the default, or Cube) and five looks (White, Black, Pink letters on white, Gold letters on black, Frosted clear with gold letters), then the phrase field ("Type a word or phrase"), then A to Z, a pink heart bead, 0 to 9, ! ? &. Typing a heart (or <3) in the phrase adds a heart bead. Saved as `{ k: 'letter', ch, st?, sh? }`: no `st` is white, no `sh` is a cube, so every bracelet saved before round letters keeps its cubes. Shape and look are not remembered between visits.
@@ -41,6 +50,8 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## Not verified
 
+- Two strands on a real phone: the cord picker and moved finish button, dragging beads between cords, and how the Cross and Diamond patterns read at phone size.
+
 - Shake to spill on a real phone (only simulated motion events were tested), and whether two 17 m/s² jolts is the right strength.
 - Tilt and the iPhone permission button.
 - The phone share sheet for Save card, Send link, and Save photo (only desktop downloads and clipboard were exercised).
@@ -50,7 +61,6 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## Open with Shauna
 
-- Cactus charm: keep the 3D version, or switch to flat enamel?
 - Era presets ("Surprise me"): she likes the concept but is unsure how the control could avoid being intrusive. Placement and naming are open.
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
@@ -138,6 +148,8 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-10 | Letter looks | White, Black, Pink on white, Gold on black, Frosted clear with gold, plus a heart bead | Shauna said yes to pink and gold; frosted and the heart come from her photos. |
 | 2026-10-10 | Beads from Shauna's photos | Seed beads (opaque, frosted glitter, silver-lined, clear, pearl, gunmetal, frosted square), matte, star beads, dice, small faceted crystals, marbled pearl, moonstone, gunmetal spacer; colors blush, baby blue, cream, navy | Picked from her real bracelets. All geometric. |
 | 2026-10-10 | Charms from Shauna's photos | Rock, evil eye (own symmetric design), heart and arrow (no initials), and a 3D potted cactus, all as dangles | Shauna wants to see the cactus in 3D before deciding; flat enamel is the fallback. The artist's monogram and name stay out. |
+| 2026-10-10 | Cactus charm | Keep the 3D version | Shauna loved all four new charms. |
+| 2026-10-10 | Two strands | Built: Top / Bottom / Both picker on the canvas, Strands switch in the More menu, Cross and Diamond patterns | Shauna's photos (two strands tied together, shared beads, little crosses). She left the build order to Claude; both steps shipped together because one layout covers them. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
