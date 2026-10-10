@@ -20,7 +20,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 - Charms (26) and Dangles (16 hanging charms): unchanged from session 2; sizes in `BOOST` in `src/beads.js`.
 
 **Tie-off (mode `tied`)**
-- The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 100 pastel paper pieces and 30 small maple leaves that tumble and flutter down (off with reduced motion).
+- The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 85 shiny pastel foil stars and 30 small maple leaves that tumble and flutter down (off with reduced motion).
 - Bottom: "Keep editing" (back to the string) and "Add to my wall".
 - Camera button opens "Share this bracelet": optional gift tag note (40 characters), then Save card (1080 x 1920 story picture: wordmark, the loop, the phrase, the date, the tag, the site address), Send link (share sheet on phones, clipboard on computers), or QR code (`qrcode-generator`, MIT).
 
@@ -134,7 +134,8 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-09 | Black letters | Added with a White / Black switch | Shauna asked. Other letter styles are suggested, not built. |
 | 2026-10-09 | Share card and gift tag | Built | Shauna: do it if not too difficult. |
 | 2026-10-09 | Trade links and QR | Built, inside "Share this bracelet" | Shauna said yes; no server needed, nothing to manage. |
-| 2026-10-09 | Confetti | Pastel paper with small maple leaves | Shauna asked for stadium-style confetti with maple leaves. |
+| 2026-10-09 | Confetti | Pastel paper with small maple leaves | Shauna asked for stadium-style confetti with maple leaves. (Superseded 2026-10-10: stars.) |
+| 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |

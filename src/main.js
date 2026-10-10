@@ -183,9 +183,9 @@ for (const sgn of [-1, 1]) {
 knot.visible = false;
 strand.add(knot);
 
-// Tie-off confetti, like the paper confetti at a stadium show: soft pastel paper rectangles that tumble and
+// Tie-off confetti, like the confetti at a stadium show: shiny pastel foil stars that tumble and
 // flutter down, with little maple leaves mixed in.
-const PAPER_N = 96, LEAF_N = 28;
+const STAR_N = 84, LEAF_N = 28;
 const CONFETTI_COLORS = [0xf7a8c8, 0xa9d6f2, 0xc8b4f2, 0xf6e2a2, 0xffffff, 0xf9c4a8].map((c) => new THREE.Color(c));
 function mapleShape() {
   const pts = [[0, 0.5], [0.08, 0.32], [0.2, 0.38], [0.17, 0.13], [0.36, 0.3], [0.4, 0.2], [0.5, 0.22], [0.43, 0.05], [0.48, 0], [0.3, -0.13],
@@ -195,11 +195,21 @@ function mapleShape() {
   pts.forEach(([x, y], i) => (i ? sh.lineTo(x, y) : sh.moveTo(x, y)));
   return sh;
 }
+function starShape() {
+  const sh = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? 0.21 : 0.5, a = Math.PI / 2 + (i * Math.PI) / 5;
+    i ? sh.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sh.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  return sh;
+}
 const confettiMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.55, metalness: 0, transparent: true, opacity: 1, depthWrite: false });
+// Stars are foil: a little metal so they catch the light as they turn.
+const starMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.32, metalness: 0.45, transparent: true, opacity: 1, depthWrite: false });
 const sparks = new THREE.Group();
-const paperMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1.55), confettiMat, PAPER_N);
+const starMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(starShape()), starMat, STAR_N);
 const leafMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(mapleShape(), 4), confettiMat, LEAF_N);
-for (const m of [paperMesh, leafMesh]) { m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); sparks.add(m); }
+for (const m of [starMesh, leafMesh]) { m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); sparks.add(m); }
 sparks.visible = false;
 scene.add(sparks);
 const confetti = [];
@@ -1154,20 +1164,20 @@ function burst() {
   if (reduce) return;
   const R = Math.min(W, H) * 0.33;
   confetti.length = 0;
-  for (let i = 0; i < PAPER_N + LEAF_N; i++) {
-    const leaf = i >= PAPER_N, a = Math.random() * TAU, sp = 120 + Math.random() * 260;
+  for (let i = 0; i < STAR_N + LEAF_N; i++) {
+    const leaf = i >= STAR_N, a = Math.random() * TAU, sp = 120 + Math.random() * 260;
     // Pops out from around the loop and up, then floats down.
     confetti.push({
-      leaf, idx: leaf ? i - PAPER_N : i,
+      leaf, idx: leaf ? i - STAR_N : i,
       x: Math.cos(a) * R * 0.9, y: Math.sin(a) * R * 0.9, z: 40 + Math.random() * 60,
       vx: Math.cos(a) * sp * 0.8, vy: Math.sin(a) * sp * 0.6 + 260 + Math.random() * 120,
       rx: Math.random() * TAU, ry: Math.random() * TAU, rz: Math.random() * TAU,
       wx: (Math.random() - 0.5) * 14, wy: (Math.random() - 0.5) * 10, wz: (Math.random() - 0.5) * 8,
-      size: leaf ? 15 + Math.random() * 6 : 8 + Math.random() * 4, ph: Math.random() * TAU, sw: 0.8 + Math.random() * 1.4,
+      size: leaf ? 15 + Math.random() * 6 : 12 + Math.random() * 5, ph: Math.random() * TAU, sw: 0.8 + Math.random() * 1.4,
     });
-    (leaf ? leafMesh : paperMesh).setColorAt(leaf ? i - PAPER_N : i, CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]);
+    (leaf ? leafMesh : starMesh).setColorAt(leaf ? i - STAR_N : i, CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]);
   }
-  for (const m of [paperMesh, leafMesh]) if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  for (const m of [starMesh, leafMesh]) if (m.instanceColor) m.instanceColor.needsUpdate = true;
   sparkLife = 3.4;
   sparks.visible = true;
 }
@@ -1317,11 +1327,11 @@ function frame(now) {
       cfObj.rotation.set(c.rx, c.ry, c.rz);
       cfObj.scale.setScalar(c.size);
       cfObj.updateMatrix();
-      (c.leaf ? leafMesh : paperMesh).setMatrixAt(c.idx, cfObj.matrix);
+      (c.leaf ? leafMesh : starMesh).setMatrixAt(c.idx, cfObj.matrix);
     }
-    paperMesh.instanceMatrix.needsUpdate = true;
+    starMesh.instanceMatrix.needsUpdate = true;
     leafMesh.instanceMatrix.needsUpdate = true;
-    confettiMat.opacity = clamp(sparkLife / 0.8, 0, 1);
+    confettiMat.opacity = starMat.opacity = clamp(sparkLife / 0.8, 0, 1);
     sparks.position.copy(strand.position);
     if (sparkLife <= 0) sparks.visible = false;
   }
