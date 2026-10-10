@@ -1327,12 +1327,12 @@ function renderThumbs(items) {
   }
 }
 function buildSwatches() {
-  const strip = $('swatches');
+  const strip = $('colorStrip');
   strip.textContent = '';
   COLORS.forEach((col, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'swatch';
+    b.className = 'color-dot';
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', i === colorIdx ? 'true' : 'false');
     b.setAttribute('aria-label', col.name);
@@ -1342,7 +1342,7 @@ function buildSwatches() {
       if (i === colorIdx) return;
       colorIdx = i;
       try { localStorage.setItem('13beads.color', String(i)); } catch (e) { /* optional */ }
-      strip.querySelectorAll('.swatch').forEach((o, j) => o.setAttribute('aria-checked', j === i ? 'true' : 'false'));
+      strip.querySelectorAll('.color-dot').forEach((o, j) => o.setAttribute('aria-checked', j === i ? 'true' : 'false'));
       tick(1 + i * 0.02, 0.08);
       buildTray(true);
     });
@@ -1351,7 +1351,7 @@ function buildSwatches() {
 }
 function buildTray(keepScroll) {
   const tray = $('tray'), items = TABS[curTab](), x = tray.scrollLeft;
-  $('swatches').hidden = curTab !== 'colors';
+  $('colorStrip').hidden = curTab !== 'colors';
   renderThumbs(items);
   tray.textContent = '';
   for (const item of items) {

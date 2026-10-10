@@ -117,19 +117,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 [data-theme="dark"] .case::after { background: linear-gradient(115deg, rgba(255, 255, 255, .1) 0 8%, transparent 22% 70%, rgba(255, 255, 255, .05) 82%, transparent 90%); }
 /* The color strip: pick a color once and every bead type in the case shows it. */
-.swatches { position: relative; z-index: 1; display: flex; gap: 3px; padding: 1px 2px; overflow-x: auto; scrollbar-width: none; }
-.swatches[hidden] { display: none; }
-.swatches::-webkit-scrollbar { display: none; }
-.swatch {
+.color-strip { position: relative; z-index: 1; display: flex; gap: 3px; padding: 1px 2px; overflow-x: auto; scrollbar-width: none; }
+.color-strip[hidden] { display: none; }
+.color-strip::-webkit-scrollbar { display: none; }
+.color-dot {
   flex: 0 1 28px; min-width: 22px; max-width: 28px; aspect-ratio: 1; height: auto; padding: 0; border-radius: 50%; border: 0; display: grid; place-items: center;
   background: transparent; box-shadow: inset 0 0 0 2px transparent;
 }
-.swatch::before {
+.color-dot::before {
   content: ""; width: 72%; height: 72%; border-radius: 50%; background: var(--c);
   box-shadow: inset 0 -2px 3px rgba(0, 0, 0, .18), inset 0 2px 2px rgba(255, 255, 255, .45), 0 0 0 1px rgba(40, 30, 70, .14);
 }
-.swatch[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
-.swatch:active { transform: scale(.92); }
+.color-dot[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+.color-dot:active { transform: scale(.92); }
 .tray {
   position: relative; z-index: 1;
   display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 60px); grid-auto-columns: 60px; gap: 5px;
