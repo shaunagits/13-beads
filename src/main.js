@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { COLORS, colorBeads, FIXED, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
+import { COLORS, colorBeads, FIXED, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
@@ -562,15 +562,16 @@ function buildRing(list, grid) {
   const S = Math.min(clamp(grid.rMax * 0.27, 14, 26), (TAU * R - 10) / Math.max(U, 1));
   const g = new THREE.Group(), loop = new THREE.Group(), hangs = [], DROP = 13;
   let acc = (-U * S) / 2;
-  for (const d of list) {
+  list.forEach((d, i) => {
     const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
     acc += w;
+    if (o.userData.cup) o.userData.cup.rotation.y = capFacing(list, i) > 0 ? 0 : Math.PI;
     o.scale.setScalar(S);
     o.position.set(R * Math.sin(phi), -DROP - R - R * Math.cos(phi), 0);
     o.rotation.z = phi;
     if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
     loop.add(o);
-  }
+  });
   const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72), stringMat);
   cord.position.y = -DROP - R;
   cord.castShadow = true;
@@ -1044,6 +1045,8 @@ function frame(now) {
     knot.scale.setScalar((k - 0.5) * 2);
   }
 
+  const defList = defs();
+  beads.forEach((b, i) => { if (b.obj.userData.cup) b.obj.userData.cup.rotation.y = capFacing(defList, i) > 0 ? 0 : Math.PI; });
   for (const b of beads) {
     const f = lerp(b.s / lineLen, 0.5 + (b.off * (Sc / sizeCur)) / C, k), p = pointAt(pts, cum, f * Lm);
     b.S = S;

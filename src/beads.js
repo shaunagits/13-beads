@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Width each bead takes up along the string, as a fraction of bead size.
-export const UNIT = { pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
+export const UNIT = { pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
   lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
@@ -37,7 +37,21 @@ export const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?&'.split('')
 export const FIXED = [
   { name: 'Pearl', def: { k: 'pearl' } },
   { name: 'Silver spacer', def: { k: 'spacer' } },
+  { name: 'Gold ball spacer', def: { k: 'ball' } },
+  { name: 'Silver daisy spacer', def: { k: 'daisy' } },
+  { name: 'Rhinestone rondelle', def: { k: 'rondelle' } },
+  { name: 'Gold bead cap', def: { k: 'cap', m: 'gold' } },
+  { name: 'Silver bead cap', def: { k: 'cap', m: 'silver' } },
 ];
+// Spacers and caps are the small metal findings. A bead cap's cup faces its nearest real bead: the next one if it is
+// a bead, otherwise the one before. Returns 1 to face the next bead (toward +x), -1 to face the one before.
+export const FINDING = new Set(['spacer', 'ball', 'daisy', 'rondelle', 'cap']);
+export function capFacing(list, i) {
+  const solid = (d) => d && !FINDING.has(d.k);
+  if (solid(list[i + 1])) return 1;
+  if (solid(list[i - 1])) return -1;
+  return 1;
+}
 
 const named = (list) => list.map(([name, k]) => ({ name, def: { k } }));
 export const CHARMS = named([
@@ -59,6 +73,7 @@ const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TAU = Math.PI * 2;
 
 /* ---------- Geometry (built once, at size 1, string axis = x) ---------- */
 const geo = {};
@@ -84,6 +99,38 @@ function clayGeo() {
   const g = new THREE.LatheGeometry(pts, 40);
   g.rotateZ(Math.PI / 2);
   return (geo.clay = g);
+}
+// A flat daisy spacer: eight round petals around a hole, face-on to the string.
+function daisyGeo() {
+  if (geo.daisy) return geo.daisy;
+  const s = new THREE.Shape(), n = 8;
+  for (let i = 0; i <= 96; i++) {
+    const a = (i / 96) * TAU, r = 0.3 + 0.09 * Math.pow(Math.abs(Math.cos((a * n) / 2)), 0.6);
+    i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 0.09, 0, TAU, true);
+  s.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 8 });
+  g.translate(0, 0, -0.04);
+  g.rotateY(Math.PI / 2);
+  return (geo.daisy = g);
+}
+// A bead cap: a shallow scalloped metal cup, open toward +x.
+function capGeo() {
+  if (geo.cap) return geo.cap;
+  const pts = [[0.08, 0], [0.14, 0.01], [0.24, 0.05], [0.32, 0.11], [0.37, 0.18], [0.39, 0.22]].map(V2);
+  const g = new THREE.LatheGeometry(pts, 64), p = g.attributes.position;
+  // Scallop the rim: petals grow toward the open edge.
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x), w = y / 0.22;
+    const f = 1 + 0.1 * w * w * Math.cos(a * 8);
+    p.setXYZ(i, x * f, y - 0.05 * w * w * (1 - Math.cos(a * 8)) * 0.5, z * f);
+  }
+  g.computeVertexNormals();
+  g.translate(0, -0.11, 0);
+  g.rotateZ(-Math.PI / 2);
+  return (geo.cap = g);
 }
 // A faceted bicone crystal: two cones point to point, with few sides so the facets catch the light.
 function crystalGeo() {
@@ -940,6 +987,35 @@ export function makeBead(d) {
     case 'pony':
       group.add(mesh(ponyGeo(), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
       break;
+    case 'ball':
+      group.add(mesh((geo.ball ||= new THREE.SphereGeometry(0.22, 24, 16)), goldMat()));
+      break;
+    case 'daisy':
+      group.add(mesh(daisyGeo(), silverMat()));
+      break;
+    case 'rondelle': {
+      group.add(mesh((geo.rondelle ||= new THREE.TorusGeometry(0.26, 0.11, 14, 36).rotateY(Math.PI / 2)), silverMat()));
+      const stone = mat('rhinestone', () => new THREE.MeshPhysicalMaterial({
+        color: 0xf4f8ff, roughness: 0, metalness: 0.1, clearcoat: 1, iridescence: 0.8, iridescenceIOR: 1.6, flatShading: true, emissive: 0x30384a,
+      }));
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * TAU, st = mesh((geo.stone ||= new THREE.OctahedronGeometry(0.075, 0)), stone);
+        st.position.set(0, Math.cos(a) * 0.36, Math.sin(a) * 0.36);
+        st.rotation.x = a;
+        group.add(st);
+      }
+      break;
+    }
+    case 'cap': {
+      // The cup sits in its own group so the strand can turn it to face a neighboring bead.
+      const cup = new THREE.Group();
+      cup.add(mesh(capGeo(), mat('cap' + d.m, () => new THREE.MeshPhysicalMaterial({
+        color: d.m === 'gold' ? 0xffc533 : 0xdfe3ee, metalness: d.m === 'gold' ? 0.75 : 1, roughness: 0.2, clearcoat: 0.6, side: THREE.DoubleSide,
+      }))));
+      group.add(cup);
+      group.userData.cup = cup;
+      break;
+    }
     case 'spacer':
       group.add(mesh(
         (geo.spacer ||= new THREE.TorusGeometry(0.2, 0.13, 16, 32).rotateY(Math.PI / 2)),
