@@ -113,20 +113,23 @@ export const defKey = (d) => JSON.stringify(d);
 // logos or title lettering, cover art, or lyrics.
 const tint = (name) => { const c = COLORS.find((o) => o.name === name); return { h: c.h, s: c.s, l: c.l }; };
 const B = (k, color) => ({ k, ...tint(color) });
-const mirrorAround = (half, mid) => [...half, ...mid, ...half.slice().reverse()];
+// Each era bracelet spells its name in letter beads in the middle, styled to the era, with its charm right after the
+// word and the era's beads on both sides. The two longest titles use their short forms.
+const spell = (word, st) => [...word].map((ch) => (ch === ' ' ? { k: 'spacer' } : letterDef(ch, st, 'round')));
+const era = (name, word, st, half, charm) => ({ name, beads: [...half, ...spell(word, st), charm, ...half.slice().reverse()] });
 export const PRESETS = [
-  ['Midnights', mirrorAround([B('seed', 'Navy'), B('seed', 'Navy'), B('facet', 'Navy'), B('starb', 'Blue'), B('facet', 'Navy'), B('starb', 'Baby blue'), B('facet', 'Navy'), { k: 'moon2' }], [{ k: 'moon' }])],
-  ['Fearless', mirrorAround([{ k: 'pearl' }, B('glitter', 'Yellow'), B('pony', 'Cream'), B('pony', 'Cream'), B('glitter', 'Yellow'), { k: 'ball' }, B('pony', 'Cream')], [{ k: 'guitar' }])],
-  ['Speak Now', mirrorAround([B('jelly', 'Lavender'), B('glitter', 'Purple'), { k: 'rondelle' }, B('crystal', 'Purple'), { k: 'pearl' }, B('glitter', 'Purple')], [{ k: 'butterfly' }])],
-  ['Red', mirrorAround([B('pony', 'Black'), B('pony', 'Red'), B('pony', 'White'), B('pony', 'Red'), B('metal', 'Red'), B('pony', 'Red')], [{ k: 'scarf' }])],
-  ['1989', mirrorAround([B('pony', 'Baby blue'), B('pony', 'White'), B('round', 'Sky'), B('pony', 'White'), { k: 'spacer' }, B('pony', 'Baby blue')], [{ k: 'photo' }])],
-  ['Reputation', mirrorAround([B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], [{ k: 'snake' }])],
-  ['Lover', mirrorAround([B('pony', 'Blush'), B('pony', 'Baby blue'), B('pony', 'Lavender'), { k: 'pearl' }, B('jelly', 'Hot pink'), B('pony', 'Blush')], [{ k: 'pheart' }])],
-  ['Folklore', mirrorAround([B('clay', 'Cream'), B('clay', 'Cream'), B('matte', 'White'), B('round', 'Black'), B('clay', 'Cream'), B('matte', 'White'), { k: 'pearl' }], [{ k: 'cardigan' }])],
-  ['Evermore', mirrorAround([B('clay', 'Orange'), B('round', 'Cream'), B('matte', 'Orange'), B('clay', 'Cream'), { k: 'ball' }, B('round', 'Teal')], [{ k: 'leaf' }])],
-  ['The Tortured Poets Department', mirrorAround([B('matte', 'Black'), B('pony', 'White'), { k: 'pearl' }, B('matte', 'White'), B('pony', 'Black'), { k: 'spacer' }], [{ k: 'wheart' }])],
-  ['The Life of a Showgirl', mirrorAround([B('glitter', 'Orange'), B('pony', 'Teal'), B('glitter', 'Orange'), { k: 'pearl' }, B('glitter', 'Teal'), { k: 'ball' }], [{ k: 'feather' }])],
-].map(([name, beads]) => ({ name, beads }));
+  era('Midnights', 'MIDNIGHTS', 'white', [B('seed', 'Navy'), B('facet', 'Navy'), B('starb', 'Blue'), B('facet', 'Navy'), B('starb', 'Baby blue'), { k: 'moon2' }], { k: 'moon' }),
+  era('Fearless', 'FEARLESS', 'gold', [{ k: 'pearl' }, B('glitter', 'Yellow'), B('pony', 'Cream'), B('glitter', 'Yellow'), { k: 'ball' }], { k: 'guitar' }),
+  era('Speak Now', 'SPEAK NOW', 'white', [B('jelly', 'Lavender'), B('glitter', 'Purple'), { k: 'rondelle' }, B('crystal', 'Purple')], { k: 'butterfly' }),
+  era('Red', 'RED', 'black', [B('pony', 'Black'), B('pony', 'Red'), B('pony', 'White'), B('pony', 'Red'), B('metal', 'Red'), B('pony', 'Red')], { k: 'scarf' }),
+  era('1989', '1989', 'white', [B('pony', 'Baby blue'), B('pony', 'White'), B('round', 'Sky'), B('pony', 'White'), { k: 'spacer' }, B('pony', 'Baby blue')], { k: 'photo' }),
+  era('Reputation', 'REPUTATION', 'black', [B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], { k: 'snake' }),
+  era('Lover', 'LOVER', 'pink', [B('pony', 'Blush'), B('pony', 'Baby blue'), B('pony', 'Lavender'), { k: 'pearl' }, B('jelly', 'Hot pink'), B('pony', 'Blush')], { k: 'pheart' }),
+  era('Folklore', 'FOLKLORE', 'white', [B('clay', 'Cream'), B('matte', 'White'), B('round', 'Black'), B('clay', 'Cream'), { k: 'pearl' }], { k: 'cardigan' }),
+  era('Evermore', 'EVERMORE', 'white', [B('clay', 'Orange'), B('round', 'Cream'), B('matte', 'Orange'), { k: 'ball' }, B('round', 'Teal')], { k: 'leaf' }),
+  era('The Tortured Poets Department', 'TTPD', 'white', [B('matte', 'Black'), B('pony', 'White'), { k: 'pearl' }, B('matte', 'White'), B('pony', 'Black'), { k: 'spacer' }], { k: 'wheart' }),
+  era('The Life of a Showgirl', 'SHOWGIRL', 'gold', [B('glitter', 'Orange'), B('pony', 'Teal'), { k: 'pearl' }, B('glitter', 'Teal'), { k: 'ball' }], { k: 'feather' }),
+];
 
 /* ---------- Two strands ---------- */
 // A bead's def can carry c: 1 (it is on the bottom cord) or c: 2 (both cords pass through it). No c is the top

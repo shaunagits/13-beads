@@ -54,10 +54,8 @@ let beads = [], fallers = [], undoStack = [], redoStack = [];
 let letterStyle = 'white', letterShape = 'round';
 // Two strands: a second cord hangs below the first. New beads go on the active cord: 0 top, 1 bottom, 2 both.
 let twoCords = false, activeCord = 0, cordPx = 0;
-// The era name shown in the bead count pill for a few seconds after Surprise me.
-let eraLabel = '', eraBeads = null, eraStringing = false;
 // Stops any bead-by-bead stringing in progress (a phrase, a pattern, the starter, or a Surprise me bracelet).
-function stopStringing() { clearInterval(phraseTimer); eraStringing = false; }
+function stopStringing() { clearInterval(phraseTimer); }
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
@@ -287,17 +285,7 @@ const usedLen = () => layoutCords(defs()).U;
 const fits = (d, more = []) => beads.length + more.length < MAX_COUNT && layoutCords([...defs(), ...more, d]).U <= BUDGET + 1e-6;
 function sync() {
   const n = beads.length, pct = Math.min(100, Math.round((usedLen() / BUDGET) * 100)), c = $('count');
-  // After Surprise me, the pill names the era while the player makes the bracelet their own. It goes back to the
-  // bead count once most of that era's beads are gone: the string cleared, Start over, or Undo back past it.
-  if (eraLabel && !eraStringing) {
-    const left = {};
-    for (const d of defs()) { const k = defKey(withCord(d, 0)); left[k] = (left[k] || 0) + 1; }
-    let kept = 0;
-    for (const k of eraBeads) if (left[k] > 0) { left[k]--; kept++; }
-    if (kept < eraBeads.length / 2) eraLabel = '';
-  }
-  c.firstChild.textContent = eraLabel || n + (n === 1 ? ' bead' : ' beads');
-  c.classList.toggle('era', !!eraLabel);
+  c.firstChild.textContent = n + (n === 1 ? ' bead' : ' beads');
   c.style.setProperty('--fill', pct + '%');
   c.classList.toggle('full', pct >= 100);
   c.setAttribute('aria-label', n + (n === 1 ? ' bead' : ' beads') + ' on the string, ' + pct + ' percent full');
@@ -1908,13 +1896,9 @@ function surprise() {
   sync();
   const list = p.beads.map((d) => (twoCords ? { ...d, c: 0 } : { ...d }));
   say('Surprise: ' + p.name + '. Undo brings your string back.');
-  eraLabel = p.name;
-  eraBeads = p.beads.map((d) => defKey(withCord(d, 0)));
-  eraStringing = true;
-  sync();
-  if (reduce) { list.forEach((d) => addBead(d, true, 'R')); eraStringing = false; sync(); return; }
+  if (reduce) { list.forEach((d) => addBead(d, true, 'R')); return; }
   let step = 0;
-  phraseTimer = setInterval(() => { const d = list.shift(); if (!d || !addBead(d, true, 'R', step++)) { stopStringing(); sync(); } }, 110);
+  phraseTimer = setInterval(() => { const d = list.shift(); if (!d || !addBead(d, true, 'R', step++)) stopStringing(); }, 110);
 }
 // Turn the second cord on or off. Turning it off puts every bead back on one cord.
 function setTwo(on, quiet) {
