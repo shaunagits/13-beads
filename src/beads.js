@@ -73,6 +73,10 @@ const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Bead plastic in a strip color. Gloss and the room light lift every color toward white, so mid tones are drawn
+// deeper and a little richer, so a bead on the string matches its dot on the color strip. Very light and very dark
+// colors barely change.
+const deep = (h, s, l) => hsl(h, Math.min(100, s * 1.08), l - 13 * Math.sin((Math.PI * l) / 100));
 const TAU = Math.PI * 2;
 
 /* ---------- Geometry (built once, at size 1, string axis = x) ---------- */
@@ -985,7 +989,7 @@ export function makeBead(d) {
   }
   switch (d.k) {
     case 'pony':
-      group.add(mesh(ponyGeo(), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      group.add(mesh(ponyGeo(), mat(defKey(d), () => plastic(deep(d.h, d.s, d.l)))));
       break;
     case 'ball':
       group.add(mesh((geo.ball ||= new THREE.SphereGeometry(0.22, 24, 16)), goldMat()));
@@ -1022,23 +1026,23 @@ export function makeBead(d) {
         mat('spacer', () => new THREE.MeshPhysicalMaterial({ color: 0xdfe3ee, metalness: 1, roughness: 0.18 }))));
       break;
     case 'clay':
-      group.add(mesh(clayGeo(), mat(defKey(d), () => new THREE.MeshStandardMaterial({ color: hsl(d.h, d.s * 0.92, d.l), roughness: 0.78 }))));
+      group.add(mesh(clayGeo(), mat(defKey(d), () => new THREE.MeshStandardMaterial({ color: deep(d.h, d.s * 0.92, d.l), roughness: 0.78 }))));
       break;
     case 'round':
-      group.add(mesh((geo.round ||= new THREE.SphereGeometry(0.43, 36, 24)), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      group.add(mesh((geo.round ||= new THREE.SphereGeometry(0.43, 36, 24)), mat(defKey(d), () => plastic(deep(d.h, d.s, d.l)))));
       break;
     case 'cube':
-      group.add(mesh((geo.solidCube ||= new RoundedBoxGeometry(0.82, 0.82, 0.82, 4, 0.14)), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      group.add(mesh((geo.solidCube ||= new RoundedBoxGeometry(0.82, 0.82, 0.82, 4, 0.14)), mat(defKey(d), () => plastic(deep(d.h, d.s, d.l)))));
       break;
     case 'crystal':
       group.add(mesh(crystalGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
-        color: hsl(d.h, d.s, clamp(d.l + 8, 22, 86)), emissive: hsl(d.h, d.s, d.l * 0.3), transparent: true, opacity: 0.84,
+        color: deep(d.h, d.s, clamp(d.l + 8, 22, 86)), emissive: hsl(d.h, d.s, d.l * 0.3), transparent: true, opacity: 0.84,
         roughness: 0.03, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0, iridescence: 0.55, iridescenceIOR: 1.5, specularIntensity: 1, flatShading: true,
       }))));
       break;
     case 'jelly':
       group.add(mesh(ponyGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
-        color: hsl(d.h, d.s, clamp(d.l, 38, 82)), emissive: hsl(d.h, d.s, d.l * 0.22), transparent: true, opacity: 0.58,
+        color: deep(d.h, d.s, clamp(d.l, 38, 82)), emissive: hsl(d.h, d.s, d.l * 0.22), transparent: true, opacity: 0.58,
         roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03,
       }))));
       break;
@@ -1048,7 +1052,7 @@ export function makeBead(d) {
       }))));
       break;
     case 'smiley': {
-      group.add(mesh((geo.smiley ||= new THREE.SphereGeometry(0.45, 36, 24).scale(1, 1, 0.72)), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      group.add(mesh((geo.smiley ||= new THREE.SphereGeometry(0.45, 36, 24).scale(1, 1, 0.72)), mat(defKey(d), () => plastic(deep(d.h, d.s, d.l)))));
       const ink = d.l < 30 ? '#ffffff' : '#1c1830';
       const face = new THREE.Mesh(smileyFaceGeo(), mat('smile' + ink, () => new THREE.MeshBasicMaterial({
         map: smileyTex(ink), transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2,
@@ -1061,7 +1065,7 @@ export function makeBead(d) {
     case 'glitter':
       group.add(mesh(ponyGeo(), mat(defKey(d), () => {
         const m = new THREE.MeshPhysicalMaterial({
-          color: d.s == null ? hsl(d.h, 85, 52) : hsl(d.h, Math.min(d.s, 85), clamp(d.l, 22, 72)), metalness: 0.75, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.1,
+          color: d.s == null ? hsl(d.h, 85, 52) : deep(d.h, Math.min(d.s, 85), clamp(d.l, 22, 72)), metalness: 0.75, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.1,
           bumpMap: sparkTex(), bumpScale: 1.2, emissive: 0xffffff, emissiveMap: sparkTex(), emissiveIntensity: 0.6,
         });
         m.userData = { kind: 'glitter', ph: d.h };
