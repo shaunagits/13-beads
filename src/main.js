@@ -280,6 +280,7 @@ function stringPhrase(text) {
 function setMode(m) {
   // Leaving a received bracelet any way other than hanging it puts the player's own string back.
   if (trade && m !== 'tied') endTrade();
+  if (m !== 'line') clearLoose();
   mode = m;
   $('buildPanel').hidden = m !== 'line';
   $('hud').hidden = false;
@@ -1227,6 +1228,7 @@ function frame(now) {
     o.rotation.x += f.r[0] * dt; o.rotation.y += f.r[1] * dt; o.rotation.z += f.r[2] * dt;
     if (o.position.y < -H / 2 - 120 || reduce) { scene.remove(o); fallers.splice(i, 1); }
   }
+  updateLoose(dt);
 
   if (sparkLife > 0) {
     sparkLife -= dt;
@@ -1293,6 +1295,9 @@ cv.addEventListener('pointerdown', (e) => {
     }
     return;
   }
+  // A loose bead on the table: tap it to string it.
+  const lb = looseAt(p);
+  if (lb) { pickLoose(lb); return; }
   let best = null, bd = 1e9;
   for (const b of beads) {
     let d = Math.hypot(b.x - p.x, b.y - p.y);
@@ -1419,13 +1424,112 @@ if (!reduce && typeof DeviceOrientationEvent !== 'undefined') {
     btn.hidden = false;
     btn.addEventListener('click', async () => {
       try {
-        if ((await DeviceOrientationEvent.requestPermission()) === 'granted') { listenTilt(); btn.hidden = true; say('Tilt is on. Lean your phone to swing the string.'); }
+        if ((await DeviceOrientationEvent.requestPermission()) === 'granted') {
+          listenTilt();
+          btn.hidden = true;
+          // Shaking needs motion access too; on iPhone the same tap can ask for it.
+          try { if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission && (await DeviceMotionEvent.requestPermission()) === 'granted') listenShake(); } catch (e2) { /* optional */ }
+          say('Tilt is on. Lean your phone to swing the string, or shake it to spill some beads.');
+        }
         else say('Tilt was not allowed, so the string stays level.');
       } catch (err) { say('Tilt is not available in this browser.'); }
     });
-  } else listenTilt();
+  } else { listenTilt(); listenShake(); }
 }
 cv.addEventListener('pointerleave', () => { parTX = 0; parTY = 0; });
+
+/* ---------- Shake to spill: loose beads tumble out across the table ---------- */
+// A shake while stringing tips a handful of loose beads out of the case. They bounce and settle on the table;
+// tap one to string it. Left alone, they roll back into the case. Off with reduced motion.
+let loose = [], looseIdle = 0, shakeAt = 0, shakePeaks = [];
+function listenShake() {
+  if (reduce || typeof DeviceMotionEvent === 'undefined') return;
+  window.addEventListener('devicemotion', (e) => {
+    const a = e.acceleration && e.acceleration.x != null ? e.acceleration : null;
+    if (!a) return;
+    const m = Math.hypot(a.x || 0, a.y || 0, a.z || 0), now = performance.now();
+    if (m < 17) return;
+    // Two hard jolts within half a second count as a shake. Then wait a moment before the next spill.
+    shakePeaks = shakePeaks.filter((t) => now - t < 550);
+    shakePeaks.push(now);
+    if (shakePeaks.length >= 2 && now - shakeAt > 2500) { shakeAt = now; shakePeaks = []; spill(); }
+  });
+}
+function spillDefs(n) {
+  // A mix like a real spilled case: mostly beads in the picked color and a few others, some letters, a charm.
+  const out = [], types = ['pony', 'pony', 'round', 'clay', 'clay', 'clay', 'cube', 'crystal', 'jelly', 'glitter', 'smiley', 'metal'];
+  for (let i = 0; i < n; i++) {
+    const r = Math.random();
+    if (r < 0.18) out.push(letterBeads(letterStyle)[Math.floor(Math.random() * 26)].def);
+    else if (r < 0.24) out.push(CHARMS[Math.floor(Math.random() * CHARMS.length)].def);
+    else {
+      const col = Math.random() < 0.55 ? COLORS[colorIdx] : COLORS[Math.floor(Math.random() * COLORS.length)];
+      out.push({ k: types[Math.floor(Math.random() * types.length)], h: col.h, s: col.s, l: col.l });
+    }
+  }
+  return out;
+}
+function spill() {
+  if (mode !== 'line' || reduce) return;
+  clearLoose();
+  buzz(40);
+  whoosh();
+  const S = sizeCur * 0.95;
+  for (const def of spillDefs(18)) {
+    const o = makeBead(def);
+    o.scale.setScalar(S);
+    scene.add(o);
+    // They pour up out of the case at the bottom of the stage and scatter across the table.
+    loose.push({
+      def, obj: o, S, x: W * (0.3 + Math.random() * 0.4), y: H + 20, vx: (Math.random() - 0.5) * 900, vy: -(700 + Math.random() * 600),
+      rz: Math.random() * TAU, vr: (Math.random() - 0.5) * 16, tx: Math.random() * TAU, ty: Math.random() * TAU, vt: 6 + Math.random() * 8, hits: 0,
+    });
+  }
+  looseIdle = 0;
+}
+function updateLoose(dt) {
+  if (!loose.length) return;
+  looseIdle += dt;
+  const home = looseIdle > 12;
+  for (let i = loose.length - 1; i >= 0; i--) {
+    const b = loose[i], o = b.obj, pad = b.S * 0.6;
+    if (home) {
+      // Roll back down into the case.
+      b.vx *= 0.9; b.vy += 1400 * dt;
+      b.x += b.vx * dt; b.y += b.vy * dt; b.rz += b.vr * dt;
+      if (b.y > H + 60) { scene.remove(o); loose.splice(i, 1); continue; }
+    } else {
+      // Table friction slows them; walls bounce them back.
+      const f = Math.pow(0.08, dt);
+      b.vx *= f; b.vy *= f; b.vr *= f; b.vt *= f;
+      b.x += b.vx * dt; b.y += b.vy * dt; b.rz += b.vr * dt;
+      if (b.x < pad || b.x > W - pad) { b.x = clamp(b.x, pad, W - pad); b.vx *= -0.55; bounceNote(b); }
+      if (b.y < pad + 40 || (b.y > H - pad && b.vy > 0)) { b.y = clamp(b.y, pad + 40, H - pad); b.vy *= -0.55; bounceNote(b); }
+    }
+    b.tx += b.vt * dt; b.ty += b.vt * 0.7 * dt;
+    o.position.set(b.x - W / 2, H / 2 - b.y, 8);
+    o.rotation.set(Math.sin(b.tx) * 0.5 * Math.min(1, b.vt / 4), Math.cos(b.ty) * 0.5 * Math.min(1, b.vt / 4), b.rz);
+  }
+}
+function bounceNote(b) { if (b.hits++ < 2 && Math.hypot(b.vx, b.vy) > 160) tick(1.2 + Math.random() * 0.4, 0.05); }
+function looseAt(p) {
+  let best = null, bd = 1e9;
+  for (const b of loose) {
+    const d = Math.hypot(b.x - p.x, b.y - p.y);
+    if (d < Math.max(22, b.S * 0.7) && d < bd) { bd = d; best = b; }
+  }
+  return best;
+}
+function pickLoose(b) {
+  looseIdle = 0;
+  if (!addBead(b.def)) return;
+  scene.remove(b.obj);
+  loose.splice(loose.indexOf(b), 1);
+}
+function clearLoose() {
+  for (const b of loose) scene.remove(b.obj);
+  loose = [];
+}
 
 /* ---------- Tray (thumbnails are real renders of each 3D bead) ---------- */
 // The Beads tab shows one compartment per bead type, in the color picked on the color strip.
