@@ -30,12 +30,31 @@ export const colorBeads = (c) => COLOR_TYPES.map(([k, label]) => ({
   name: c.name + ' ' + label, def: { k, h: c.h, s: c.s, l: c.l },
 }));
 
-// Letter beads come in two looks: white cubes with dark letters (the default, saved with no st), and black cubes
-// with white letters (st: 'black').
-export const LETTER_STYLES = { white: { cube: 0xfbf9ff, ink: '#1c1830', label: 'White' }, black: { cube: 0x1d1a24, ink: '#ffffff', label: 'Black' } };
-const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?&'.split('');
-export const letterBeads = (st) => CHARS.map((ch) => ({
-  name: (st === 'black' ? 'Black letter ' : 'Letter ') + ch, def: st === 'black' ? { k: 'letter', ch, st } : { k: 'letter', ch },
+// Letter beads come in two shapes and five looks. Shape: flat round coins (sh: 'round', the default for new beads)
+// or cubes (no sh, so every bracelet saved before round letters existed keeps its cubes). Look (st): white with dark
+// letters (no st), black with white letters, white with pink letters, black with gold letters, or frosted clear with
+// gold letters. The heart is a letter bead too: a pink heart on any look.
+export const LETTER_STYLES = {
+  white: { cube: 0xfbf9ff, ink: '#1c1830', label: 'White' },
+  black: { cube: 0x1d1a24, ink: '#ffffff', label: 'Black' },
+  pink: { cube: 0xfbf9ff, ink: '#ff3d9a', label: 'Pink' },
+  gold: { cube: 0x1d1a24, ink: 'gold', label: 'Gold' },
+  frost: { cube: 0xe9e5e2, ink: 'deepgold', label: 'Frosted', frost: true },
+};
+export const LETTER_STYLE_ORDER = ['white', 'black', 'pink', 'gold', 'frost'];
+export const HEART = '\u2665';
+const CHARS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', HEART, ...'0123456789!?&'];
+export const isLetterChar = (ch) => /^[A-Z0-9!?&]$/.test(ch) || ch === HEART;
+export function letterDef(ch, st, sh) {
+  const d = { k: 'letter', ch };
+  if (st && st !== 'white' && LETTER_STYLES[st]) d.st = st;
+  if (sh === 'round') d.sh = 'round';
+  return d;
+}
+export const letterBeads = (st, sh = 'round') => CHARS.map((ch) => ({
+  name: [st && st !== 'white' ? LETTER_STYLES[st].label : '', sh === 'round' ? 'round' : 'cube', ch === HEART ? 'heart bead' : 'letter ' + ch]
+    .filter(Boolean).join(' ').replace(/^./, (c) => c.toUpperCase()),
+  def: letterDef(ch, st, sh),
 }));
 export const LETTERS = letterBeads('white');
 
@@ -78,12 +97,14 @@ export const defKey = (d) => JSON.stringify(d);
 /* ---------- Trade links: a bracelet written as a short code that fits in a link or QR code ---------- */
 // One token per bead, joined with dots. Tokens name beads by kind, never by list position, so adding new beads
 // later never changes old links.
-//   A to Z, 0 to 9: white letter beads. x1 x2 x3: ! ? &. A leading _ makes it a black letter bead.
+//   A to Z, 0 to 9: white letter cubes. x1 x2 x3 x4: ! ? & and the heart. A leading _ makes it a black letter cube.
+//   o, then shape (0 cube, 1 round), then look (0 to 4 in LETTER_STYLE_ORDER), then the letter: any other letter
+//   bead, for example o10A is a round white A.
 //   A type letter plus a color number (0 to b): a colored bead, for example p0 is a hot pink pony bead.
 //   - and a name: any other bead, for example -pearl, -lucky13, or -cap:gold.
 const TYPE_CODE = { pony: 'p', clay: 'c', round: 'r', crystal: 'y', cube: 'q', smiley: 's', jelly: 'j', metal: 'm', glitter: 'g', glow: 'w' };
 const CODE_TYPE = Object.fromEntries(Object.entries(TYPE_CODE).map(([k, v]) => [v, k]));
-const SYMBOL = { '!': 'x1', '?': 'x2', '&': 'x3' }, UNSYMBOL = { x1: '!', x2: '?', x3: '&' };
+const SYMBOL = { '!': 'x1', '?': 'x2', '&': 'x3', [HEART]: 'x4' }, UNSYMBOL = { x1: '!', x2: '?', x3: '&', x4: HEART };
 // The nearest strip color for a bead saved with its own hue (older bracelets had a few colors outside the strip).
 function nearestColor(d) {
   const s = d.s == null ? 85 : d.s, l = d.l == null ? 55 : d.l;
@@ -97,7 +118,11 @@ function nearestColor(d) {
 }
 export function encodeBracelet(list) {
   return list.map((d) => {
-    if (d.k === 'letter') return (d.st === 'black' ? '_' : '') + (SYMBOL[d.ch] || d.ch);
+    if (d.k === 'letter') {
+      const c = SYMBOL[d.ch] || d.ch;
+      if (!d.sh && (!d.st || d.st === 'black') && d.ch !== HEART) return (d.st === 'black' ? '_' : '') + c;
+      return 'o' + (d.sh === 'round' ? 1 : 0) + Math.max(0, LETTER_STYLE_ORDER.indexOf(d.st || 'white')) + c;
+    }
     if (TYPE_CODE[d.k]) return TYPE_CODE[d.k] + nearestColor(d).toString(16);
     return '-' + d.k + (d.m ? ':' + d.m : '');
   }).join('.');
@@ -110,6 +135,11 @@ export function decodeBracelet(code) {
       const [k, m] = t.slice(1).split(':');
       if (!UNIT[k] || TYPE_CODE[k] || k === 'letter') continue;
       out.push(m && /^(gold|silver)$/.test(m) ? { k, m } : { k });
+      continue;
+    }
+    if (/^o[01][0-4]/.test(t)) {
+      const ch = UNSYMBOL[t.slice(3)] || t.slice(3);
+      if (isLetterChar(ch)) out.push(letterDef(ch, LETTER_STYLE_ORDER[+t[2]], t[1] === '1' ? 'round' : ''));
       continue;
     }
     const black = t[0] === '_', body = black ? t.slice(1) : t;
@@ -326,13 +356,40 @@ function canvasTex(size, draw) {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+// A flat round letter bead: a coin with softly rounded edges, faces toward the viewer, the hole across its width.
+function coinGeo() {
+  const r = 0.48, t = 0.2, e = 0.09, pts = [new THREE.Vector2(0, -t)];
+  for (let i = 0; i <= 8; i++) { const a = -Math.PI / 2 + (i / 8) * Math.PI; pts.push(new THREE.Vector2(r - e + Math.cos(a) * e, Math.sin(a) * (t))); }
+  pts.push(new THREE.Vector2(0, t));
+  return new THREE.LatheGeometry(pts, 48).rotateX(Math.PI / 2);
+}
 function letterTex(ch, fill = '#1c1830', stroke = null) {
   return (tex['L' + ch + fill] ||= canvasTex(160, (x, s) => {
+    if (ch === HEART) {
+      // A plain pink heart, like the heart beads in a letter bead kit.
+      x.fillStyle = '#ff3d9a';
+      x.beginPath();
+      x.moveTo(s * 0.5, s * 0.78);
+      x.bezierCurveTo(s * 0.16, s * 0.56, s * 0.2, s * 0.24, s * 0.37, s * 0.25);
+      x.bezierCurveTo(s * 0.45, s * 0.25, s * 0.49, s * 0.31, s * 0.5, s * 0.36);
+      x.bezierCurveTo(s * 0.51, s * 0.31, s * 0.55, s * 0.25, s * 0.63, s * 0.25);
+      x.bezierCurveTo(s * 0.8, s * 0.24, s * 0.84, s * 0.56, s * 0.5, s * 0.78);
+      x.fill();
+      return;
+    }
+    if (fill === 'gold' || fill === 'deepgold') {
+      // Gold foil letters: a warm gradient so they read as metal, not yellow paint. On frosted beads the gold is
+      // deeper, with a fine dark edge, so it still stands out against the pale bead.
+      const deepG = fill === 'deepgold', g = x.createLinearGradient(0, s * 0.2, 0, s * 0.85);
+      if (deepG) { g.addColorStop(0, '#f2c94c'); g.addColorStop(0.5, '#c88f12'); g.addColorStop(1, '#8a5c06'); stroke = 'rgba(80, 48, 0, 0.7)'; }
+      else { g.addColorStop(0, '#fff0a8'); g.addColorStop(0.45, '#e3b23c'); g.addColorStop(1, '#b07d18'); }
+      fill = g;
+    }
     x.font = `700 ${s * (ch.length > 1 ? 0.62 : 0.78)}px Fredoka, "Arial Rounded MT Bold", "Trebuchet MS", sans-serif`;
     x.textAlign = 'center';
     x.textBaseline = 'middle';
     x.lineJoin = 'round';
-    if (stroke) { x.strokeStyle = stroke; x.lineWidth = s * 0.07; x.strokeText(ch, s / 2, s * 0.54); }
+    if (stroke) { x.strokeStyle = stroke; x.lineWidth = s * (typeof fill === 'string' ? 0.07 : 0.035); x.strokeText(ch, s / 2, s * 0.54); }
     x.fillStyle = fill;
     x.fillText(ch, s / 2, s * 0.54);
   }));
@@ -1142,14 +1199,19 @@ export function makeBead(d) {
       break;
     }
     case 'letter': {
-      const ls = LETTER_STYLES[d.st] || LETTER_STYLES.white, sk = d.st === 'black' ? 'black' : '';
-      group.add(mesh((geo.cube ||= new RoundedBoxGeometry(0.94, 0.94, 0.72, 5, 0.17)), mat('cube' + sk, () => plastic(ls.cube, { roughness: 0.28 }))));
+      const st = LETTER_STYLES[d.st] ? d.st : 'white', ls = LETTER_STYLES[st], round = d.sh === 'round';
+      const body = round ? (geo.coin ||= coinGeo()) : (geo.cube ||= new RoundedBoxGeometry(0.94, 0.94, 0.72, 5, 0.17));
+      const bodyMat = ls.frost
+        ? mat('frostL', () => new THREE.MeshPhysicalMaterial({ color: ls.cube, roughness: 0.62, clearcoat: 0.3, clearcoatRoughness: 0.5, transparent: true, opacity: 0.8, sheen: 0.4, sheenColor: new THREE.Color(0xffffff) }))
+        : mat('cube' + ls.cube, () => plastic(ls.cube, { roughness: 0.28 }));
+      group.add(mesh(body, bodyMat));
+      const half = round ? 0.212 : 0.362;
       const face = new THREE.Mesh(
-        (geo.face ||= new THREE.PlaneGeometry(0.8, 0.8)),
-        mat('L' + d.ch + sk, () => new THREE.MeshBasicMaterial({ map: letterTex(d.ch, ls.ink), transparent: true, depthWrite: false, toneMapped: false })));
-      face.position.z = 0.362;
+        round ? (geo.coinFace ||= new THREE.PlaneGeometry(0.7, 0.7)) : (geo.face ||= new THREE.PlaneGeometry(0.8, 0.8)),
+        mat('L' + d.ch + ls.ink, () => new THREE.MeshBasicMaterial({ map: letterTex(d.ch, ls.ink), transparent: true, depthWrite: false, toneMapped: false })));
+      face.position.z = half;
       const faceBack = face.clone();
-      faceBack.position.z = -0.362;
+      faceBack.position.z = -half;
       faceBack.rotation.y = Math.PI;
       group.add(face, faceBack);
       break;

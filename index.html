@@ -162,9 +162,18 @@
           </div>
           <div class="color-strip" id="colorStrip" role="radiogroup" aria-label="Bead color"></div>
           <div class="letter-row" id="letterRow" hidden>
-            <div class="letter-style" role="radiogroup" aria-label="Letter bead color">
-              <button class="letter-chip" type="button" role="radio" data-st="white" aria-checked="true" aria-label="White letter beads" title="White letters">A</button>
-              <button class="letter-chip black" type="button" role="radio" data-st="black" aria-checked="false" aria-label="Black letter beads" title="Black letters">A</button>
+            <div class="letter-opts">
+              <div class="letter-shape" role="radiogroup" aria-label="Letter bead shape">
+                <button class="shape-chip" type="button" role="radio" data-sh="round" aria-checked="true" aria-label="Round letter beads" title="Round"><span class="sh-round"></span></button>
+                <button class="shape-chip" type="button" role="radio" data-sh="cube" aria-checked="false" aria-label="Cube letter beads" title="Cube"><span class="sh-cube"></span></button>
+              </div>
+              <div class="letter-style" role="radiogroup" aria-label="Letter bead look">
+                <button class="letter-chip" type="button" role="radio" data-st="white" aria-checked="true" aria-label="White with black letters" title="White">A</button>
+                <button class="letter-chip black" type="button" role="radio" data-st="black" aria-checked="false" aria-label="Black with white letters" title="Black">A</button>
+                <button class="letter-chip pink" type="button" role="radio" data-st="pink" aria-checked="false" aria-label="White with pink letters" title="Pink">A</button>
+                <button class="letter-chip gold" type="button" role="radio" data-st="gold" aria-checked="false" aria-label="Black with gold letters" title="Gold">A</button>
+                <button class="letter-chip frost" type="button" role="radio" data-st="frost" aria-checked="false" aria-label="Frosted clear with gold letters" title="Frosted">A</button>
+              </div>
             </div>
             <form class="phrase" id="phraseForm">
               <input id="phrase" type="text" maxlength="26" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type a word or phrase" aria-label="Phrase to spell in letter beads" enterkeyhint="done">

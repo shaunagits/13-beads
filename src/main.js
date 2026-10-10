@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import qrcode from 'qrcode-generator';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { encodeBracelet, decodeBracelet, COLORS, colorBeads, FIXED, LETTERS, letterBeads, LETTER_STYLES, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
+import { encodeBracelet, decodeBracelet, COLORS, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import feltUrl from './assets/felt.jpg';
@@ -51,7 +51,7 @@ const STACK_MAX = 12;
 
 /* ---------- State ---------- */
 let beads = [], fallers = [], undoStack = [], redoStack = [];
-let letterStyle = 'white';
+let letterStyle = 'white', letterShape = 'round';
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
@@ -300,8 +300,9 @@ function removeBead(b) {
 }
 function stringPhrase(text) {
   const list = [];
-  for (const ch of text.toUpperCase()) {
-    if (/[A-Z0-9!?&]/.test(ch)) list.push(letterStyle === 'black' ? { k: 'letter', ch, st: 'black' } : { k: 'letter', ch });
+  // Any heart typed (the plain one or the red emoji) becomes a heart bead.
+  for (const ch of text.toUpperCase().replace(/\u2764\uFE0F?|\u2665\uFE0F?|<3/g, HEART)) {
+    if (isLetterChar(ch)) list.push(letterDef(ch, letterStyle, letterShape));
     else if (ch === ' ' && list.length) list.push({ k: 'spacer' });
   }
   if (!list.length) { say('Type letters, numbers, or ! ? & to spell a phrase.'); return; }
@@ -1546,7 +1547,7 @@ function spillDefs(n) {
   const out = [], types = ['pony', 'pony', 'round', 'clay', 'clay', 'clay', 'cube', 'crystal', 'jelly', 'glitter', 'smiley', 'metal'];
   for (let i = 0; i < n; i++) {
     const r = Math.random();
-    if (r < 0.18) out.push(letterBeads(letterStyle)[Math.floor(Math.random() * 26)].def);
+    if (r < 0.18) out.push(letterBeads(letterStyle, letterShape)[Math.floor(Math.random() * 26)].def);
     else if (r < 0.24) out.push(CHARMS[Math.floor(Math.random() * CHARMS.length)].def);
     else {
       const col = Math.random() < 0.55 ? COLORS[colorIdx] : COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -1621,7 +1622,7 @@ function clearLoose() {
 // The Beads tab shows one compartment per bead type, in the color picked on the color strip.
 let colorIdx = 0;
 try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0, 0, COLORS.length - 1); } catch (e) { /* optional */ }
-const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle), charms: () => CHARMS, dangles: () => DANGLES };
+const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
 // One small offscreen renderer draws thumbnails as they are needed, so each color is only drawn the first time it is picked.
@@ -1766,10 +1767,13 @@ document.addEventListener('keydown', (e) => {
   else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); $('redo').click(); }
 });
 // The starter bracelet mirrors the logo: 1 3, a hot pink bead, B E A D S, framed with sparkles, gold glitter, and pearls.
-const STARTER = (() => {
-  const L = (ch) => ({ k: 'letter', ch }), pink = { k: 'pony', h: 330, s: 90, l: 58 }, gold = { k: 'glitter', h: 48, s: 98, l: 56 };
+// Round letters since 2026-10-10; LEGACY_STARTER is the cube version older players may still have on their string.
+const starterWith = (L) => {
+  const pink = { k: 'pony', h: 330, s: 90, l: 58 }, gold = { k: 'glitter', h: 48, s: 98, l: 56 };
   return [{ k: 'pearl' }, gold, { k: 'sparkle' }, L('1'), L('3'), pink, ...'BEADS'.split('').map(L), { k: 'sparkle' }, gold, { k: 'pearl' }];
-})();
+};
+const STARTER = starterWith((ch) => letterDef(ch, 'white', 'round'));
+const LEGACY_STARTER = starterWith((ch) => ({ k: 'letter', ch }));
 // Beads slide on one by one, each playing the next note of the tune.
 function stringStarter(delay = 0) {
   clearInterval(phraseTimer);
@@ -1841,7 +1845,7 @@ $('editRing').addEventListener('click', () => {
   closePop(false);
   if (i < 0) return;
   const at = stack.length - 1 - i, list = stack[at];
-  const current = defs(), isStarter = JSON.stringify(current) === JSON.stringify(STARTER);
+  const current = defs(), isStarter = [STARTER, LEGACY_STARTER].some((s) => JSON.stringify(current) === JSON.stringify(s));
   if (current.length && !isStarter) stack[at] = current;
   else stack.splice(at, 1);
   saveStack();
@@ -1912,11 +1916,18 @@ document.addEventListener('keydown', (e) => {
 });
 $('restart').addEventListener('click', () => setMenu(false));
 
-// Letter bead color: white or black cubes. Applies to the Letters tab and to typed phrases.
+// Letter bead shape (round coins or cubes) and look. Both apply to the Letters tab and to typed phrases.
 document.querySelectorAll('.letter-chip').forEach((b) => b.addEventListener('click', () => {
   letterStyle = b.dataset.st;
   document.querySelectorAll('.letter-chip').forEach((o) => o.setAttribute('aria-checked', o === b ? 'true' : 'false'));
-  tick(letterStyle === 'black' ? 0.9 : 1.1, 0.08);
+  tick(1.1 - LETTER_STYLE_ORDER.indexOf(letterStyle) * 0.05, 0.08);
+  buildTray(true);
+}));
+document.querySelectorAll('.shape-chip').forEach((b) => b.addEventListener('click', () => {
+  letterShape = b.dataset.sh;
+  document.querySelectorAll('.shape-chip').forEach((o) => o.setAttribute('aria-checked', o === b ? 'true' : 'false'));
+  $('letterRow').classList.toggle('cubes', letterShape !== 'round');
+  tick(letterShape === 'round' ? 1.05 : 0.95, 0.08);
   buildTray(true);
 }));
 

@@ -11,12 +11,12 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 - Header: wordmark, Tilt (iPhone only, until allowed), Your wall (with count badge), and a "⋯" More menu: Sound, Light or Dark mode, Table (Felt / Wood), which end new beads go on, and Start over.
 - Touch: tap a case compartment to add a bead (it slides on and plays the next note). On the string: tap to pull a bead off, drag to reorder, pluck the cord (press must start on it), swipe fast to strum. Cmd or Ctrl + Z undoes; with Shift, or Ctrl + Y, redoes.
 - Length budget: the string holds beads by total width (`BUDGET = 25` units, about 32 pony beads or 26 letters, or about 80 clay discs), not by count. Older saved strings over the budget keep all their beads.
-- Starter bracelet (first visit, and Start over): pearl, gold glitter, sparkle, 1 3, hot pink, B E A D S, sparkle, gold glitter, pearl.
+- Starter bracelet (first visit, and Start over): pearl, gold glitter, sparkle, 1 3, hot pink, B E A D S, sparkle, gold glitter, pearl. Round white letters; an older saved cube starter still counts as the untouched starter (`LEGACY_STARTER` in `src/main.js`).
 - Shake to spill: on a phone, two hard jolts within half a second pour 18 loose beads onto the table (mostly the picked color, some letters, the odd charm). Tap one to string it; untouched, they roll back into the case after 12 seconds. iPhone gets motion access from the Tilt button tap. Off with reduced motion. Tested only with simulated motion events.
 
 **Bead case** (clear plastic organizer, lid folds it away; tabs Beads, Letters, Charms, Dangles)
 - Beads tab: a 12-color strip (saved as `13beads.color`), then one compartment per type in that color: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow. Then pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, gold and silver bead caps. A cap turns its cup toward the nearest bead. Mid-tone colors are drawn deeper (`deep` in `src/beads.js`) so beads match their dots.
-- Letters tab: a White / Black letter switch and the phrase field ("Type a word or phrase") on one row, then A to Z, 0 to 9, ! ? &. Black letters are saved as `{ k: 'letter', ch, st: 'black' }`.
+- Letters tab: a row with the shape switch (Round, the default, or Cube) and five looks (White, Black, Pink letters on white, Gold letters on black, Frosted clear with gold letters), then the phrase field ("Type a word or phrase"), then A to Z, a pink heart bead, 0 to 9, ! ? &. Typing a heart (or <3) in the phrase adds a heart bead. Saved as `{ k: 'letter', ch, st?, sh? }`: no `st` is white, no `sh` is a cube, so every bracelet saved before round letters keeps its cubes. Shape and look are not remembered between visits.
 - Charms (26) and Dangles (16 hanging charms): unchanged from session 2; sizes in `BOOST` in `src/beads.js`.
 
 **Tie-off (mode `tied`)**
@@ -50,10 +50,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## Open with Shauna
 
-- Felt: keep as default? Gray, or tinted (blush, sage, charcoal)?
-- Velvet: good as is, or push it to read more clearly as fabric?
-- Era presets ("Surprise me"): a tile in the Beads tab or a menu item? Album titles or mood and color names? She approved the idea; placement and naming are open.
-- More letter styles: pink letters on white cubes and gold on black?
+- Era presets ("Surprise me"): she likes the concept but is unsure how the control could avoid being intrusive. Placement and naming are open.
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
 - Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
@@ -135,6 +132,9 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-09 | Share card and gift tag | Built | Shauna: do it if not too difficult. |
 | 2026-10-09 | Trade links and QR | Built, inside "Share this bracelet" | Shauna said yes; no server needed, nothing to manage. |
 | 2026-10-09 | Confetti | Pastel paper with small maple leaves | Shauna asked for stadium-style confetti with maple leaves. (Superseded 2026-10-10: stars.) |
+| 2026-10-10 | Felt and velvet | Keep the gray felt and the velvet cones as they are | Shauna. |
+| 2026-10-10 | Round letters | Flat round letter beads added and made the default; cubes stay a choice. Starter uses round letters | Shauna's photos: every real bracelet uses round letters. She chose round as default. |
+| 2026-10-10 | Letter looks | White, Black, Pink on white, Gold on black, Frosted clear with gold, plus a heart bead | Shauna said yes to pink and gold; frosted and the heart come from her photos. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
