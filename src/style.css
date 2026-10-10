@@ -187,6 +187,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   overflow-x: auto; scrollbar-width: none; border-radius: 10px;
 }
 .tray::-webkit-scrollbar { display: none; }
+/* Jump chips above the Beads tab: one per group of compartments. */
+.jump-row { position: relative; z-index: 1; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 0 2px; }
+.jump-row::-webkit-scrollbar { display: none; }
+.jump-row[hidden] { display: none; }
+.jump { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 2px 9px; font: 700 11.5px/1.5 var(--body); }
+.jump[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: transparent; }
+.jump:active { transform: scale(.95); }
+/* An empty compartment, so each group starts at the top of a column. */
+.bead-gap { pointer-events: none; }
 /* A compartment: a square well with clear plastic walls. */
 /* The Surprise me compartment carries a small label, since its picture is a jumble of beads. */
 .bead-btn.surprise { position: relative; }

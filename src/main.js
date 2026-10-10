@@ -1734,7 +1734,35 @@ const patterns = () => (twoCords ? Object.keys(PATTERN_NAMES).map((p) => {
 }) : []);
 // The first compartment strings a ready-made bracelet; each tap brings the next one.
 const SURPRISE = { name: 'Surprise me', surprise: true, def: { k: 'surprise' } };
-const TABS = { colors: () => [SURPRISE, ...patterns(), ...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
+// The Beads tab is sorted into groups, each starting a new column, with a chip above the tray to jump to each one.
+// Recent holds the last six beads picked from the case (any tab), so going back and forth is one tap.
+const BEAD_GROUPS = [
+  ['basics', 'Basics', ['pony', 'round', 'cube', 'matte', 'jelly', 'clay', 'smiley']],
+  ['shiny', 'Shiny', ['crystal', 'facet', 'glitter', 'glow', 'metal']],
+  ['fun', 'Fun', ['starb', 'dice']],
+  ['seed', 'Seed', ['seed', 'seedg', 'seedl', 'seedx']],
+  ['pearls', 'Pearls', ['pearl', 'marble', 'moon2', 'spacer', 'ball', 'daisy', 'rondelle', 'gunspacer', 'cap']],
+];
+let recent = [];
+function noteRecent(item) {
+  const def = withCord(item.def, 0), key = defKey(def);
+  recent = [{ name: item.name, def }, ...recent.filter((r) => defKey(r.def) !== key)].slice(0, 6);
+}
+function beadsTab() {
+  const all = [...colorBeads(COLORS[colorIdx]), ...FIXED], out = [];
+  const tag = (list, group) => list.map((it) => ({ ...it, group }));
+  if (recent.length) out.push(...tag(recent, 'recent'));
+  out.push(...tag([SURPRISE, ...patterns()], 'ideas'));
+  const placed = new Set();
+  BEAD_GROUPS.forEach(([id, , kinds], gi) => {
+    const mine = all.filter((it) => kinds.includes(it.def.k) || (gi === BEAD_GROUPS.length - 1 && !BEAD_GROUPS.some((g) => g[2].includes(it.def.k))));
+    mine.forEach((it) => placed.add(it));
+    out.push(...tag(mine, id));
+  });
+  return out;
+}
+const GROUP_LABELS = { recent: 'Recent', ideas: 'Ideas', ...Object.fromEntries(BEAD_GROUPS.map(([id, label]) => [id, label])) };
+const TABS = { colors: beadsTab, letters: () => letterBeads(letterStyle, letterShape), charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
 const TINY = new Set(['seed', 'seedg', 'seedl', 'seedx', 'facet', 'gunspacer']);
@@ -1764,7 +1792,7 @@ const tbox = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vecto
 function renderThumbs(items) {
   const todo = items.filter((it) => !thumbs[defKey(it.def)] && !it.pattern && !it.surprise);
   for (const it of items) if (it.pattern && !thumbs[defKey(it.def)]) thumbs[defKey(it.def)] = patternThumb(it.def);
-  if (items.includes(SURPRISE) && !thumbs[defKey(SURPRISE.def)]) thumbs[defKey(SURPRISE.def)] = surpriseThumb();
+  if (items.some((it) => it.surprise) && !thumbs[defKey(SURPRISE.def)]) thumbs[defKey(SURPRISE.def)] = surpriseThumb();
   if (!todo.length) return;
   const kit = thumbRenderer();
   if (!kit) return;
@@ -1920,7 +1948,17 @@ function buildTray(keepScroll) {
   $('letterRow').hidden = curTab !== 'letters';
   renderThumbs(items);
   tray.textContent = '';
-  for (const item of items) {
+  const jump = $('jumpRow'), starts = [];
+  jump.hidden = curTab !== 'colors';
+  jump.textContent = '';
+  let count = 0;
+  items.forEach((item, i) => {
+    // Each group starts a new column: an odd group ends with an empty compartment.
+    if (item.group && (i === 0 || items[i - 1].group !== item.group)) {
+      if (count % 2) { const gap = document.createElement('span'); gap.className = 'bead-btn bead-gap'; gap.setAttribute('aria-hidden', 'true'); tray.appendChild(gap); count++; }
+      starts.push({ group: item.group, col: count / 2 });
+    }
+    count++;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'bead-btn';
@@ -1931,11 +1969,50 @@ function buildTray(keepScroll) {
     img.src = thumbs[defKey(item.def)] || '';
     btn.appendChild(img);
     if (item.surprise) btn.classList.add('surprise');
-    btn.addEventListener('click', () => { arm(); item.surprise ? surprise() : item.pattern ? addPattern(item.pattern) : addBead(item.def); });
+    btn.addEventListener('click', () => {
+      arm();
+      if (item.surprise) surprise();
+      else if (item.pattern) addPattern(item.pattern);
+      else if (addBead(item.def)) noteRecent(item);
+    });
     tray.appendChild(btn);
+  });
+  // Jump chips, one per group. The chip for the group in view is highlighted as the tray scrolls.
+  for (const st of starts) {
+    const c = document.createElement('button');
+    c.type = 'button';
+    c.className = 'jump';
+    c.textContent = GROUP_LABELS[st.group];
+    c.setAttribute('aria-label', 'Show ' + GROUP_LABELS[st.group].toLowerCase() + ' beads');
+    c.addEventListener('click', () => {
+      jumpPick = st;
+      tray.dataset.gliding = '1';
+      clearTimeout(glideTimer);
+      glideTimer = setTimeout(() => { delete tray.dataset.gliding; markJump(); }, reduce ? 0 : 600);
+      tray.scrollTo({ left: st.col * 65, behavior: reduce ? 'auto' : 'smooth' });
+      markJump();
+      tick(1.1, 0.05);
+    });
+    st.chip = c;
+    jump.appendChild(c);
   }
+  traySections = starts;
   tray.scrollLeft = keepScroll ? x : 0;
+  markJump();
 }
+let traySections = [], jumpPick = null, glideTimer = 0;
+function markJump() {
+  const tray = $('tray'), left = tray.scrollLeft + 20, max = tray.scrollWidth - tray.clientWidth;
+  let cur = traySections[0];
+  for (const st of traySections) if (st.col * 65 <= left) cur = st;
+  // A chip just tapped stays lit while the tray glides to it, and when the tray cannot scroll that far.
+  if (jumpPick && traySections.includes(jumpPick)) {
+    const goal = Math.min(jumpPick.col * 65, max);
+    if (Math.abs(tray.scrollLeft - goal) < 4 || tray.dataset.gliding) cur = jumpPick;
+  }
+  for (const st of traySections) st.chip.setAttribute('aria-pressed', st === cur ? 'true' : 'false');
+}
+$('tray').addEventListener('scroll', markJump, { passive: true });
 // Fold the bead case away, or open it again.
 $('caseToggle').addEventListener('click', () => {
   const closed = $('case').classList.toggle('closed');

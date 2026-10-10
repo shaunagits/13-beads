@@ -11,6 +11,8 @@ Top item is the next thing to do.
 
 ## Later, agreed in principle
 
+- On short desktop windows (about 760 px tall) with the bead case open, a full string can dip to the bottom edge of the canvas. Consider limiting the sag by the canvas height.
+
 - Name feature: ask the player's name, starter spells it, sign reads "<name>'s beads" (needs the sign's 12-character limit and no-apostrophe rule raised). Shauna: not yet.
 - Clasps and cord choices at the finish step.
 - Length budget: revisit (Shauna).
