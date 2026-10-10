@@ -293,6 +293,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .phrase-go:active { transform: scale(.94); }
 .side .seg { width: 36px; height: 30px; padding: 0; display: grid; place-items: center; }
+.side .seg.surf { width: auto; padding: 0 11px; font-size: 13px; }
 .icon-btn:disabled { opacity: .35; }
 .hud .side { left: 10px; bottom: 17px; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); }
 

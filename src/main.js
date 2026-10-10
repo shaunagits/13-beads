@@ -6,6 +6,8 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { encodeBracelet, decodeBracelet, COLORS, colorBeads, FIXED, LETTERS, letterBeads, LETTER_STYLES, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
+import feltUrl from './assets/felt.jpg';
+import feltNormalUrl from './assets/felt-normal.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
 // The string holds beads by length, not count. The budget is 25 pony-bead widths' worth of units (26 letter cubes),
@@ -107,24 +109,47 @@ table.material.depthWrite = false;
 table.renderOrder = -1;
 table.position.z = -46.5;
 scene.add(table);
-let tableLoaded = false;
-// The tabletop texture is a photo-scanned wood surface (CC0, Poly Haven "Dark Wood"), in both light and dark mode.
-const tableLoader = new THREE.TextureLoader();
+// The tabletop is a photo-scanned surface: gray felt like a bead mat (CC0, ambientCG "Fabric 034"), or dark wood
+// (CC0, Poly Haven "Dark Wood"). The player picks one in the More menu; felt is the default.
+const SURFACES = {
+  felt: { url: feltUrl, normal: feltNormalUrl, tile: 300, cord: 0x7a6f94, day: [0.5, 0.4], night: [0.36, 0.05], tint: 0xf3eef5, normalScale: 0.9, rough: 0.95 },
+  wood: { url: tableUrl, tile: 620, cord: 0xe6ddf2, day: [0.62, 0.5], night: [0.4, 0.03], tint: 0xffffff, rough: 0.62 },
+};
+let surface = 'felt';
+try { const v = localStorage.getItem('13beads.table'); if (SURFACES[v]) surface = v; } catch (e) { /* optional */ }
+const tableLoader = new THREE.TextureLoader(), tableTex = {};
+function loadTex(url, srgb) {
+  return (tableTex[url] ||= tableLoader.load(url, (t) => { applyMood(); table.material.needsUpdate = true; }, undefined, () => {}));
+}
 function buildTable() {
-  if (tableLoaded) return;
-  tableLoaded = true;
-  tableLoader.load(tableUrl, (t) => {
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 4;
-    if (table.material.map) table.material.map.dispose();
-    table.material.map = t;
-    // Part of the color comes from the texture itself, so the moving colored lights do not tint the table.
-    table.material.emissive.set(0xffffff);
-    table.material.emissiveMap = t;
-    applyMood();
-    table.material.needsUpdate = true;
-  });
+  const sf = SURFACES[surface], t = loadTex(sf.url);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  const m = table.material;
+  m.map = t;
+  // Part of the color comes from the texture itself, so the moving colored lights do not tint the table.
+  m.emissive.set(sf.tint);
+  m.emissiveMap = t;
+  m.roughness = sf.rough;
+  if (sf.normal) {
+    const n = loadTex(sf.normal);
+    n.wrapS = n.wrapT = THREE.RepeatWrapping;
+    m.normalMap = n;
+    m.normalScale.set(sf.normalScale, sf.normalScale);
+  } else m.normalMap = null;
+  m.needsUpdate = true;
+  // The cord is pale on dark wood and a deeper lavender gray on felt, so it shows on either.
+  stringMat.color.set(sf.cord);
+  applyMood();
+}
+function setSurface(v) {
+  if (!SURFACES[v] || v === surface) return;
+  surface = v;
+  try { localStorage.setItem('13beads.table', v); } catch (e) { /* optional */ }
+  document.querySelectorAll('.surf').forEach((o) => o.setAttribute('aria-pressed', o.dataset.surf === v ? 'true' : 'false'));
+  buildTable();
+  tick(1.1, 0.08);
 }
 
 const strand = new THREE.Group();
@@ -182,8 +207,6 @@ const cfObj = new THREE.Object3D();
 let sparkLife = 0;
 
 function readTheme() {
-  // A pale cord in both themes, so it shows up against the dark wood table.
-  stringMat.color.set(0xe6ddf2);
   buildTable();
 }
 
@@ -424,8 +447,9 @@ function applyMood() {
   // The craft table: evenly lit by day; in dark mode the room dims and a warm desk lamp pools light in the middle.
   const deskNight = !onWall && isDark();
   if (table.material.map) {
-    table.material.emissiveIntensity = deskNight ? 0.03 : 0.5;
-    table.material.color.setScalar(deskNight ? 0.4 : 0.62);
+    const sf = SURFACES[surface], [c, e] = deskNight ? sf.night : sf.day;
+    table.material.emissiveIntensity = e;
+    table.material.color.set(sf.tint).multiplyScalar(c);
   }
   deskLamp.intensity = deskNight ? 7 : 0;
   if (deskNight) { sun.intensity = 0.55; sun.color.set(0xffe2c4); scene.environmentIntensity = 0.35; stageA.intensity = stageB.intensity = 0.35; }
@@ -1310,8 +1334,12 @@ function frame(now) {
   camera.lookAt(0, 0, 0);
   stageA.position.set(Math.cos(T * 0.45) * W * 0.6, H * 0.2 + Math.sin(T * 0.6) * H * 0.3, 240);
   table.scale.set(W * 1.6, H * 1.6, 1);
-  // The wood grain is drawn finer to match, as if the table is a little farther away.
-  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 620, (H * 1.6) / 620);
+  // The surface pattern is drawn at a scale that reads as a real tabletop a little way off.
+  if (table.material.map) {
+    const tile = SURFACES[surface].tile;
+    table.material.map.repeat.set((W * 1.6) / tile, (H * 1.6) / tile);
+    if (table.material.normalMap) table.material.normalMap.repeat.copy(table.material.map.repeat);
+  }
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
   deskLamp.position.set(-W * 0.08, H * 0.12, 230);
   deskLamp.distance = Math.max(W, H) * 0.9;
@@ -1924,6 +1952,11 @@ function endTrade() {
   syncUndo();
   sync();
 }
+
+document.querySelectorAll('.surf').forEach((b) => {
+  b.setAttribute('aria-pressed', b.dataset.surf === surface ? 'true' : 'false');
+  b.addEventListener('click', () => setSurface(b.dataset.surf));
+});
 
 /* ---------- Boot ---------- */
 async function start() {
