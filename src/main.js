@@ -238,7 +238,7 @@ function addBead(def, noUndo, end = side, step = null) {
 function drop(b) {
   strand.remove(b.obj);
   scene.add(b.obj);
-  b.obj.position.set(b.x - W / 2, H / 2 - b.y, 24);
+  b.obj.position.set(b.x - W / 2, H / 2 - proj(b.y), 24);
   fallers.push({ obj: b.obj, vx: (Math.random() - 0.5) * 160, vy: 200 + Math.random() * 80, r: [0, 1, 2].map(() => (Math.random() - 0.5) * 12) });
 }
 function removeBead(b) {
@@ -275,6 +275,7 @@ function setMode(m) {
   $('buildPanel').hidden = m !== 'line';
   $('hud').hidden = false;
   $('hud').dataset.mode = m;
+  $('menu').dataset.mode = m;
   $('stackBtn').setAttribute('aria-pressed', m === 'stack' ? 'true' : 'false');
 
   $('count').hidden = m !== 'line';
@@ -854,32 +855,36 @@ function pointAt(p, c, s) {
   return { x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f), a: Math.atan2(b.y - a.y, b.x - a.x) };
 }
 
-/* ---------- The string: a chain of linked points with gravity (Verlet rope) ---------- */
-// The rope's length grows with the bead count, so a fuller string hangs lower. Beads add weight where they sit,
-// a finger grabs the nearest point and pulls it, and tilting the phone tips gravity.
+/* ---------- The string: lying on a bead board ---------- */
+// The string lies on the table in an open C, the shape it will take around a wrist, with the gap at the top where
+// new beads go on. Layout and physics happen in table space (a true circle, in stage pixels). The table is tilted
+// away from the viewer, so table space is drawn squashed top to bottom (proj) and touches are unsquashed (unproj).
+// The string is a chain of linked points (Verlet), each pulled back toward its rest spot on the C, so a pluck
+// bends it locally and it springs back.
 const RX = new Float32Array(N + 1), RY = new Float32Array(N + 1), OX = new Float32Array(N + 1), OY = new Float32Array(N + 1);
-const RW = new Float32Array(N + 1);
-let ropeKey = '', ropeSeg = 0;
-function ropeShape(n) {
-  return { ay: H * 0.16, sag: lerp(0.14, 1, Math.min(1, usedLen() / BUDGET)) * Math.min(H * 0.6, W * 0.6) };
+const TILT = 0.72, CT = Math.cos(TILT), GAP = 0.62;
+let ropeKey = '', ropeSeg = 0, bcx = 150, bcy = 150, bR = 100, lastLine = null, lastLc = null;
+const proj = (y) => bcy + (y - bcy) * CT;
+const unproj = (y) => bcy + (y - bcy) / CT;
+function boardShape() {
+  // Room for the controls that float over the top and bottom of the stage.
+  const top = 50, bot = 80;
+  bcx = W / 2;
+  bcy = top + (H - top - bot) / 2;
+  bR = Math.max(50, Math.min(W * 0.41, (H - top - bot - 30) / (2 * CT)));
 }
-function ropeLength(n) {
-  const { ay, sag } = ropeShape(n);
-  let L = 0, px = -12, py = ay;
-  for (let i = 1; i <= 60; i++) {
-    const t = i / 60, x = lerp(-12, W + 12, t), y = ay + sag * 4 * t * (1 - t);
-    L += Math.hypot(x - px, y - py); px = x; py = y;
-  }
-  return L;
+function restAt(i) {
+  const th = -Math.PI / 2 - GAP / 2 - (i / N) * (TAU - GAP);
+  return { x: bcx + bR * Math.cos(th), y: bcy + bR * Math.sin(th) };
 }
-function resetRope(n) {
-  const { ay, sag } = ropeShape(n);
+function resetRope() {
+  boardShape();
   for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    RX[i] = OX[i] = lerp(-12, W + 12, t);
-    RY[i] = OY[i] = ay + sag * 4 * t * (1 - t);
+    const r = restAt(i);
+    RX[i] = OX[i] = r.x;
+    RY[i] = OY[i] = r.y;
   }
-  ropeSeg = ropeLength(n) / N;
+  ropeSeg = (bR * (TAU - GAP)) / N;
 }
 // Push the rope at a point (0 to 1 along it), in pixels per second.
 function kickRope(f, vx, vy) {
@@ -889,21 +894,19 @@ function kickRope(f, vx, vy) {
     OX[i] -= vx * fall * k; OY[i] -= vy * fall * k;
   }
 }
-function stepRope(dt, n) {
+// The nearest spot on the string to a point in table space, as a distance along it.
+function nearestS(p) {
+  if (!lastLine) return 0;
+  let bi = 0, bd = 1e9;
+  for (let i = 0; i <= N; i++) { const d = Math.hypot(lastLine[i].x - p.x, lastLine[i].y - p.y); if (d < bd) { bd = d; bi = i; } }
+  return lastLc[bi];
+}
+function stepRope(dt) {
   const key = W + 'x' + H;
-  if (key !== ropeKey) { ropeKey = key; resetRope(n); }
-  const ay = H * 0.16;
-  // Ease the length toward its target, so adding beads lowers the string smoothly.
-  ropeSeg += (ropeLength(n) / N - ropeSeg) * Math.min(1, dt * 6);
-  // Weight: each bead loads the point under it.
-  RW.fill(1);
-  for (const b of beads) {
-    if (b.drag || b.s == null) continue;
-    const c = Math.round(clamp(b.s / (lineLen || 1), 0, 1) * N);
-    if (c > 0 && c < N) RW[c] += UNIT[b.def.k] * 2.2;
-  }
-  const g = 1400, gx = Math.sin(tiltS * 0.5) * g, gy = Math.cos(tiltS * 0.5) * g;
-  const SUB = 3, h = dt / SUB, damp = reduce ? 0.9 : 0.992;
+  if (key !== ropeKey) { ropeKey = key; resetRope(); }
+  // Tilting the phone nudges the string sideways a little.
+  const gx = Math.sin(tiltS * 0.5) * 260, K = 520;
+  const SUB = 3, h = dt / SUB, damp = reduce ? 0.85 : 0.985;
   let gi = -1, fx = 0, fy = 0;
   if (pluck && pluck.armed) {
     if (pluck.i == null) {
@@ -911,23 +914,25 @@ function stepRope(dt, n) {
       for (let i = 1; i < N; i++) { const d = Math.hypot(RX[i] - pluck.x, RY[i] - pluck.y); if (d < bd) { bd = d; pluck.i = i; } }
     }
     gi = pluck.i;
-    fx = pluck.x + clamp(pluck.dx, -80, 80); fy = pluck.y + clamp(pluck.dy, -90, 110);
+    fx = pluck.x + clamp(pluck.dx, -80, 80); fy = pluck.y + clamp(pluck.dy, -80, 80);
   }
+  const r0 = restAt(0), rN = restAt(N);
   for (let st = 0; st < SUB; st++) {
     for (let i = 1; i < N; i++) {
-      const vx = (RX[i] - OX[i]) * damp, vy = (RY[i] - OY[i]) * damp;
+      const r = restAt(i), vx = (RX[i] - OX[i]) * damp, vy = (RY[i] - OY[i]) * damp;
       OX[i] = RX[i]; OY[i] = RY[i];
-      RX[i] += vx + gx * h * h; RY[i] += vy + gy * h * h;
+      RX[i] += vx + (K * (r.x - RX[i]) + gx) * h * h;
+      RY[i] += vy + K * (r.y - RY[i]) * h * h;
     }
     if (gi > 0) { RX[gi] += (fx - RX[gi]) * 0.6; RY[gi] += (fy - RY[gi]) * 0.6; OX[gi] = RX[gi]; OY[gi] = RY[gi]; }
-    RX[0] = OX[0] = -12; RY[0] = OY[0] = ay;
-    RX[N] = OX[N] = W + 12; RY[N] = OY[N] = ay;
+    RX[0] = OX[0] = r0.x; RY[0] = OY[0] = r0.y;
+    RX[N] = OX[N] = rN.x; RY[N] = OY[N] = rN.y;
     // Keep each link close to its rest length. A little give makes the cord feel elastic.
-    for (let it = 0; it < 14; it++) {
+    for (let it = 0; it < 8; it++) {
       for (let i = 0; i < N; i++) {
         const dx = RX[i + 1] - RX[i], dy = RY[i + 1] - RY[i], d = Math.hypot(dx, dy) || 1e-6;
         const diff = ((d - ropeSeg) / d) * 0.9;
-        const wa = i === 0 || i === gi ? 0 : 1 / RW[i], wb = i + 1 === N || i + 1 === gi ? 0 : 1 / RW[i + 1], ws = wa + wb;
+        const wa = i === 0 || i === gi ? 0 : 1, wb = i + 1 === N || i + 1 === gi ? 0 : 1, ws = wa + wb;
         if (!ws) continue;
         RX[i] += dx * diff * (wa / ws); RY[i] += dy * diff * (wa / ws);
         RX[i + 1] -= dx * diff * (wb / ws); RY[i + 1] -= dy * diff * (wb / ws);
@@ -956,6 +961,9 @@ function burst() {
 }
 
 /* ---------- Frame ---------- */
+const qTilt = new THREE.Quaternion(), AX = new THREE.Vector3(1, 0, 0), eul = new THREE.Euler();
+// The signed difference between two angles, the short way round.
+const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.033, (now - last) / 1000 || 0.016);
@@ -971,14 +979,14 @@ function frame(now) {
   const n = beads.length;
   let U = 0;
   for (const b of beads) U += UNIT[b.def.k];
-  const line = stepRope(dt, n);
+  const line = stepRope(dt);
   const lc = cumOf(line);
   lineLen = lc[N];
-  const SMAX = clamp(W / 10, 28, 48);
-  // Keep the end beads fully on screen: measure how much string is lost past each edge.
-  let edge = 0;
-  for (let i = 0; i <= N; i++) { if (line[i].x >= sizeCur * 0.62 + 10) { edge = lc[i]; break; } }
-  const sizeT = U ? Math.min(SMAX, (lineLen - 2 * edge) / U) : SMAX;
+  lastLine = line; lastLc = lc;
+  // One bead size: a full string (the length budget) fills the C from end to end. Only an older saved string
+  // that is longer than the budget draws its beads smaller to fit.
+  const arc = bR * (TAU - GAP) * 0.97;
+  const sizeT = arc / Math.max(BUDGET, U);
   sizeCur += (sizeT - sizeCur) * (reduce ? 1 : 0.2);
 
   let acc = (lineLen - U * sizeCur) / 2;
@@ -1010,16 +1018,15 @@ function frame(now) {
   // Tied bracelet: the string morphs into a loop.
   const R = Math.min(W, H) * 0.33, cx = W / 2, cy = H / 2 + R * 0.06, C = TAU * R;
   const Sc = U ? Math.min(sizeCur, (C * 0.93) / U) : sizeCur;
-  let pts = line, cum = lc;
-  if (k > 0) {
-    pts = [];
-    for (let i = 0; i <= N; i++) {
-      const th = -Math.PI / 2 - (TAU * i) / N;
-      pts.push({ x: lerp(line[i].x, cx + R * Math.cos(th), k), y: lerp(line[i].y, cy + R * Math.sin(th), k) });
-    }
-    cum = cumOf(pts);
+  // The board string as seen on screen (squashed by the table tilt), blended into the loop as it ties.
+  const pts = [];
+  for (let i = 0; i <= N; i++) {
+    const th = -Math.PI / 2 - (TAU * i) / N;
+    pts.push({ x: lerp(line[i].x, cx + R * Math.cos(th), k), y: lerp(proj(line[i].y), cy + R * Math.sin(th), k) });
   }
-  const Lm = cum[N], S = lerp(sizeCur, Sc, k);
+  const cum = cumOf(pts);
+  const Lm = cum[N], S = lerp(sizeCur, Sc, k), tiltK = TILT * (1 - k);
+  qTilt.setFromAxisAngle(AX, -tiltK);
 
   // Lift into 3D. The strand pivots around the loop center so the tied bracelet can turn.
   strand.position.set(cx - W / 2, H / 2 - cy, 0);
@@ -1048,23 +1055,30 @@ function frame(now) {
   const defList = defs();
   beads.forEach((b, i) => { if (b.obj.userData.cup) b.obj.userData.cup.rotation.y = capFacing(defList, i) > 0 ? 0 : Math.PI; });
   for (const b of beads) {
-    const f = lerp(b.s / lineLen, 0.5 + (b.off * (Sc / sizeCur)) / C, k), p = pointAt(pts, cum, f * Lm);
     b.S = S;
     const o = b.obj;
     if (b.drag) {
+      // A dragged bead lifts off the board under the finger.
       b.x = b.drag.x; b.y = b.drag.y;
-      o.position.set(b.x - cx, cy - b.y + 6, 34);
-      o.rotation.set(0, 0, 0);
+      o.position.set(b.x - cx, cy - proj(b.y) + 6, 34);
+      o.quaternion.copy(qTilt);
       o.scale.setScalar(S * 1.15);
       if (o.userData.hang) o.userData.hang.rotation.set(0, 0, b.sw);
     } else {
-      b.x = p.x; b.y = p.y;
+      // Where the bead sits on the board (table space), and where it goes on the tied loop; blend by k.
+      const t = pointAt(line, lc, b.s);
+      const fc = 0.5 + (b.off * (Sc / sizeCur)) / C, thc = -Math.PI / 2 - TAU * fc;
+      const lx = cx + R * Math.cos(thc), ly = cy + R * Math.sin(thc), la = thc - Math.PI / 2;
+      const a = t.a + angDiff(t.a, la) * k;
+      b.x = t.x; b.y = t.y;
       const q = b.sq < 0.6 ? Math.exp(-b.sq * 9) * Math.cos(b.sq * 34) : 0;
-      o.position.set(p.x - cx, cy - p.y, 0);
+      o.position.set(lerp(t.x, lx, k) - cx, cy - lerp(proj(t.y), ly, k), 0);
+      // On the board a hanging charm lies flat, pointing into the middle of the C. Once tied, it hangs down.
       if (o.userData.hang) {
-        o.rotation.set(0, 0, -p.a);
-        o.userData.hang.rotation.set(b.rock * 0.5, 0, p.a + b.sw);
-      } else o.rotation.set(b.rock, 0, -p.a, 'ZYX');
+        eul.set(0, 0, -a);
+        o.userData.hang.rotation.set(b.rock * 0.5, 0, a * k + Math.PI * (1 - k) + b.sw);
+      } else eul.set(b.rock, 0, -a, 'ZYX');
+      o.quaternion.setFromEuler(eul).premultiply(qTilt);
       o.scale.set(S * (1 - 0.22 * q), S * (1 + 0.18 * q), S * (1 + 0.18 * q));
     }
     if (o.userData.spin) o.userData.spin.rotation.y = T * 0.9;
@@ -1104,8 +1118,10 @@ function frame(now) {
   camera.position.set(parX * 26, parY * 18, dist);
   camera.lookAt(0, 0, 0);
   stageA.position.set(Math.cos(T * 0.45) * W * 0.6, H * 0.2 + Math.sin(T * 0.6) * H * 0.3, 240);
-  table.scale.set(W * 1.6, H * 1.6, 1);
-  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 760, (H * 1.6) / 760);
+  // The tabletop tilts away from the viewer, like the board the string lies on.
+  table.rotation.x = -TILT;
+  table.scale.set(W * 1.6, (H * 1.6) / CT, 1);
+  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 760, (H * 1.6) / CT / 760);
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
   deskLamp.position.set(-W * 0.08, H * 0.12, 230);
   deskLamp.distance = Math.max(W, H) * 0.9;
@@ -1116,7 +1132,11 @@ function frame(now) {
 
 /* ---------- Pointer: tap to pull off, drag to reorder ---------- */
 let grab = null;
-const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+// Pointer position in stage pixels. While stringing, it is mapped onto the tilted board (table space).
+const pos = (e) => {
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  return mode === 'line' ? { x, y: unproj(y), sy: y } : { x, y, sy: y };
+};
 cv.addEventListener('pointerdown', (e) => {
   arm();
   const p = pos(e);
@@ -1167,7 +1187,7 @@ cv.addEventListener('pointermove', (e) => {
   const p = pos(e);
   p.vx = p.x - lastX;
   lastX = p.x;
-  if (e.pointerType === 'mouse') { parTX = (p.x / W - 0.5) * 2; parTY = -(p.y / H - 0.5) * 2; }
+  if (e.pointerType === 'mouse') { parTX = (p.x / W - 0.5) * 2; parTY = -(p.sy / H - 0.5) * 2; }
   if (spin) {
     const dx = p.x - spin.x, dy = p.y - spin.y;
     if (Math.abs(dx) + Math.abs(dy) > 6) { spin.moved = true; clearTimeout(holdTimer); }
@@ -1211,8 +1231,10 @@ cv.addEventListener('pointermove', (e) => {
   const b = grab.b;
   b.drag = p;
   const others = beads.filter((o) => o !== b);
+  // Its new place in the order is by where the finger is along the C.
+  const at = nearestS(p);
   let idx = 0;
-  for (const o of others) if (o.x < p.x) idx++;
+  for (const o of others) if (o.s < at) idx++;
   if (beads.indexOf(b) !== idx) { others.splice(idx, 0, b); beads = others; tick(1.3, 0.08); }
 });
 function release() {
@@ -1242,7 +1264,7 @@ function release() {
   const b = grab.b;
   if (!grab.moved) removeBead(b);
   else {
-    b.s = clamp((b.drag.x + 12) / (W + 24), 0, 1) * lineLen;
+    b.s = nearestS(b.drag);
     b.v = 0; b.drag = null; b.landed = false;
     sync();
   }
@@ -1355,6 +1377,7 @@ function buildSwatches() {
 function buildTray(keepScroll) {
   const tray = $('tray'), items = TABS[curTab](), x = tray.scrollLeft;
   $('colorStrip').hidden = curTab !== 'colors';
+  $('phraseForm').hidden = curTab !== 'letters';
   renderThumbs(items);
   tray.textContent = '';
   for (const item of items) {
@@ -1488,6 +1511,7 @@ function syncThemeBtn() {
   const dark = isDark();
   $('themeBtn').setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
   $('themeBtn').title = dark ? 'Light mode' : 'Dark mode';
+  $('themeLabel').textContent = dark ? 'Light mode' : 'Dark mode';
 }
 syncThemeBtn();
 onTheme(syncThemeBtn);
@@ -1498,8 +1522,25 @@ $('sound').addEventListener('click', () => {
   arm();
   setMuted(muted);
   $('sound').setAttribute('aria-pressed', muted ? 'false' : 'true');
+  $('soundState').textContent = muted ? 'Off' : 'On';
   if (!muted) tick(1);
 });
+
+// The More menu opens from the header and closes on a tap outside it, on Escape, or after a one-off action.
+function setMenu(open, focusFirst) {
+  $('menu').hidden = !open;
+  $('moreBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && focusFirst) $('menu').querySelector('button').focus({ preventScroll: true });
+}
+// Opened from the keyboard (no pointer, so detail is 0), focus moves into the menu.
+$('moreBtn').addEventListener('click', (e) => { arm(); setMenu($('menu').hidden, e.detail === 0); });
+document.addEventListener('pointerdown', (e) => {
+  if (!$('menu').hidden && !$('menu').contains(e.target) && !$('moreBtn').contains(e.target)) setMenu(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('menu').hidden) { setMenu(false); $('moreBtn').focus({ preventScroll: true }); }
+});
+['restart', 'clear'].forEach((id) => $(id).addEventListener('click', () => setMenu(false)));
 
 /* ---------- Boot ---------- */
 async function start() {
