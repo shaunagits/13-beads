@@ -324,40 +324,54 @@ board.add(wall);
 // A neon-style sign in script. It glows at night and sits unlit by day.
 function neonTexture(lit) {
   const c = document.createElement('canvas');
-  c.width = 470; c.height = 220;
+  c.width = NEON_W; c.height = NEON_H;
   const x = c.getContext('2d');
   const word = decor.sign || SIGN_DEFAULT;
-  // Shrink the script to fit the sign, so longer words stay inside the glow.
-  let size = 120;
-  x.font = size + 'px Pacifico, "Brush Script MT", cursive';
-  const wid = x.measureText(word).width;
-  if (wid > 410) { size = Math.max(54, Math.floor((size * 410) / wid)); x.font = size + 'px Pacifico, "Brush Script MT", cursive'; }
-  x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.lineJoin = 'round';
+  // Letters are drawn one at a time with a little air between them, like separate neon tubes.
+  // The script shrinks to fit, so longer words stay inside the sign.
+  const font = (sz) => sz + 'px Pacifico, "Brush Script MT", cursive';
+  const lay = (sz) => {
+    x.font = font(sz);
+    const gap = sz * 0.07, ws = [...word].map((ch) => x.measureText(ch).width);
+    return { ws, gap, total: ws.reduce((a, w) => a + w, 0) + gap * Math.max(0, ws.length - 1) };
+  };
+  let size = 130, L = lay(size);
+  const room = NEON_W - 60;
+  if (L.total > room) { size = Math.max(56, Math.floor((size * room) / L.total)); L = lay(size); }
+  x.textAlign = 'left'; x.textBaseline = 'middle';
+  x.lineJoin = 'round'; x.lineCap = 'round';
+  const cy = NEON_H / 2 + 4;
+  const strokeAll = () => {
+    let px = (NEON_W - L.total) / 2;
+    [...word].forEach((ch, i) => { x.strokeText(ch, px, cy); px += L.ws[i] + L.gap; });
+  };
   if (lit) {
-    x.shadowColor = '#ff3fa0'; x.shadowBlur = 34;
-    x.strokeStyle = '#ff6fbd'; x.lineWidth = 9;
-    for (let i = 0; i < 3; i++) x.strokeText(word, 235, 112);
-    x.shadowBlur = 8;
-    x.strokeStyle = '#fff2fa'; x.lineWidth = 3.5;
-    x.strokeText(word, 235, 112);
+    // White neon: a soft warm glow, then the tube, then a bright core, kept thin so the letters stay readable.
+    x.shadowColor = 'rgba(255,214,170,.9)'; x.shadowBlur = 16;
+    x.strokeStyle = 'rgba(255,238,215,.85)'; x.lineWidth = 6;
+    strokeAll();
+    x.shadowBlur = 4;
+    x.strokeStyle = '#ffffff'; x.lineWidth = 2.6;
+    strokeAll();
   } else {
-    x.shadowColor = 'rgba(90,40,90,.35)'; x.shadowBlur = 5; x.shadowOffsetX = 3; x.shadowOffsetY = 4;
-    x.strokeStyle = '#fff4fa'; x.lineWidth = 8;
-    x.strokeText(word, 235, 112);
+    // Unlit by day: clear glass tubes, with a soft shadow on the wall so they read on a light wall.
+    x.shadowColor = 'rgba(60,45,35,.32)'; x.shadowBlur = 5; x.shadowOffsetX = 3; x.shadowOffsetY = 4;
+    x.strokeStyle = '#fdfbf8'; x.lineWidth = 8;
+    strokeAll();
     x.shadowColor = 'transparent';
-    x.strokeStyle = '#ee8fbf'; x.lineWidth = 3;
-    x.strokeText(word, 235, 112);
+    x.strokeStyle = '#b5aa9f'; x.lineWidth = 2.6;
+    strokeAll();
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+const NEON_W = 640, NEON_H = 220;
 const neonMaps = { on: null, off: null };
 const neon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false }));
 neon.position.z = -40;
 board.add(neon);
-const neonGlow = new THREE.PointLight(0xff4fa8, 0, 0, 0);
+const neonGlow = new THREE.PointLight(0xfff0dc, 0, 0, 0);
 const lamp = new THREE.PointLight(0xffb873, 0, 0, 0);
 const deskLamp = new THREE.PointLight(0xffc98a, 0, 1, 1.4);
 scene.add(deskLamp);
@@ -389,7 +403,7 @@ function applyMood() {
   neonGlow.intensity = night ? 1.5 : 0;
   if (!neonMaps.on) { neonMaps.on = neonTexture(true); neonMaps.off = neonTexture(false); }
   neon.material.map = night ? neonMaps.on : neonMaps.off;
-  neon.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+  neon.material.blending = THREE.NormalBlending;
   neon.material.needsUpdate = true;
 }
 onTheme(applyMood);
@@ -425,9 +439,11 @@ const hookGeo = {
 function wallGrid() {
   const cols = W < 520 ? 3 : W < 900 ? 4 : 5;
   const slotW = Math.min((W * 0.9) / cols, 148), rMax = slotW * 0.42, rowH = rMax * 2 + 36;
-  // Space is kept above the top bar for the neon sign.
-  const rows = clamp(Math.floor((H * 0.84 - 40) / rowH), 1, 3);
-  const top = (H - (rows * rowH + 30)) / 2 + 46;
+  // Room is kept above the stand for the neon sign (SIGN_ROOM) and below the shelf for the Make another button,
+  // and the stand is centered in what is left. Short screens drop to fewer rows rather than crowd the button.
+  const SIGN_ROOM = 112, BTN_ROOM = 92;
+  const rows = clamp(Math.floor((H - SIGN_ROOM - BTN_ROOM - 20) / rowH), 1, 3), block = rows * rowH + 20;
+  const top = SIGN_ROOM + Math.max(0, (H - SIGN_ROOM - BTN_ROOM - block) / 2) + 12;
   return { cols, rows, slotW, rMax, rowH, top, shelf: top + rows * rowH + 4, cap: Math.min(STACK_MAX, cols * rows) };
 }
 let standKey = '';
@@ -562,9 +578,12 @@ function wear() {
 function updateStack(dt) {
   wall.scale.set(W * 1.4, H * 1.4, 1);
   {
-    const g = wallGrid(), signH = clamp(g.top - 50, 30, 70), topY = H / 2 - g.top;
-    neon.scale.set(signH * 2.14, signH, 1);
-    neon.position.set(0, topY + 30 + signH / 2, -40);
+    // The sign sits in the band between the top of the stand and the buttons at the top of the screen, centered in it.
+    // Only the middle of the sign's picture holds letters, so its edges may overlap the band a little.
+    const g = wallGrid(), topY = H / 2 - g.top, lo = topY + 34, hi = H / 2 - 50;
+    const signH = clamp((hi - lo) * 1.25, 60, 110), signW = Math.min(signH * (NEON_W / NEON_H), W * 0.92);
+    neon.scale.set(signW, signW * (NEON_H / NEON_W), 1);
+    neon.position.set(0, Math.max(lo + 10, (lo + hi) / 2), -40);
     neonGlow.position.set(0, neon.position.y, 60);
     lamp.position.set(W * 0.42, -H * 0.3, 220);
   }
