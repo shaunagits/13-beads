@@ -23,7 +23,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 - Opening a two-strand bracelet (saved string, Edit from the wall, trade link, undo) turns two strands on. Turning two strands off puts every bead back on one cord (undoable).
 - Trade links: a bead token ending in `~1` or `~2` is on the bottom cord or both.
 
-**Surprise me**: the first compartment of the Beads tab (labeled "Surprise") replaces the string with a ready-made bracelet; each tap brings the next one, starting at a random one. Undo restores the string. Ten presets in era-inspired colors, named by mood and color only (`PRESETS` in `src/beads.js`): Night sky, Golden fields, Purple sparkle, Scarlet, Seaside snapshot, Silver snake, Pastel dream, Woodland, Stage lights, Lucky blue. Each fills about 40 percent of the string, leaving room for a word.
+**Surprise me**: the first compartment of the Beads tab (labeled "Surprise") replaces the string with a ready-made bracelet; each tap brings the next one, starting at a random one. Undo restores the string. Eleven presets, one per album, in that era's colors with a matching charm (`PRESETS` in `src/beads.js`): Midnights, Fearless, Speak Now, Red, 1989, Reputation, Lover, Folklore, Evermore, The Tortured Poets Department, The Life of a Showgirl. The debut album is left out because its title is the artist's name. Each fills about 40 percent of the string, leaving room for a word. The footer carries "Fan-made. Not affiliated with any artist or label."
 
 **Finding beads**: the Beads tab is sorted into groups, each starting at the top of a new column (an odd group ends with an empty compartment): Recent, Ideas (Surprise me and, on two strands, the patterns), Basics, Shiny, Fun, Seed, Pearls (`BEAD_GROUPS` in `src/main.js`). A row of chips above the tray jumps to each group and lights up the one in view. Recent holds the last six beads picked from the case in any tab, newest first; it refreshes the next time the tray is drawn (switching tab or color), so compartments never move under a finger. Recent is not saved between visits.
 
@@ -65,7 +65,6 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## Open with Shauna
 
-- Surprise me preset names: mood and color names (built) or album titles?
 - Twist and Daisy patterns, and whether pattern joining beads get a second color (automatic contrast or a picker).
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
@@ -159,6 +158,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-10 | Two-strand controls | Word labels, tap a cord to pick it, highlighted cord, ghost bead | Shauna asked for easier controls and approved all four. |
 | 2026-10-10 | Bubble pattern | Added; Twist and Daisy wait | Shauna wanted to see Bubble first. |
 | 2026-10-10 | Switching bead types | Recent group and jump chips | Shauna picked ideas 1 and 2 of four (press and hold to copy a bead, and add three at once, not built). |
+| 2026-10-10 | Surprise me names | Album titles, plus a fan-made note in the footer | Shauna picked option A. Still never the artist's name, logos or title lettering, cover art, or lyrics. Revisit if the game ever becomes paid or sponsored. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
