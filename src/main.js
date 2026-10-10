@@ -434,47 +434,58 @@ function woodTexture() {
   return t;
 }
 const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.75 });
-const hookGeo = {
-  ring: new THREE.TorusGeometry(6.5, 1.3, 8, 20).rotateY(Math.PI / 2),
-  link: new THREE.CylinderGeometry(1.1, 1.1, 9, 6),
-};
-// How many bars and hooks fit the current stage, in stage pixels (y measured down from the top).
+// The display: white velvet bracelet cones on a slim shelf. Bracelets stack around a cone the way they do on a
+// real one, each resting on the one below. Drag a cone to spin it and read the phrases; hold a bracelet to edit it.
+const velvet = new THREE.MeshPhysicalMaterial({ color: 0xf4f0ea, roughness: 0.92, sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xffffff) });
+const CONE_TILT = 0.24;
+// Where the cones go on this stage, in stage pixels (y measured down from the top).
 function wallGrid() {
-  const cols = W < 520 ? 3 : W < 900 ? 4 : 5;
-  const slotW = Math.min((W * 0.9) / cols, 148), rMax = slotW * 0.42, rowH = rMax * 2 + 36;
-  // Room is kept above the stand for the neon sign (SIGN_ROOM) and below the shelf for the Make another button,
-  // and the stand is centered in what is left. Short screens drop to fewer rows rather than crowd the button.
-  const SIGN_ROOM = 112, BTN_ROOM = 92;
-  const rows = clamp(Math.floor((H - SIGN_ROOM - BTN_ROOM - 20) / rowH), 1, 3), block = rows * rowH + 20;
-  const top = SIGN_ROOM + Math.max(0, (H - SIGN_ROOM - BTN_ROOM - block) / 2) + 12;
-  return { cols, rows, slotW, rMax, rowH, top, shelf: top + rows * rowH + 4, cap: Math.min(STACK_MAX, cols * rows) };
+  const maxCones = W < 520 ? 2 : 3, per = Math.ceil(STACK_MAX / maxCones);
+  const n = Math.min(stack.length, STACK_MAX), cones = clamp(Math.ceil(n / per), 1, maxCones);
+  const SIGN_ROOM = 118, BTN_ROOM = 92;
+  const shelf = H - BTN_ROOM - 10;
+  const spacing = Math.min((W * 0.92) / Math.max(cones, maxCones === 2 ? 2 : 2.4), 250);
+  const R = clamp(spacing * 0.36, 34, 74);
+  // Bracelet bead size: the same rule the loop uses everywhere else, so phrases stay readable.
+  const S = clamp(R * 0.3, 13, 24), gap = S * 1.18;
+  const avail = shelf - SIGN_ROOM - 12;
+  const coneH = clamp(Math.min(avail * 0.92, R * 5.2), R * 2.4, 560);
+  return { cones, per, spacing, R, S, gap, coneH, shelf, top: shelf - coneH, cap: Math.min(STACK_MAX, cones * per) };
 }
 let standKey = '';
+const coneGroups = [];
 function buildStand(grid) {
-  for (const m of [...stand.children]) { stand.remove(m); if (m.userData.own) m.geometry.dispose(); }
-  // The stand and shelf cast no shadows. Their shadows on the wall read as clutter.
-  const solid = (geo, mat, x, y, z = 0, shadow = false) => {
+  for (const m of [...stand.children]) { stand.remove(m); m.traverse((o) => { if (o.userData.own) o.geometry.dispose(); }); }
+  coneGroups.length = 0;
+  const solid = (geo, mat, parent, x, y, z = 0) => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
-    m.castShadow = shadow; m.receiveShadow = true;
+    m.receiveShadow = true;
     m.userData.own = true;
-    stand.add(m);
+    parent.add(m);
     return m;
   };
-  const Y = (py) => H / 2 - py, barW = grid.cols * grid.slotW, shelfY = Y(grid.shelf);
+  const shelfY = H / 2 - grid.shelf, R = grid.R, Hc = grid.coneH;
   // Slim floating shelf.
-  solid(new THREE.BoxGeometry(Math.min(W * 0.98, barW + 150), 11, 112), woodMat, 0, shelfY - 5.5, -12);
-  solid(new THREE.CylinderGeometry(barW * 0.2, barW * 0.22, 9, 48), goldMat, 0, shelfY + 4.5, -6);
-  const topY = Y(grid.top);
-  solid(new THREE.CylinderGeometry(5.5, 5.5, topY - shelfY + 16, 20), goldMat, 0, (topY + shelfY) / 2 + 8, -8);
-  solid(new THREE.SphereGeometry(9, 20, 14), goldMat, 0, topY + 20, -8);
-  for (let r = 0; r < grid.rows; r++) {
-    const y = Y(grid.top + r * grid.rowH);
-    solid(new THREE.CylinderGeometry(4.2, 4.2, barW, 16).rotateZ(Math.PI / 2), goldMat, 0, y, 0);
-    for (const sx of [-1, 1]) solid(new THREE.SphereGeometry(7, 16, 12), goldMat, (sx * barW) / 2, y, 0);
+  solid(new THREE.BoxGeometry(Math.min(W * 0.98, grid.cones * grid.spacing + 140), 11, 140), woodMat, stand, 0, shelfY - 5.5, -20);
+  // A cone: a soft velvet taper with a rounded top, standing on a low round foot.
+  // Slim, like a jewelry display cone: just wider than a bracelet at the foot, narrowing to a rounded tip.
+  const Rb = R * 1.08, Rt = R * 0.2;
+  const prof = [[0, 0], [Rb * 1.06, 0], [Rb * 1.07, 3], [Rb * 1.03, 6], [Rb, 7]];
+  for (let i = 1; i <= 16; i++) { const t = i / 16; prof.push([Rb + (Rt - Rb) * t, 7 + (Hc - 7 - Rt) * t]); }
+  for (let i = 1; i <= 8; i++) { const a = (i / 8) * (Math.PI / 2); prof.push([Rt * Math.cos(a), Hc - Rt + Rt * Math.sin(a)]); }
+  const coneGeo = new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x, y)), 56);
+  for (let c = 0; c < grid.cones; c++) {
+    const g = new THREE.Group(), spinner = new THREE.Group();
+    g.position.set((c - (grid.cones - 1) / 2) * grid.spacing, shelfY, 0);
+    g.rotation.x = CONE_TILT;
+    const m = solid(coneGeo, velvet, spinner, 0, 0, 0);
+    m.userData.own = c === 0;
+    g.add(spinner);
+    stand.add(g);
+    coneGroups.push({ g, spinner, spin: 0, spinV: 0, Rb, Rt, Hc });
   }
 }
-
 let stack = [];
 let rings = [], grabRing = null;
 try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.filter(Array.isArray); } catch (e) { /* optional */ }
@@ -485,44 +496,48 @@ function syncStack() {
   $('stackBtn').setAttribute('aria-label', stack.length ? 'Your wall, ' + stack.length + ' on display' : 'Your wall');
   if (mode === 'stack') $('photoBtn').disabled = !stack.length;
 }
+// A bracelet lying around a cone: the beads stand in a level ring, letters facing out, the front of the
+// phrase toward the viewer. Its height on the cone is set each frame.
 function buildRing(list, grid) {
   let U = 0;
   for (const d of list) U += UNIT[d.k];
-  // Every bracelet hangs as the same size loop, so short ones show more cord, like real ones do.
-  const R = grid.rMax * 0.94;
-  const S = Math.min(clamp(grid.rMax * 0.27, 14, 26), (TAU * R - 10) / Math.max(U, 1));
-  const g = new THREE.Group(), loop = new THREE.Group(), hangs = [], DROP = 13;
+  const R = grid.R, S = Math.min(grid.S, (TAU * R - 10) / Math.max(U, 1));
+  const g = new THREE.Group(), loop = new THREE.Group(), hangs = [];
   let acc = (-U * S) / 2;
   list.forEach((d, i) => {
     const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
     acc += w;
     if (o.userData.cup) o.userData.cup.rotation.y = capFacing(list, i) > 0 ? 0 : Math.PI;
     o.scale.setScalar(S);
-    o.position.set(R * Math.sin(phi), -DROP - R - R * Math.cos(phi), 0);
-    o.rotation.z = phi;
+    o.position.set(R * Math.sin(phi), 0, R * Math.cos(phi));
+    o.rotation.y = phi;
     if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
     loop.add(o);
   });
-  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72), stringMat);
-  cord.position.y = -DROP - R;
-  cord.castShadow = true;
-  // Hook: a ring over the bar and a short link down to the bracelet.
-  const ring = new THREE.Mesh(hookGeo.ring, goldMat), link = new THREE.Mesh(hookGeo.link, goldMat);
-  link.position.y = -8.5;
-  ring.castShadow = true;
-  loop.add(cord, ring, link);
-  loop.position.z = 4;
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72).rotateX(Math.PI / 2), stringMat);
+  loop.add(cord);
   g.add(loop);
-  board.add(g);
-  return { g, loop, R: R + DROP / 2, cy: -DROP - R, cr: R, hangs, th: (Math.random() - 0.5) * 0.3, thv: 0, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, x: 0, y: 0 };
+  return { g, loop, R, S, hangs, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, sx: 0, sy: 0, rx: R, ry: R * 0.4, cone: null, wob: 0, wobv: 0 };
 }
-// Newest bracelet takes the first hook. Older ones shift along.
+// Oldest bracelets sit lowest on the first cone; newer ones stack on top, then fill the next cone.
 function rebuildStack() {
   const grid = wallGrid();
-  standKey = [grid.cols, grid.rows, Math.round(grid.rMax / 3), Math.round(W / 30), Math.round(H / 30)].join('|');
+  standKey = [grid.cones, Math.round(grid.R), Math.round(grid.coneH / 4), Math.round(W / 30), Math.round(H / 30)].join('|');
+  rings.forEach((r) => r.g.parent && r.g.parent.remove(r.g));
   buildStand(grid);
-  rings.forEach((r) => board.remove(r.g));
   rings = stack.slice(-grid.cap).reverse().map((list) => buildRing(list.filter((d) => d && UNIT[d.k]), grid));
+  const n = rings.length;
+  rings.forEach((r, i) => {
+    const j = n - 1 - i, c = Math.min(coneGroups.length - 1, Math.floor(j / grid.per)), level = j % grid.per;
+    const cg = coneGroups[c];
+    // Rest where the cone is just narrower than the bracelet, then one bead height higher per bracelet below.
+    const y0 = ((cg.Rb - grid.R * 0.94) / (cg.Rb - cg.Rt)) * (cg.Hc - cg.Rt) + 7 + grid.S * 0.6;
+    r.cone = cg;
+    r.level = level;
+    r.y0 = y0 + level * grid.gap;
+    r.g.position.y = r.y0;
+    cg.spinner.add(r.g);
+  });
   buildRingButtons();
 }
 const tmpV = new THREE.Vector3();
@@ -547,7 +562,7 @@ function buildRingButtons() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'ring-btn';
-    b.setAttribute('aria-label', braceletName(stack[stack.length - 1 - i]) + ', ' + (i + 1) + ' of ' + rings.length + '. Press Enter to take it off.');
+    b.setAttribute('aria-label', braceletName(stack[stack.length - 1 - i]) + ', ' + (i + 1) + ' of ' + rings.length + '. Press Enter to edit it or take it off.');
     b.addEventListener('focus', () => { kbRing = r; });
     b.addEventListener('blur', () => { if (kbRing === r) kbRing = null; });
     b.addEventListener('click', () => { if (rings.includes(r)) openPop(r, b); });
@@ -580,56 +595,68 @@ function wear() {
 }
 function updateStack(dt) {
   wall.scale.set(W * 1.4, H * 1.4, 1);
+  const grid = wallGrid();
+  if ([grid.cones, Math.round(grid.R), Math.round(grid.coneH / 4), Math.round(W / 30), Math.round(H / 30)].join('|') !== standKey) rebuildStack();
   {
-    // The sign sits in the band between the top of the stand and the buttons at the top of the screen, centered in it.
-    // Only the middle of the sign's picture holds letters, so its edges may overlap the band a little.
-    const g = wallGrid(), topY = H / 2 - g.top, lo = topY + 34, hi = H / 2 - 50;
+    // The sign sits in the band between the top of the cones and the buttons at the top of the screen.
+    const topY = H / 2 - grid.top, lo = topY + 24, hi = H / 2 - 50;
     const signH = clamp((hi - lo) * 1.25, 60, 110), signW = Math.min(signH * (NEON_W / NEON_H), W * 0.92);
     neon.scale.set(signW, signW * (NEON_H / NEON_W), 1);
-    neon.position.set(0, Math.max(lo + 10, (lo + hi) / 2), -40);
+    // Sit the sign a little above the cones rather than up against the top of the screen.
+    neon.position.set(0, clamp(lo + signH * 0.45 + 20, lo + 10, Math.max(lo + 10, (lo + hi) / 2)), -60);
     neonGlow.position.set(0, neon.position.y, 60);
     lamp.position.set(W * 0.42, -H * 0.3, 220);
   }
-  const grid = wallGrid();
-  if ([grid.cols, grid.rows, Math.round(grid.rMax / 3), Math.round(W / 30), Math.round(H / 30)].join('|') !== standKey) rebuildStack();
-  rings.forEach((r, i) => {
-    const col = i % grid.cols, row = Math.floor(i / grid.cols);
-    r.x = (col - (grid.cols - 1) / 2) * grid.slotW;
-    r.y = H / 2 - (grid.top + row * grid.rowH);
-    // Falling onto the hook.
+  for (const cg of coneGroups) {
+    // A spun cone coasts to a stop. Tilting the phone turns the cones a little.
+    if (cg !== grabCone) { cg.spin += cg.spinV * dt; cg.spinV *= Math.pow(0.12, dt); }
+    const lean = reduce ? 0 : Math.sin(T * 0.35) * 0.06 + tiltS * 0.3;
+    cg.spinner.rotation.y = cg.spin + lean;
+  }
+  rings.forEach((r) => {
+    // Dropping onto the cone from above, with a little settle.
     r.dropv += (-r.drop * 150 - r.dropv * 13) * dt;
     r.drop += r.dropv * dt;
-    if (!r.landed && r.drop < 6) { r.landed = true; thud(); chime(); buzz(25); r.thv += 2.4; }
-    // Pendulum swing around the bar, leaning with the phone.
-    if (grabRing !== r) {
-      r.thv += (-(r.th - tiltS * 0.55) * 34 - r.thv * 1.5) * dt;
-      r.th = clamp(r.th + r.thv * dt, -1.4, 1.4);
-    }
-    const idle = reduce ? 0 : Math.sin(T * 0.9 + r.ph) * 0.025;
-    r.g.position.set(r.x, r.y, 0);
+    if (!r.landed && r.drop < 6) { r.landed = true; thud(); chime(); buzz(25); r.wobv += 3; }
+    r.wobv += (-r.wob * 60 - r.wobv * 5) * dt;
+    r.wob += r.wobv * dt;
+    r.g.position.y = r.y0 + r.drop;
+    r.g.rotation.set(r.wob * 0.05, 0, r.wob * 0.04);
     r.pick = lerp(r.pick || 0, popRing === r || kbRing === r ? 1 : 0, reduce ? 1 : Math.min(1, dt * 14));
-    if (r.btn) {
-      // Keep the invisible button centred on the bracelet as it swings, projected through the camera.
-      r.loop.updateWorldMatrix(true, false);
-      const c = toScreen(r.loop, 0, r.cy), e = toScreen(r.loop, r.cr, r.cy);
-      const d = Math.hypot(e.x - c.x, e.y - c.y) * 2 + 10;
-      r.btn.style.width = r.btn.style.height = d + 'px';
-      r.btn.style.transform = `translate(${c.x - d / 2}px, ${c.y - d / 2}px)`;
-    }
     r.loop.scale.setScalar(1 + r.pick * 0.07);
-    r.loop.position.y = r.drop;
-    r.loop.rotation.z = r.th + idle;
-    for (const h of r.hangs) h.hang.rotation.set(0, 0, -(h.phi + r.th + idle) - r.thv * 0.05);
+    // Where the bracelet is on screen: its center and the half-widths of the ellipse it makes.
+    r.g.updateWorldMatrix(true, false);
+    const c = toScreen(r.g, 0, 0), e = toScreen(r.g, r.R, 0);
+    tmpV.set(0, 0, r.R); r.g.localToWorld(tmpV); tmpV.project(camera);
+    const fy = ((1 - tmpV.y) / 2) * H;
+    r.sx = c.x; r.sy = c.y; r.rx = Math.abs(e.x - c.x); r.ry = Math.max(8, Math.abs(fy - c.y));
+    if (r.btn) {
+      r.btn.style.width = r.rx * 2 + 10 + 'px';
+      r.btn.style.height = r.ry * 2 + r.S * 2 + 'px';
+      r.btn.style.transform = `translate(${r.sx - r.rx - 5}px, ${r.sy - r.ry - r.S}px)`;
+    }
   });
 }
-// Which hanging bracelet is under the pointer (stage pixels, y down)?
+// Which cone is under the pointer, and which bracelet on it (stage pixels, y down)?
+let grabCone = null;
+function coneAt(p) {
+  let best = null, bd = 1e9;
+  coneGroups.forEach((cg) => {
+    const base = toScreen(cg.g, 0, 0), tip = toScreen(cg.g, 0, cg.Hc);
+    const half = (cg.Rb * 1.2 * (W / W));
+    if (p.y < tip.y - 20 || p.y > base.y + 30) return;
+    const d = Math.abs(p.x - base.x);
+    if (d < half + 30 && d < bd) { bd = d; best = cg; }
+  });
+  return best;
+}
+// Which bracelet is under the pointer: the nearest ring whose band (its screen ellipse) the point falls in.
 function ringAt(p) {
-  const px = p.x - W / 2, py = H / 2 - p.y;
   let best = null, bd = 1e9;
   for (const r of rings) {
-    const cx = r.x + Math.sin(r.th) * r.R, cy = r.y - Math.cos(r.th) * r.R;
-    const d = Math.hypot(px - cx, py - cy);
-    if (d < r.R + 18 && d < bd) { bd = d; best = r; }
+    const dx = (p.x - r.sx) / (r.rx + 12), dy = (p.y - r.sy) / (r.ry + r.S + 6);
+    const d = dx * dx + dy * dy;
+    if (d < 1 && Math.abs(p.y - r.sy) < bd) { bd = Math.abs(p.y - r.sy); best = r; }
   }
   return best;
 }
@@ -645,7 +672,7 @@ function openPop(r, opener) {
   const pop = $('pop');
   pop.hidden = false;
   const pw = pop.offsetWidth, ph = pop.offsetHeight;
-  const cx = W / 2 + r.x, top = H / 2 - r.y, bottom = top + r.R * 2 + 12;
+  const cx = r.sx, top = r.sy - r.ry - r.S, bottom = r.sy + r.ry + r.S;
   let y = bottom + 8;
   if (y + ph > H - 74) y = top - ph - 8;
   pop.style.left = clamp(cx - pw / 2, 10, W - pw - 10) + 'px';
@@ -1191,6 +1218,8 @@ cv.addEventListener('pointerdown', (e) => {
     spin = { x: p.x, y: p.y, moved: false };
     spinVY = 0; spinVX = 0;
     grabRing = mode === 'stack' ? ringAt(p) : null;
+    grabCone = mode === 'stack' ? (grabRing ? grabRing.cone : coneAt(p)) : null;
+    if (grabCone) grabCone.spinV = 0;
     if (!$('custom').hidden) { closeCustom(false); spin.dismiss = true; }
     else if (!$('shareCard').hidden) { closeShare(false); spin.dismiss = true; }
     else if (popRing) { closePop(false); spin.dismiss = true; }
@@ -1240,22 +1269,12 @@ cv.addEventListener('pointermove', (e) => {
     if (Math.abs(dx) + Math.abs(dy) > 6) { spin.moved = true; clearTimeout(holdTimer); }
     if (spin.held || spin.dismiss) return;
     if (mode === 'stack') {
-      const px = p.x - W / 2, py = H / 2 - p.y;
-      if (grabRing) {
-        // Hold a bracelet and it follows your finger around its hook.
-        const th = clamp(Math.atan2(px - grabRing.x, -(py - grabRing.y)), -1.4, 1.4);
-        grabRing.thv = clamp((th - grabRing.th) * 30, -9, 9);
-        grabRing.th = th;
-      } else {
-        // Brushing across the stand knocks each bracelet you pass.
-        for (const r of rings) {
-          const cx = r.x + Math.sin(r.th) * r.R, cy = r.y - Math.cos(r.th) * r.R;
-          if (Math.hypot(px - cx, py - cy) < r.R && performance.now() - (r.hitAt || 0) > 300) {
-            r.hitAt = performance.now();
-            r.thv += clamp(dx * 0.35, -5, 5);
-            note(rings.indexOf(r) * 2);
-          }
-        }
+      // Drag sideways to spin the cone, like turning a display on a counter.
+      if (grabCone && spin.moved) {
+        const d = (p.x - spin.x) * 0.014;
+        grabCone.spin += d;
+        grabCone.spinV = d / 0.016;
+        if (Math.abs(p.x - (spin.lastNote || spin.x)) > 28) { spin.lastNote = p.x; note(coneGroups.indexOf(grabCone) * 2 + Math.floor(Math.random() * 3)); }
       }
       spin.x = p.x; spin.y = p.y;
       return;
@@ -1287,12 +1306,16 @@ function release() {
     // A tap on the tied bracelet makes it hop and throw sparkles.
     if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
     clearTimeout(holdTimer);
-    if (!spin.moved && !spin.held && !spin.dismiss && mode === 'stack' && grabRing) {
-      grabRing.thv += (Math.random() < 0.5 ? -1 : 1) * 3.5;
-      [0, 2, 4].forEach((n, i) => setTimeout(() => note(rings.indexOf(grabRing) + n), i * 60));
+    if (!spin.moved && !spin.held && !spin.dismiss && mode === 'stack' && (grabRing || grabCone)) {
+      // A tap jingles: the bracelet bounces on its cone, or the cone gives a little turn.
+      if (grabRing) grabRing.wobv += 6;
+      else grabCone.spinV += (Math.random() < 0.5 ? -1 : 1) * 2.2;
+      const base = grabRing ? rings.indexOf(grabRing) : coneGroups.indexOf(grabCone) * 3;
+      [0, 2, 4].forEach((n, i) => setTimeout(() => note(base + n), i * 60));
       buzz(15);
     }
     grabRing = null;
+    grabCone = null;
     spin = null;
     return;
   }
