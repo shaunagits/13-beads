@@ -17,7 +17,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 **Bead case** (clear plastic organizer, lid folds it away; tabs Beads, Letters, Charms, Dangles)
 - Beads tab: a 16-color strip (saved as `13beads.color`; blush, baby blue, cream, and navy were added at the end of `COLORS` and placed by `COLOR_ORDER`), then one compartment per type in that color: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow, matte, star bead, dice, small faceted crystal, seed bead, frosted glitter seed bead, silver-lined seed bead. Then pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, marbled pearl, moonstone, clear, pearl, and gunmetal seed beads, frosted square seed bead, gunmetal spacer, gold and silver bead caps. Seed beads are about a third of a pony bead wide (about 89 fit). Tiny beads are drawn larger in their compartments (`TINY` in `src/main.js`). A cap turns its cup toward the nearest bead. Mid-tone colors are drawn deeper (`deep` in `src/beads.js`) so beads match their dots.
 - Letters tab: a row with the shape switch (Round, the default, or Cube) and five looks (White, Black, Pink letters on white, Gold letters on black, Frosted clear with gold letters), then the phrase field ("Type a word or phrase"), then A to Z, a pink heart bead, 0 to 9, ! ? &. Typing a heart (or <3) in the phrase adds a heart bead. Saved as `{ k: 'letter', ch, st?, sh? }`: no `st` is white, no `sh` is a cube, so every bracelet saved before round letters keeps its cubes. Shape and look are not remembered between visits.
-- Charms (26) and Dangles (16 hanging charms): unchanged from session 2; sizes in `BOOST` in `src/beads.js`.
+- Charms (26) and Dangles (20 hanging charms; the last four, from Shauna's photos: lucky rock, evil eye, heart and arrow, potted cactus); sizes in `BOOST` in `src/beads.js`.
 
 **Tie-off (mode `tied`)**
 - The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 85 shiny pastel foil stars and 30 small maple leaves that tumble and flutter down (off with reduced motion).
@@ -50,6 +50,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## Open with Shauna
 
+- Cactus charm: keep the 3D version, or switch to flat enamel?
 - Era presets ("Surprise me"): she likes the concept but is unsure how the control could avoid being intrusive. Placement and naming are open.
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
@@ -136,6 +137,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-10 | Round letters | Flat round letter beads added and made the default; cubes stay a choice. Starter uses round letters | Shauna's photos: every real bracelet uses round letters. She chose round as default. |
 | 2026-10-10 | Letter looks | White, Black, Pink on white, Gold on black, Frosted clear with gold, plus a heart bead | Shauna said yes to pink and gold; frosted and the heart come from her photos. |
 | 2026-10-10 | Beads from Shauna's photos | Seed beads (opaque, frosted glitter, silver-lined, clear, pearl, gunmetal, frosted square), matte, star beads, dice, small faceted crystals, marbled pearl, moonstone, gunmetal spacer; colors blush, baby blue, cream, navy | Picked from her real bracelets. All geometric. |
+| 2026-10-10 | Charms from Shauna's photos | Rock, evil eye (own symmetric design), heart and arrow (no initials), and a 3D potted cactus, all as dangles | Shauna wants to see the cactus in 3D before deciding; flat enamel is the fallback. The artist's monogram and name stay out. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |

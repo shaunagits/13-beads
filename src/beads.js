@@ -9,10 +9,10 @@ export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
   shades: 1.6, note: 1.04, vinyl: 1.25, cassette: 1.3, ticket: 1.34, chihuahua: 1.38, lips: 1.3,
-  minibead: 0.36, teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
+  minibead: 0.36, rock: 0.36, evileye: 0.36, arrowheart: 0.36, cactus: 0.36, teacup: 0.36, rod: 0.36, redwood: 0.36, feather: 0.36, hat: 0.36, discube: 0.36, globe: 0.36 };
 
 // Charms that hang below the string from a ring instead of sitting on it.
-export const DANGLE = new Set(['guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe', 'minibead', 'teacup', 'rod', 'redwood', 'feather', 'hat', 'discube', 'globe']);
+export const DANGLE = new Set(['rock', 'evileye', 'arrowheart', 'cactus', 'guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe', 'minibead', 'teacup', 'rod', 'redwood', 'feather', 'hat', 'discube', 'globe']);
 
 // The color strip above the Beads tab. Every bead type below that takes a color uses the one picked here.
 export const COLORS = [
@@ -103,6 +103,7 @@ export const DANGLES = named([
   ['Acoustic guitar', 'guitar'], ['Microphone', 'mic'], ['Cowboy boot', 'boot'], ['Cardigan', 'cardigan'], ['Red scarf', 'scarf'],
   ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'], ['Storm in a teacup', 'teacup'], ['Lightning rod', 'rod'],
   ['Redwood tree', 'redwood'], ['Showgirl feather', 'feather'], ['Cowboy hat', 'hat'], ['Disco cube', 'discube'], ['Snow globe', 'globe'], ['Mini bracelet', 'minibead'],
+  ['Lucky rock', 'rock'], ['Evil eye', 'evileye'], ['Heart and arrow', 'arrowheart'], ['Potted cactus', 'cactus'],
 ]);
 
 export const defKey = (d) => JSON.stringify(d);
@@ -166,7 +167,7 @@ export function decodeBracelet(code) {
 }
 // Charms that read small on a phone are drawn larger. All hanging charms share roughly one size. Widths in UNIT match.
 const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35, chair: 1.35, ladder: 1.3, minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
-  teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
+  rock: 1.3, evileye: 1.35, arrowheart: 1.3, cactus: 1.35, teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Bead plastic in a strip color. Gloss and the room light lift every color toward white, so mid tones are drawn
@@ -632,6 +633,123 @@ function hanger(group) {
 // A small flat lightning bolt, shared by the teacup and the lightning rod.
 const boltGeo = () => G('bolt', () => flat(poly([[0.06, 0.12], [-0.1, -0.04], [0.0, -0.04], [-0.08, -0.22], [0.13, 0.0], [0.03, 0.0], [0.12, 0.12]]), 0.05, 0.015));
 const CHARM_BUILDERS = {
+  /* ---------- Charm set four, from Shauna's photos ---------- */
+  rock(g) {
+    // A chunky faceted stone. Each corner is nudged by a value worked out from where it sits, so the flat faces still
+    // meet cleanly, and every rock comes out the same.
+    const c = hanger(g);
+    c.add(part(G('rockCap', () => new THREE.CylinderGeometry(0.05, 0.07, 0.08, 12)), silverMat(), 0, -0.1));
+    const stone = mesh(G('rock', () => {
+      const geom = new THREE.IcosahedronGeometry(0.36, 1), pos = geom.attributes.position;
+      const hash = (x, y, z) => { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return v - Math.floor(v); };
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), k = 0.78 + 0.36 * hash(+x.toFixed(3), +y.toFixed(3), +z.toFixed(3));
+        pos.setXYZ(i, x * k * 1.08, y * k * 0.92, z * k * 0.78);
+      }
+      geom.computeVertexNormals();
+      return geom;
+    }), mat('rock', () => new THREE.MeshPhysicalMaterial({ color: 0x34424a, roughness: 0.5, metalness: 0.12, clearcoat: 0.35, clearcoatRoughness: 0.4, flatShading: true, sheen: 0.5, sheenColor: new THREE.Color(0x7d8fb8) })));
+    stone.position.y = -0.42;
+    stone.rotation.set(0.3, 0.5, 0.2);
+    c.add(stone);
+  },
+  evileye(g) {
+    // An almond-shaped gold frame lined with rhinestones, around a purple glitter iris and a faceted crystal pupil.
+    const c = hanger(g), h = 0.48, w = 0.3, cy = -0.52;
+    const almond = (sc) => {
+      const s = new THREE.Shape();
+      s.moveTo(0, h * sc); s.quadraticCurveTo(2 * w * sc, 0, 0, -h * sc); s.quadraticCurveTo(-2 * w * sc, 0, 0, h * sc);
+      return s;
+    };
+    const frame = mesh(G('eyeFrame', () => {
+      const s = almond(1);
+      s.holes.push(almond(0.74));
+      return flat(s, 0.07, 0.025);
+    }), goldMat());
+    frame.position.y = cy;
+    c.add(frame);
+    const stone = mat('rhinestone', () => new THREE.MeshPhysicalMaterial({
+      color: 0xf4f8ff, roughness: 0, metalness: 0.1, clearcoat: 1, iridescence: 0.8, iridescenceIOR: 1.6, flatShading: true, emissive: 0x30384a,
+    }));
+    const mid = almond(0.87).getSpacedPoints(26);
+    for (let i = 0; i < 26; i++) {
+      for (const z of [0.066, -0.066]) {
+        const st = part(G('eyeStone', () => new THREE.OctahedronGeometry(0.034, 1)), stone, mid[i].x, cy + mid[i].y, z);
+        st.scale.z = 0.6;
+        c.add(st);
+      }
+    }
+    const iris = mat('eyeIris', () => {
+      const m = new THREE.MeshPhysicalMaterial({
+        color: 0x7a2bd6, metalness: 0.45, roughness: 0.35, clearcoat: 1, bumpMap: sparkTex(), bumpScale: 1.2,
+        emissive: 0xe0c8ff, emissiveMap: sparkTex(), emissiveIntensity: 0.5,
+      });
+      m.userData = { kind: 'glitter', ph: 280 };
+      animated.push(m);
+      return m;
+    });
+    c.add(part(G('eyeIris', () => new THREE.CylinderGeometry(0.19, 0.19, 0.08, 40).rotateX(Math.PI / 2)), iris, 0, cy));
+    c.add(part(G('eyePupil', () => new THREE.CylinderGeometry(0.075, 0.09, 0.1, 8).rotateX(Math.PI / 2)), mat('eyePupil', () => new THREE.MeshPhysicalMaterial({
+      color: 0x3d2a6e, roughness: 0, metalness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.8, flatShading: true, emissive: 0x150a2a,
+    })), 0, cy));
+  },
+  arrowheart(g) {
+    // A red glitter puffy heart with a gold arrow through it, feathers at the top where it hangs.
+    const c = hanger(g);
+    const red = mat('arrowHeart', () => {
+      const m = new THREE.MeshPhysicalMaterial({
+        color: 0xb5121f, metalness: 0.3, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.05, bumpMap: sparkTex(), bumpScale: 0.9,
+        emissive: 0xff6a6a, emissiveMap: sparkTex(), emissiveIntensity: 0.45,
+      });
+      m.userData = { kind: 'glitter', ph: 0 };
+      animated.push(m);
+      return m;
+    });
+    const heart = part(heartGeo(), red, 0, -0.62);
+    heart.scale.set(0.82, 0.82, 1.7);
+    c.add(heart);
+    c.add(part(G('arrowShaft', () => new THREE.CylinderGeometry(0.022, 0.022, 0.98, 10)), goldMat(), 0, -0.6));
+    c.add(part(G('arrowTip', () => new THREE.ConeGeometry(0.06, 0.15, 14).rotateX(Math.PI)), goldMat(), 0, -1.15));
+    for (const sx of [1, -1]) {
+      const vane = part(G('arrowVane', () => flat(poly([[0.02, 0], [0.16, 0.06], [0.16, -0.16], [0.02, -0.22]]), 0.02, 0.008)), goldMat(), 0, -0.1);
+      vane.scale.x = sx;
+      c.add(vane);
+    }
+  },
+  cactus(g) {
+    // A glossy little cactus in a terracotta pot, with white tips on its arms and head.
+    const c = hanger(g);
+    const dots = (tex.cactusDots ||= (() => {
+      const t = canvasTex(64, (x, s) => {
+        x.fillStyle = '#000'; x.fillRect(0, 0, s, s);
+        x.fillStyle = '#fff';
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { x.beginPath(); x.arc((i + (j % 2) * 0.5) * s / 4 + 4, j * s / 4 + 8, 2.4, 0, TAU); x.fill(); }
+      });
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(3, 2);
+      return t;
+    })());
+    const green = mat('cactus', () => plastic(0x4f9e3a, { roughness: 0.22, clearcoat: 0.8, bumpMap: dots, bumpScale: 2.2 }));
+    const tip = mat('cactusTip', () => plastic(0xfaf6ec, { roughness: 0.5 }));
+    const head = part(G('cactusHead', () => new THREE.SphereGeometry(0.15, 28, 20)), green, 0, -0.2);
+    head.scale.set(1, 0.95, 0.85);
+    c.add(head);
+    for (const sx of [-1, 1]) c.add(part(G('cactusNub', () => new THREE.SphereGeometry(0.032, 10, 8)), tip, sx * 0.09, -0.07, 0));
+    const body = part(G('cactusBody', () => new THREE.CapsuleGeometry(0.13, 0.26, 8, 24)), green, 0, -0.5);
+    body.scale.z = 0.85;
+    c.add(body);
+    for (const sx of [-1, 1]) {
+      const arm = mesh(G('cactusArm', () => tubeOf([[0.06, -0.62], [0.2, -0.6], [0.24, -0.5], [0.25, -0.38]], 0.062, false, 24)), green);
+      arm.scale.x = sx;
+      c.add(arm);
+      c.add(part(G('cactusArmEnd', () => new THREE.SphereGeometry(0.062, 16, 12)), green, sx * 0.25, -0.38));
+      c.add(part(G('cactusArmTip', () => new THREE.SphereGeometry(0.035, 10, 8)), tip, sx * 0.25, -0.33));
+    }
+    const clay = mat('pot', () => plastic(0xc4502f, { roughness: 0.55, clearcoat: 0.2 }));
+    c.add(part(G('pot', () => new THREE.LatheGeometry([[0, -1.04], [0.15, -1.04], [0.165, -1.02], [0.2, -0.76], [0, -0.76]].map(V2), 32)), clay));
+    c.add(part(G('potRim', () => new THREE.CylinderGeometry(0.225, 0.215, 0.09, 32)), clay, 0, -0.73));
+    c.add(part(G('potSoil', () => new THREE.CylinderGeometry(0.19, 0.19, 0.02, 24)), mat('soil', () => plastic(0x4a2c1a, { roughness: 0.9, clearcoat: 0 })), 0, -0.68));
+  },
   /* ---------- Charm set three: music, keepsakes, and new dangles ---------- */
   note(g) {
     g.add(mesh(G('note', () => {
