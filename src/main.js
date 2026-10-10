@@ -55,7 +55,9 @@ let letterStyle = 'white', letterShape = 'round';
 // Two strands: a second cord hangs below the first. New beads go on the active cord: 0 top, 1 bottom, 2 both.
 let twoCords = false, activeCord = 0, cordPx = 0;
 // The era name shown in the bead count pill for a few seconds after Surprise me.
-let eraLabel = '';
+let eraLabel = '', eraBeads = null, eraStringing = false;
+// Stops any bead-by-bead stringing in progress (a phrase, a pattern, the starter, or a Surprise me bracelet).
+function stopStringing() { clearInterval(phraseTimer); eraStringing = false; }
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
@@ -285,7 +287,13 @@ const usedLen = () => layoutCords(defs()).U;
 const fits = (d, more = []) => beads.length + more.length < MAX_COUNT && layoutCords([...defs(), ...more, d]).U <= BUDGET + 1e-6;
 function sync() {
   const n = beads.length, pct = Math.min(100, Math.round((usedLen() / BUDGET) * 100)), c = $('count');
-  // Right after Surprise me, the pill names the era for a few seconds, then goes back to the count.
+  // After Surprise me, the pill names the era for as long as the string is that era's bracelet (or still stringing
+  // it). Any change of the player's own turns it back into the bead count.
+  if (eraLabel) {
+    const key = (d) => defKey(withCord(d, 0)), now = defs().map(key);
+    const prefix = now.length <= eraBeads.length && now.every((k, i) => k === eraBeads[i]);
+    if (!prefix || (!eraStringing && now.length !== eraBeads.length)) eraLabel = '';
+  }
   c.firstChild.textContent = eraLabel || n + (n === 1 ? ' bead' : ' beads');
   c.classList.toggle('era', !!eraLabel);
   c.style.setProperty('--fill', pct + '%');
@@ -337,14 +345,14 @@ function stringPhrase(text) {
   if (room <= 0) { say('That is a full wrist. Pull a bead off to add more.'); return; }
   if (list.length > room) say('Only ' + room + ' beads fit, so the phrase was cut short.');
   pushUndo();
-  clearInterval(phraseTimer);
+  stopStringing();
   const end = side;
   // On the left end the last letter goes on first, so the phrase still reads left to right.
   const q = tagged.slice(0, room);
   if (end === 'L') q.reverse();
   if (reduce) { q.forEach((d) => addBead(d, true, end)); return; }
   let step = 0;
-  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) clearInterval(phraseTimer); }, 120);
+  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) stopStringing(); }, 120);
 }
 function setMode(m) {
   // Leaving a received bracelet any way other than hanging it puts the player's own string back.
@@ -1864,11 +1872,11 @@ function addPattern(p) {
   const q = [...(joined ? [] : [shared]), ...run, { ...shared }];
   if (!fits(q[q.length - 1], q.slice(0, -1))) { say('That is a full wrist. Pull a bead off to add more.'); return; }
   pushUndo();
-  clearInterval(phraseTimer);
+  stopStringing();
   if (end === 'L') q.reverse();
   if (reduce) { q.forEach((d) => addBead(d, true, end)); return; }
   let step = 0;
-  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) clearInterval(phraseTimer); }, 110);
+  phraseTimer = setInterval(() => { const d = q.shift(); if (!d || !addBead(d, true, end, step++)) stopStringing(); }, 110);
 }
 // A drawing of loose beads in many colors for the Surprise me compartment.
 function surpriseThumb() {
@@ -1887,24 +1895,24 @@ function surpriseThumb() {
   return c.toDataURL('image/png');
 }
 // Surprise me: replaces the string with the next ready-made bracelet. Undo brings the old string back.
-let surpriseAt = Math.floor(Math.random() * PRESETS.length), eraTimer = 0;
+let surpriseAt = Math.floor(Math.random() * PRESETS.length);
 function surprise() {
   if (mode !== 'line') return;
   const p = PRESETS[surpriseAt++ % PRESETS.length];
   pushUndo();
-  clearInterval(phraseTimer);
+  stopStringing();
   beads.forEach(drop);
   beads = [];
   sync();
   const list = p.beads.map((d) => (twoCords ? { ...d, c: 0 } : { ...d }));
   say('Surprise: ' + p.name + '. Undo brings your string back.');
-  clearTimeout(eraTimer);
   eraLabel = p.name;
+  eraBeads = p.beads.map((d) => defKey(withCord(d, 0)));
+  eraStringing = true;
   sync();
-  eraTimer = setTimeout(() => { eraLabel = ''; sync(); }, 3500);
-  if (reduce) { list.forEach((d) => addBead(d, true, 'R')); return; }
+  if (reduce) { list.forEach((d) => addBead(d, true, 'R')); eraStringing = false; sync(); return; }
   let step = 0;
-  phraseTimer = setInterval(() => { const d = list.shift(); if (!d || !addBead(d, true, 'R', step++)) clearInterval(phraseTimer); }, 110);
+  phraseTimer = setInterval(() => { const d = list.shift(); if (!d || !addBead(d, true, 'R', step++)) { stopStringing(); sync(); } }, 110);
 }
 // Turn the second cord on or off. Turning it off puts every bead back on one cord.
 function setTwo(on, quiet) {
@@ -1961,10 +1969,8 @@ function buildTray(keepScroll) {
   jump.textContent = '';
   let count = 0;
   items.forEach((item, i) => {
-    // Each group starts a new column: an odd group ends with an empty compartment.
     if (item.group && (i === 0 || items[i - 1].group !== item.group)) {
-      if (count % 2) { const gap = document.createElement('span'); gap.className = 'bead-btn bead-gap'; gap.setAttribute('aria-hidden', 'true'); tray.appendChild(gap); count++; }
-      starts.push({ group: item.group, col: count / 2 });
+      starts.push({ group: item.group, col: Math.floor(count / 2) });
     }
     count++;
     const btn = document.createElement('button');
@@ -2012,7 +2018,8 @@ let traySections = [], jumpPick = null, glideTimer = 0;
 function markJump() {
   const tray = $('tray'), left = tray.scrollLeft + 20, max = tray.scrollWidth - tray.clientWidth;
   let cur = traySections[0];
-  for (const st of traySections) if (st.col * 65 <= left) cur = st;
+  // When two groups share a column, the earlier one wins.
+  for (const st of traySections) if (st.col * 65 <= left && st.col > cur.col) cur = st;
   // A chip just tapped stays lit while the tray glides to it, and when the tray cannot scroll that far.
   if (jumpPick && traySections.includes(jumpPick)) {
     const goal = Math.min(jumpPick.col * 65, max);
@@ -2055,7 +2062,7 @@ function stepHistory(from, to, pitch, empty) {
   const s = from.pop();
   if (!s) { say(empty); return; }
   to.push(JSON.stringify(defs()));
-  clearInterval(phraseTimer);
+  stopStringing();
   setBeads(JSON.parse(s));
   sync();
   syncUndo();
@@ -2080,7 +2087,7 @@ const STARTER = starterWith((ch) => letterDef(ch, 'white', 'round'));
 const LEGACY_STARTER = starterWith((ch) => ({ k: 'letter', ch }));
 // Beads slide on one by one, each playing the next note of the tune.
 function stringStarter(delay = 0) {
-  clearInterval(phraseTimer);
+  stopStringing();
   if (reduce) { STARTER.forEach((d) => addBead(d, true, 'R')); sync(); return; }
   STARTER.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R', i); }, delay + i * 130));
 }
@@ -2096,7 +2103,7 @@ $('restart').addEventListener('click', () => {
 $('clear').addEventListener('click', () => {
   arm();
   if (!beads.length) return;
-  clearInterval(phraseTimer);
+  stopStringing();
   pushUndo();
   beads.forEach(drop);
   beads = [];
@@ -2107,7 +2114,7 @@ $('clear').addEventListener('click', () => {
 $('tie').addEventListener('click', () => {
   arm();
   if (!beads.length) { say('Add at least one bead first.'); return; }
-  clearInterval(phraseTimer);
+  stopStringing();
   beads.forEach((b) => { b.drag = null; });
   setMode('tied');
 });
@@ -2155,7 +2162,7 @@ $('editRing').addEventListener('click', () => {
   saveStack();
   rebuildStack();
   syncStack();
-  clearInterval(phraseTimer);
+  stopStringing();
   setBeads(list);
   undoStack.length = 0;
   redoStack.length = 0;
@@ -2181,7 +2188,7 @@ cv.addEventListener('contextmenu', (e) => {
 $('stackBtn').addEventListener('click', () => {
   arm();
   if (mode === 'stack') { setMode('line'); return; }
-  clearInterval(phraseTimer);
+  stopStringing();
   kLin = 0;
   setMode('stack');
 });
@@ -2257,7 +2264,7 @@ function tradeUI() {
 // The received bracelet is strung bead by bead in front of the player, then ties itself off.
 function receiveTrade(list, note, saved) {
   trade = { saved, note };
-  clearInterval(phraseTimer);
+  stopStringing();
   beads.forEach((b) => strand.remove(b.obj));
   beads = [];
   tradeUI();
@@ -2270,7 +2277,7 @@ function endTrade() {
   const t = trade;
   trade = null;
   tradeUI();
-  clearInterval(phraseTimer);
+  stopStringing();
   setBeads(t.saved);
   undoStack.length = 0;
   redoStack.length = 0;
