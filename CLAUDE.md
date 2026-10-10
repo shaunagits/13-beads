@@ -17,7 +17,7 @@ There is no test suite. The check is `npm run build` (must finish with no errors
 
 ## Rules that must hold
 
-- Stack: Vite and Three.js, plain JavaScript modules, no framework, no backend, no accounts. Player data lives in local storage under `13beads.strand`, `13beads.stack`, `13beads.wall` (wall color and neon sign word), `13beads.theme` (light or dark, once the player picks one), `13beads.color` (the color picked on the bead case's color strip), and `13beads.table` (felt or wood tabletop).
+- Stack: Vite and Three.js, plain JavaScript modules, no framework, no backend, no accounts. Player data lives in local storage under `13beads.strand`, `13beads.stack`, `13beads.wall` (wall color, neon sign word, and sign color), `13beads.theme` (light or dark, once the player picks one), `13beads.color` (the color picked on the bead case's color strip), and `13beads.table` (felt or wood tabletop).
 - `vite.config.js` keeps `base: './'`. The game is served both at a domain root and under `/13-beads`.
 - Third-party 3D models need a license that allows hosting on a public site (CC0 or CC BY), or written permission. See the heart-hands finding.
 - Mobile first. Every change is checked at phone width.

@@ -24,12 +24,12 @@ npm run dev
 | File | What it holds |
 |---|---|
 | `index.html` | Page structure: header, stage, the bead tray panel, and the controls that float on the canvas for the tie-off and wall screens (`#hud`, shown per mode with `data-show`). |
-| `src/main.js` | The 3D scene, string physics, pointer and tilt input, the tie-off animation, the wall (stand, lighting moods, depth of field), and photo export. |
-| `src/beads.js` | The bead and charm catalog, and the code that builds each one in 3D. |
+| `src/main.js` | The 3D scene, string physics, pointer, tilt, and shake input, the tie-off animation and confetti, the wall (velvet cones, neon sign, lighting moods), the More menu, the share card, trade links, and photo export. |
+| `src/beads.js` | The bead and charm catalog, the code that builds each one in 3D, and the trade link bead code (`encodeBracelet`, `decodeBracelet`). |
 | `src/theme.js` | Light or dark: follows the device until the player uses the header toggle, then remembers their pick. Other code reads `isDark()` and listens with `onTheme()`. |
 | `src/audio.js` | Musical sounds: every sound is a note in one key, voiced by an acoustic guitar model by default. |
 | `src/style.css` | Layout and colors, light and dark. |
-| `src/assets/` | Tabletop texture: CC0 scan from Poly Haven (Dark Wood). |
+| `src/assets/` | Tabletop textures, both CC0 photo scans: felt (ambientCG Fabric 034, color and normal map) and wood (Poly Haven Dark Wood). |
 
 The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tied` (the finished loop), and `stack` (the wall).
 
@@ -38,12 +38,13 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 1. Add an entry to `COLOR_TYPES` (a bead type that comes in every color on the color strip), `FIXED` (a bead with one look), `CHARMS`, or `DANGLES` in `src/beads.js`.
 2. Give it a width in `UNIT`. The string holds beads by total width (`BUDGET` in `src/main.js`), not by count. Hanging charms also go in the `DANGLE` set.
 3. Add a builder for its shape: a `case` in `makeBead` for colored beads, or an entry in `CHARM_BUILDERS` for charms. Hanging charms start with `hanger(g)`.
-4. Optionally give it a sound role in `KIND` in `src/audio.js`: `bell` (adds a bell an octave up), `low` (an octave down), or `soft` (a soft swell).
+4. A new colored type also needs a one-letter code in `TYPE_CODE` (same file), so trade links can carry it.
+5. Optionally give it a sound role in `KIND` in `src/audio.js`: `bell` (adds a bell an octave up), `low` (an octave down), or `soft` (a soft swell).
 
 ## Design rules
 
 - `vite.config.js` sets `base: './'` so the game works both at a domain root and under `/13-beads`. Keep asset paths relative.
-- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), `13beads.wall` (wall color and neon sign word), `13beads.theme` (light or dark, set by the header toggle), and `13beads.color` (the color picked on the bead case's color strip).
+- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), `13beads.wall` (wall color, neon sign word, and sign color), `13beads.theme` (light or dark, set in the More menu), `13beads.color` (the color picked on the bead case's color strip), and `13beads.table` (felt or wood tabletop).
 
 ## Project docs
 

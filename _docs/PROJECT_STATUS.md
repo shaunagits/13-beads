@@ -1,89 +1,70 @@
 # Project status
 
-Last updated: 2026-10-09 (session 3). Everything is on `main` and live. The session 3 list below overrides older details further down where they disagree.
-
-## Session 3 changes (2026-10-09)
-
-- **Bead case:** one compartment per bead type, colored from a 12-color strip above the Beads tab (saved as `13beads.color`). Types: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow (all in every color), plus pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, gold and silver bead caps (a cap turns its cup toward the nearest bead). Bead colors are drawn deeper in mid tones so beads match their dots.
-- **Length budget:** the string holds beads by total width (`BUDGET` in `src/main.js`, about 32 pony beads or 26 letters), not a 26-bead count. The counter shows a fill bar. Shauna wants to revisit this.
-- **View:** the original hanging string, zoomed out a little (beads drawn about 18 percent smaller, finer wood grain). A bead board view (open C on a tilted table) was built, put live, and rejected; it is on branch `bead-board` for reference.
-- **Controls:** no pop-up hint box anywhere (messages go only to a screen-reader live region). Sound, light or dark mode, which end new beads go on, and Start over live in a header More menu. Undo, Redo, and Clear (trash icon, grayed out when the string is empty) are on the canvas. The phrase field is in the Letters tab.
-- **Preview:** "See it finished" ties the loop; that screen offers "Keep editing" and "Add to my wall".
-- **Edit from the wall:** hold or right-click a bracelet on the stand: Edit it, Take it off, or Leave it. Edit puts it back on the string; a string already in progress hangs in its place (unless it is the untouched starter).
-- **Velvet cones replace the T-bar stand:** white velvet bracelet cones (fine pile texture and soft sheen) on a low lacquered display riser, tilted with the cones so its top shows; the riser color follows the wall color. Bracelets stack around a cone as level rings (oldest at the bottom), letters facing out. Up to 12 bracelets: 2 cones of 6 on phones, 3 cones of 4 on wider screens; only as many cones as needed show. Drag sideways on a cone to spin it (it coasts), tap to jingle, hold or right-click a bracelet for Edit / Take it off / Leave it. The old stand is in git history (before commit "Velvet cones").
-- **Confetti:** finishing a bracelet (and tapping the tied loop) throws stadium-style paper confetti: about 100 pastel paper rectangles (pink, baby blue, lavender, butter, white, peach) and about 30 little maple leaves, which pop out, tumble, and flutter down over about 3 seconds. Off with reduced motion.
-- **Trade links and QR codes:** the camera button on the tie-off screen opens "Share this bracelet": an optional gift tag note, then Save card, Send link (share sheet on phones, copied on computers), or QR code. The link is the game address plus `#t=<bead code>&n=<note>`; the bead code is written by `encodeBracelet` in `src/beads.js` (one token per bead, by kind, so new beads never break old links). Opening a link strings the bracelet bead by bead, ties it off with confetti, and shows "A bracelet for you" with the note. "Hang it on my wall" adds it to the wall; "Back to mine" returns to the player's own string, which is set aside and never overwritten. QR codes use the `qrcode-generator` package (MIT).
-- **Shake to spill:** while stringing, two hard jolts of the phone within half a second pour 18 loose beads out of the case (mostly the picked color, some other colors, letters, and the odd charm). They bounce and settle on the table; tap one to string it. Left alone for 12 seconds they roll back into the case. iPhone gets motion access from the same Tilt button tap. Off with reduced motion, and nothing happens on computers.
-- **Tabletop:** gray felt like a bead mat is the default (CC0 photo scan, ambientCG "Fabric 034": `src/assets/felt.jpg` and `felt-normal.jpg`). Wood (Poly Haven "Dark Wood") is still available: More menu, Table: Felt / Wood, saved as `13beads.table`. The cord is a deeper lavender gray on felt and pale on wood.
-- **Wall simplified:** plain painted wall with a soft fade and faint grain. The limewash clouds, plaster ridges, window light, depth-of-field blur, and bracelet shadows on the wall are gone.
-- **Sound:** the guitar no longer goes through the echo.
-- **Neon sign:** always lit, letters spaced like separate tubes, centered between the cones and the top buttons. Sign color is a Decorate choice saved in `13beads.wall` as `neon`: Rainbow (default, each letter its own color), White, Pink, or Blue. Brighter glow at night; by day a soft shadow keeps it readable on a light wall.
-- **Undo and Redo:** both on the canvas, grayed out when there is nothing to step to. Cmd or Ctrl + Z undoes; with Shift (or Ctrl + Y) it redoes. A new change clears the redo history.
-- **Black letters:** the Letters tab has a White / Black switch beside the phrase field. Black letter beads are saved as `{ k: 'letter', ch, st: 'black' }`; typed phrases use the chosen color.
-- **Share card:** on the tie-off screen the camera button opens "Make a share card" with an optional gift tag note (up to 40 characters). It saves a 1080 x 1920 story-sized picture: wordmark, the tied bracelet on the wood, the phrase, the date, the gift tag, and the site address. Phones get the share sheet. On the wall the camera still saves a photo of the wall.
+Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and live, including these docs.
 
 ## What exists
 
 **Stringing (mode `line`)**
-- Controls float on the canvas like the other screens: bead count (top left), Start over, Undo, and Clear icons (top right), the Left/Right end switch as two arrow icons (bottom left), "Finish bracelet" (bottom center), and a hint note that fades. Below the canvas: the phrase field (with an arrow button inside it) and the bead case.
-- 3D string simulated as a weighted rope (Verlet chain with gravity): beads weigh it down where they sit, plucks bend it locally at the finger, tilt tips gravity, and it has a twisted-thread texture.
-- The string lies over a wood tabletop made from a photo-scanned CC0 texture, Poly Haven "Dark Wood" (`src/assets/table-dark.jpg`), in both themes. The cord is pale lavender in both themes so it shows on the dark wood, and the bead counter has a dark backing. In dark mode the room dims and a warm desk lamp pools light in the middle of the table. The table catches shadows but is drawn beneath everything, so the tilted loop never dips behind it, and part of its color is self-lit so the colored stage lights do not tint it.
-- Touch: the string is only caught by a press that starts on it (22 px band on touch screens, 14 px with a mouse) and only follows after the finger moves 8 px. Pulling is silent; the pluck sounds on release if pulled more than 18 px. Only a fast swipe across beads plays strum notes. Double-tap zoom is off (pinch zoom still works). Tap a bead to add it. It slides on, squashes, and plays the next note of the tune.
-- Add to either end of the string (Left / Right switch). Type a phrase and the letters string themselves, playing a quick run of the tune.
-- On the string: tap to pull a bead off, drag to reorder, pluck the string, strum across the beads.
-- Limit of 26 beads. Undo and Clear.
-- Starter bracelet (first visit, and the Start over button): pearl, gold glitter, sparkle, 1 3, hot pink bead, B E A D S, sparkle, gold glitter, pearl. It mirrors the wordmark. Start over is undoable; it does not touch the wall.
-- Tilt leans the string and hanging charms. iPhone shows a Tilt button because it needs a tap for permission.
+- A 3D cord simulated as a weighted rope (Verlet chain with gravity): beads weigh it down, a pluck bends it at the finger, phone tilt tips gravity. Drawn zoomed out a little (`ZOOM = 0.82` in `frame` in `src/main.js`): beads are about 18 percent smaller than the cord has room for.
+- Tabletop: gray felt like a bead mat by default (`src/assets/felt.jpg` and `felt-normal.jpg`, CC0 ambientCG "Fabric 034"), or dark wood (`src/assets/table-dark.jpg`, CC0 Poly Haven "Dark Wood"). Picked in the More menu (Table: Felt / Wood), saved as `13beads.table`. The cord is lavender gray on felt and pale on wood. In dark mode the room dims under a warm desk lamp. The table is drawn beneath everything and is partly self-lit so stage lights do not tint it much.
+- Canvas controls: bead count with a fill bar (top left); Undo, Redo, and Clear (trash) icons (top right, each grayed out when it would do nothing); "See it finished" (bottom center). No pop-up hint box anywhere: messages go only to a hidden screen-reader live region (`#status`).
+- Header: wordmark, Tilt (iPhone only, until allowed), Your wall (with count badge), and a "⋯" More menu: Sound, Light or Dark mode, Table (Felt / Wood), which end new beads go on, and Start over.
+- Touch: tap a case compartment to add a bead (it slides on and plays the next note). On the string: tap to pull a bead off, drag to reorder, pluck the cord (press must start on it), swipe fast to strum. Cmd or Ctrl + Z undoes; with Shift, or Ctrl + Y, redoes.
+- Length budget: the string holds beads by total width (`BUDGET = 25` units, about 32 pony beads or 26 letters, or about 80 clay discs), not by count. Older saved strings over the budget keep all their beads.
+- Starter bracelet (first visit, and Start over): pearl, gold glitter, sparkle, 1 3, hot pink, B E A D S, sparkle, gold glitter, pearl.
+- Shake to spill: on a phone, two hard jolts within half a second pour 18 loose beads onto the table (mostly the picked color, some letters, the odd charm). Tap one to string it; untouched, they roll back into the case after 12 seconds. iPhone gets motion access from the Tilt button tap. Off with reduced motion. Tested only with simulated motion events.
 
-**Bead case**: the tray sits in a clear plastic organizer (recessed compartments with clear walls), one bead picture per compartment. The Beads, Letters, Charms, and Dangles tabs are inside the case. Its top edge is a lid button that folds the case away ("Show beads" brings it back), which gives the string more room.
-
-**Catalog (`src/beads.js`)**
-- Beads tab: 12 colors, pearl, 3 glitter, 2 glow, silver spacer.
-- Letters tab: A to Z, 0 to 9, and ! ? &.
-- Charms tab, 26 (adds heart sunglasses): Lucky 13, star, sparkle, heart, pastel heart, wire heart, mirror ball, jewel, snake, butterfly, cat, seagull, crescent moon, midnight clock, rainbow, evergreen tree, autumn leaf, instant photo, bow and arrow, music note, vinyl record, cassette tape, ticket stub, chihuahua (flat die-cut enamel style), red lips (die-cut), heart sunglasses.
-- Size overrides live in `BOOST` in `src/beads.js`: the newer charms and every dangle are drawn about 1.2 to 1.4 times larger (the mini bracelet 1.75) so they read on a phone. All dangles share roughly one size.
-- Dangles tab, 16 hanging charms (adds a mini bracelet, from Shauna's sticker drawing): guitar, microphone, cowboy boot, cardigan, red scarf, champagne glass, chair, ladder, storm in a teacup (a lightning bolt striking a teacup), lightning rod, redwood tree, showgirl feather, pink cowboy hat, disco cube, snow globe, mini bracelet.
+**Bead case** (clear plastic organizer, lid folds it away; tabs Beads, Letters, Charms, Dangles)
+- Beads tab: a 12-color strip (saved as `13beads.color`), then one compartment per type in that color: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow. Then pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, gold and silver bead caps. A cap turns its cup toward the nearest bead. Mid-tone colors are drawn deeper (`deep` in `src/beads.js`) so beads match their dots.
+- Letters tab: a White / Black letter switch and the phrase field ("Type a word or phrase") on one row, then A to Z, 0 to 9, ! ? &. Black letters are saved as `{ k: 'letter', ch, st: 'black' }`.
+- Charms (26) and Dangles (16 hanging charms): unchanged from session 2; sizes in `BOOST` in `src/beads.js`.
 
 **Tie-off (mode `tied`)**
-- The string morphs into a knotted loop. Drag to spin it, tap for sparkles.
-- Controls float on the canvas: a back arrow labeled "Back to stringing" (top left), camera icon for Save photo (top right), "Add to my wall" (bottom center), and a hint note that fades after a few seconds.
+- The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 100 pastel paper pieces and 30 small maple leaves that tumble and flutter down (off with reduced motion).
+- Bottom: "Keep editing" (back to the string) and "Add to my wall".
+- Camera button opens "Share this bracelet": optional gift tag note (40 characters), then Save card (1080 x 1920 story picture: wordmark, the loop, the phrase, the date, the tag, the site address), Send link (share sheet on phones, clipboard on computers), or QR code (`qrcode-generator`, MIT).
+
+**Trade links**
+- Link: game address plus `#t=<code>&n=<note>`. `encodeBracelet` / `decodeBracelet` in `src/beads.js` write one token per bead by kind (letters as themselves, colored beads as type letter plus strip color, everything else as `-name`), so new beads never break old links. Off-strip colors from older bracelets map to the nearest strip color.
+- Opening a link: the code is cleared from the address bar, the player's own string is set aside (`trade.saved`, never saved over), the bracelet strings itself bead by bead and ties off, and a pill reads "A bracelet for you: <note>". "Hang it on my wall" or "Back to mine" (leaving any other way also restores the player's string).
 
 **The wall (mode `stack`)**
-- Limewash plaster wall (soft cloudy tone shifts, fine grain, trowel ridges, all generated in code), slim dark wood floating shelf, gold three-tier T-bar stand, neon-style script sign. The plant is gone, and the stand and shelf cast no shadows.
-- Each wall color has its own night tint.
-- Controls float on the canvas: Decorate and Save photo icons grouped top right, "Make another" (bottom center, dark ink button), and a short hint note that fades. The "on display" label moved to a badge on the header's wall button.
-- Decorate popover: wall color (white by default, pink, or sage) and the neon sign word (defaults to "13 beads", up to 12 letters, numbers, spaces, or ! ? &, shrinks to fit). Saved under `13beads.wall`.
-- Take any bracelet off: press and hold it (phone), or hold or right-click (computer). A confirm popover appears beside it.
-- Keyboard: Tab reaches each bracelet (an invisible button over it, with a focus ring around the bracelet). Arrow keys move between them. Enter or Delete opens the confirm. Popovers keep Tab inside, close on Escape, and return focus.
-- Bracelets hang from gold hooks facing forward. Grab to swing, brush across to knock them, tap for a jingle, tilt to lean.
-- Shows the newest 9 on a phone and 12 on desktop. Up to 24 are remembered.
-- Day mood in light mode (window light across the wall). Evening mood in dark mode (lamp glow, lit neon).
-- Slight depth-of-field blur behind the bracelets.
+- Plain painted wall (white, pink, or sage) with a soft top-to-bottom fade and faint grain; no shadows on it.
+- Display: white velvet bracelet cones (pile texture plus sheen) on a lacquered riser whose color follows the wall; cones and riser tilt slightly toward the viewer. Bracelets stack as level rings around a cone, oldest lowest, letters facing out. Up to 12 shown (2 cones of 6 on phones, 3 cones of 4 wider), up to 24 remembered.
+- Drag sideways on a cone to spin it; tap to jingle; hold or right-click a bracelet for Edit it, Take it off, or Leave it. Edit puts it on the string; a string in progress hangs in its place unless it is the untouched starter.
+- Neon sign: always lit, letters spaced like separate tubes, centered between the cones and the top buttons. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`.
+- Keyboard: Tab reaches each bracelet, Enter or Delete opens its options, popovers trap Tab and close on Escape.
 
-**Header**: the wordmark, then icon buttons for Light/Dark (moon or sun), Tilt, Sound, and Your wall (with a count badge). The theme follows the device until the player taps the toggle; the pick is saved under `13beads.theme`.
+**Sound (`src/audio.js`)**: musical, D major. Stringing plays a melody over I, V, vi, IV; charms add bells; strumming arpeggiates; hanging resolves home. Acoustic guitar voice by default, through a small room reverb. The ping-pong echo is off for the guitar (it made plucks sound doubled); the other voices still use it.
 
-**Footer**: one quiet line at the bottom of every screen: "‹ More games" (games.shauna.digital) on the left, "Made by Shauna" (shauna.digital) on the right.
-
-**Sound (`src/audio.js`)**: musical. Every sound is a note in D major. Stringing beads plays a melody over I, V, vi, IV (four beads per chord), restarting after a 2 second pause, so each bracelet plays its own tune. Charms add a bell an octave up, wood charms drop an octave, fabric charms swell softly. Strumming arpeggiates the current chord, plucking the cord plays its bass note, and hanging a bracelet resolves to the home chord. One instrument voices everything (acoustic guitar by default: a plucked steel string with a pick-position comb, pitch-dependent decay, and wooden body resonances; music box, kalimba, and synth pluck are built in, chosen with `setInstrument`), through a tempo-synced ping-pong echo and a small room.
-
-**Games site**: `games.shauna.digital` is live from the `games` repository, with 13 Beads mounted at `/13-beads`.
+**Footer**: "‹ More games" and "Made by Shauna".
 
 ## Not verified
 
-Shauna tested production on her iPhone during session 2: layout, the string (grab, hang, pluck), the new charms and dangles, the wood table, and the guitar sound all reported good. Still unknown:
+- Shake to spill on a real phone (only simulated motion events were tested), and whether two 17 m/s² jolts is the right strength.
+- Tilt and the iPhone permission button.
+- The phone share sheet for Save card, Send link, and Save photo (only desktop downloads and clipboard were exercised).
+- Trade links on a phone end to end, and QR scanning with a real camera.
+- Cone spinning and press-and-hold on a real phone; wall performance on older phones.
+- Screen reader announcements (keyboard only was tested).
 
-- Tilt, and the iPhone permission button.
-- The phone share sheet for Save photo. Only the desktop download was exercised.
-- Wall performance on phones (depth of field renders the scene more than once per frame). No slowness reported, but not tested on purpose. If slow, turn it off first in `renderWall` in `src/main.js`.
-- Screen reader announcements for the bracelet buttons (tested by keyboard only).
-- Press-and-hold to take a bracelet off, and the Decorate popover, on a real phone.
+## Open with Shauna
+
+- Felt: keep as default? Gray, or tinted (blush, sage, charcoal)?
+- Velvet: good as is, or push it to read more clearly as fabric?
+- Era presets ("Surprise me"): a tile in the Beads tab or a menu item? Album titles or mood and color names? She approved the idea; placement and naming are open.
+- More letter styles: pink letters on white cubes and gold on black?
+- Shake strength, after a real phone test.
+- Length budget: kept for now, to revisit.
+- Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
+- True-size beads: on hold.
 
 ## Decisions
 
 | Date | Decision | Resolution | Why |
 |---|---|---|---|
 | 2026-10-07 | Audience | Concert bracelet-trading fans | Shauna's choice. Drives the phrase-first design and charm list. |
-| 2026-10-07 | Name | "13 Beads" | Name only. It is not a 13-bead limit. The string holds 26 so full phrases fit. |
+| 2026-10-07 | Name | "13 Beads" | Name only. It is not a 13-bead limit. The string holds 26 so full phrases fit. (Superseded 2026-10-09: a length budget replaces the 26 count.) |
 | 2026-10-07 | Rendering | Real 3D with Three.js | Shauna ranked glossy, realistic beads as the top priority over a lighter flat build. |
 | 2026-10-07 | Backend | None. Local storage only | Portfolio piece with nothing to maintain. A collection lives on one device. |
 | 2026-10-07 | Hosting | Vercel, deployed from GitHub, under `games.shauna.digital/13-beads` | Free at this scale, auto-deploys, and the account was already connected. |
@@ -98,8 +79,8 @@ Shauna tested production on her iPhone during session 2: layout, the string (gra
 | 2026-10-08 | Collection concept | A decorated wall, like a fan's merch wall | Shauna's idea. A wall can display every future craft. A jacket could only hold bracelets. |
 | 2026-10-08 | Heart hands built in code | Rejected twice | Tubes and spheres cannot make convincing hands. Needs a real 3D model. |
 | 2026-10-08 | MakerWorld heart-hands model | Not usable | Its license forbids hosting or distributing the file. |
-| 2026-10-08 | Current display piece | Gold T-bar stand | Geometric, so it renders well in code. Shauna approved it as the display for now. |
-| 2026-10-08 | Bracelets on the T-bar | Hang from hooks facing forward | On a real T-bar they sit edge-on and phrases cannot be read. |
+| 2026-10-08 | Current display piece | Gold T-bar stand | Geometric, so it renders well in code. Shauna approved it as the display for now. (Superseded 2026-10-09: velvet cones.) |
+| 2026-10-08 | Bracelets on the T-bar | Hang from hooks facing forward | On a real T-bar they sit edge-on and phrases cannot be read. (Superseded 2026-10-09: rings around cones.) |
 | 2026-10-08 | Wall color | Soft pink painted plaster | Shauna chose a painted wall to start. Whether players pick the color is still open. (Superseded the same day: player picks, white default.) |
 | 2026-10-08 | Unlocks and trading links | Deferred | Shauna: hold until the core is further along. |
 | 2026-10-08 | Wall and tie-off controls | Float on the canvas instead of panels below it | Shauna asked. Direct manipulation: act on the bracelet itself, icons in corners, one labeled primary action. |
@@ -111,7 +92,7 @@ Shauna tested production on her iPhone during session 2: layout, the string (gra
 | 2026-10-08 | Night wall | Each color keeps its own feel at night | Shauna asked. |
 | 2026-10-08 | Interface style | Fewer, quieter controls: icon header, grouped icons, one dark primary button | Shauna asked for a simpler, more sophisticated interface. |
 | 2026-10-08 | Back to games | Muted "‹ Games" link at the start of the header | Shauna: visible but not obvious or intrusive. (Superseded 2026-10-09: moved to the footer.) |
-| 2026-10-08 | Sound | Musical: every sound is a note in one key, stringing plays a melody | Shauna rejected both the original sounds and a realistic rebuild, and asked for music notes. |
+| 2026-10-08 | Sound | Musical: every sound is a note in one key, stringing plays a melody | Shauna rejected both the original sounds and a realistic rebuild, and asked for music notes. (2026-10-09: echo off for the guitar.) |
 | 2026-10-08 | Daytime neon on white | Fine for now | Shauna. |
 | 2026-10-09 | Instrument | Acoustic guitar by default | Shauna asked for a guitar option. Music box, kalimba, and synth pluck stay available in code. |
 | 2026-10-09 | Stringing screen | Same on-canvas treatment as the wall and tie-off screens | Shauna approved the simplification pass. |
@@ -119,7 +100,7 @@ Shauna tested production on her iPhone during session 2: layout, the string (gra
 | 2026-10-09 | Stringing surface | Wood (superseded below: Dark Wood in both themes) | Shauna asked for a surface someone would make a bracelet on. |
 | 2026-10-09 | Tray | Clear plastic bead organizer around single-bead pictures, collapsible | Shauna's reference: how people store pony beads in real life. She meant the container, not the bead images; a pile-of-beads version was tried and reverted. |
 | 2026-10-09 | Table surface | Photo-scanned CC0 wood (Poly Haven; Plywood by day at first, then Dark Wood in both themes) | Code-generated wood tiled into bricks, then still looked off. Real scans look right. CC0 needs no credit. Shauna's reference photo is not used (license unknown). |
-| 2026-10-09 | Table wood | Dark Wood in both themes | Shauna's pick from the six CC0 scans. |
+| 2026-10-09 | Table wood | Dark Wood in both themes | Shauna's pick from the six CC0 scans. (Superseded 2026-10-10: felt default, wood selectable.) |
 | 2026-10-09 | Dark mode on the table | Dim room with a warm desk lamp | Shauna's idea. |
 | 2026-10-09 | Light/Dark toggle | Icon in the header; follows the device until used, then remembered | Shauna asked. |
 | 2026-10-09 | "Lover" charm | Not built | Shauna wanted it only if it could look like the real logo; that version will not be made. |
@@ -131,10 +112,35 @@ Shauna tested production on her iPhone during session 2: layout, the string (gra
 | 2026-10-09 | Hanging charm size | All dangles drawn at one size (about 1.3 to 1.4 times the original) | The first eight looked tiny next to the newer ones. Supersedes the 1.02 decision. |
 | 2026-10-09 | Send feedback link | Not added for now; footer stays as is | Shauna: not necessary right now. |
 | 2026-10-09 | Favicon | A tiny bracelet: colored beads on the lower two thirds of a cord loop, top left bare | Shauna asked. A full ring of beads read as a wreath. |
-| 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. |
+| 2026-10-09 | Finish button | "Finish bracelet" replaces "Tie it off"; back button reads "Back to stringing" | Shauna: the old wording was poor. (Superseded 2026-10-09: "See it finished", then "Keep editing".) |
 | 2026-10-09 | String grabbing | Press must start on the string; silent until release | Shauna's phone test: it was too easy to grab by accident and made noise. |
 | 2026-10-09 | Charm set three | Music note, vinyl, cassette, ticket stub, chihuahua, red lips; dangles: storm in a teacup, lightning rod, redwood, showgirl feather, cowboy hat, disco cube, snow globe | Shauna's picks. Organic subjects (chihuahua, lips) use the flat die-cut enamel style of Lucky 13 instead of sculpted primitives. |
 | 2026-10-09 | Song snippets | Not built | Shauna asked about playing part of a real song. A recognizable snippet carries the protected part (melody, hook). Alternative offered: an original easter-egg melody behind a secret phrase. |
+| 2026-10-09 | Bead case | One compartment per bead type plus a 12-color strip; one tap adds a bead | Shauna: too many same-shape beads. The strip keeps adding to one tap (her option A). |
+| 2026-10-09 | New bead types | Clay disc, round, crystal, solid cube, smiley, jelly, metallic; spacers (gold ball, daisy, rondelle) and gold and silver caps | Shauna agreed to the suggested batch. All geometric, so code-built shapes look right. |
+| 2026-10-09 | Clasps and cord choices | Deferred | Shauna. |
+| 2026-10-09 | Bead limit | Length budget (25 units) instead of 26 beads | A count made no sense once clay discs (a third as wide) existed. Revisit later, Shauna said. |
+| 2026-10-09 | Guitar echo | Off for the guitar only | Shauna: plucks sounded doubled. |
+| 2026-10-09 | Bead board view (open C on a tilted table) | Built, put live, rejected | Shauna preferred the hanging string. Kept on branch `bead-board`. |
+| 2026-10-09 | True-size beads and wrist sizes | On hold; one bead size | True size only helps planning if accurate; without it wrist size is irrelevant (Shauna). |
+| 2026-10-09 | View | Hanging string, zoomed out about 18 percent | Shauna: "zoom out a little", then "perfect". |
+| 2026-10-09 | Pop-up hint box | Removed everywhere | Shauna: it blocks the player. Messages still reach screen readers. |
+| 2026-10-09 | Controls | Hybrid: Undo, Redo, Clear on the canvas; Sound, theme, end switch, Start over, Table in a "⋯" menu; phrase field in the Letters tab | Shauna picked option C, then asked for Redo and for Clear back on the canvas as a trash icon. |
+| 2026-10-09 | Finish flow | "See it finished" then "Keep editing" or "Add to my wall" | Shauna wanted to preview the finished bracelet and keep editing. |
+| 2026-10-09 | Edit from the wall | Edit it / Take it off / Leave it; a string in progress swaps onto the wall | Shauna: yes to the swap, so nothing is lost. |
+| 2026-10-09 | Wall background | Plain painted wall; limewash, plaster ridges, window light, depth of field, and wall shadows removed | Shauna: it looked weird and overcomplicated. The shadows read as gray ghosts. |
+| 2026-10-09 | Display piece | White velvet cones on a lacquered riser replace the gold T-bar stand and wood shelf | Shauna was not keen on the stand. Cones are geometric and read like a jewelry counter. The stand is in git history. |
+| 2026-10-09 | Neon sign | Always lit, spaced, larger, raised; Rainbow default with White, Pink, Blue options | Shauna: not right above the stand, not hot pink, more lit, maybe rainbow. |
+| 2026-10-09 | Black letters | Added with a White / Black switch | Shauna asked. Other letter styles are suggested, not built. |
+| 2026-10-09 | Share card and gift tag | Built | Shauna: do it if not too difficult. |
+| 2026-10-09 | Trade links and QR | Built, inside "Share this bracelet" | Shauna said yes; no server needed, nothing to manage. |
+| 2026-10-09 | Confetti | Pastel paper with small maple leaves | Shauna asked for stadium-style confetti with maple leaves. |
+| 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
+| 2026-10-09 | Name feature | Not yet | Shauna. |
+| 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
+| 2026-10-10 | Tabletop | Felt bead mat by default, wood selectable | Shauna asked to see felt. Photo scan (CC0), per the wood lesson that code-made textures look fake. |
+| 2026-10-09 | Workflow | Push finished work straight to `main`; never give local run commands | Shauna's rule: she checks on the live site. Recorded in `CLAUDE.md`. |
+
 
 ## Wrong turns worth knowing
 
@@ -148,4 +154,11 @@ Shauna tested production on her iPhone during session 2: layout, the string (gra
 - The Playwright software renderer stalls on element-level screenshots and on click stability checks. Use page screenshots with `clip`, and click with `$eval(sel, e => e.click())`.
 - Vercel preview builds sat in a queue for over 30 minutes once; production builds were not affected afterward. If a preview stalls, check the deployments page.
 - Another session also pushes to `main` (the README screenshot commit). Always `git fetch` and rebase before pushing.
-
+- A new CSS class reused existing names (`.swatch`, `.swatches` from the Decorate popover) and broke both. Check `src/style.css` for a name before adding one.
+- Copying files to the Mac with the device commit tool reported success for two files that did not update before `git commit` ran there, so a commit message listed spacers that were not in it. After copying, check the content on the Mac (`grep`) before committing.
+- The Mac link has no GitHub login. Commit and push from the cloud clone (`/home/claude/13-beads`), then fast-forward the Mac copy with `git fetch` and `git merge --ff-only origin/main`.
+- Pushes to `main` from the cloud were blocked by the permission check until Shauna made "push to main" an explicit project rule; after that they went through.
+- When the questions list changes between replies, keep the numbering stable. Shauna answered an older list once and the numbers no longer matched.
+- `pkill -f "vite preview"` from the shell killed the shell itself. Start the preview with `setsid` on a fresh port instead.
+- In tests, Playwright's `$eval(click)` has `detail` 0, so the More menu opens as if from the keyboard and focuses its first item. That focus ring in screenshots is expected.
+- The share card's QR canvas sat under a global `.stage canvas` rule (absolute, full size). Scope canvas rules to the game canvas.

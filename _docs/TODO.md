@@ -4,21 +4,21 @@ Top item is the next thing to do.
 
 ## Next
 
-1. **Phone checks still open**: Tilt and its iPhone permission button, the Save photo share sheet, press-and-hold to remove a bracelet, the Decorate popover, and whether the wall feels slow. If slow, turn off depth of field first.
-2. **Heart hands model.** Shauna scans her own sculpture using `_docs/findings/2026-10-08-heart-hands-model.md`, or finds an openly licensed model. Then load it and add it to the wall as a second display piece, and consider a heart-hands charm.
-3. **Drag-to-decorate the wall.** Let the player place and move items. Starter items discussed: fairy lights, instant photos on a wire, a pennant, a disco ball. Shauna's sticker drawings were offered as wall stickers; she said not yet.
-4. **Fairy lights.** The one wall upgrade from the 2026-10-08 list that was not built.
+1. **Phone checks.** On a real phone: shake to spill (tap Tilt first on iPhone; tune the 17 m/s² threshold in `listenShake` if needed), trade links end to end with a QR scan, the share sheet for Save card and Send link, cone spinning and press-and-hold, and Tilt.
+2. **Era presets ("Surprise me").** Approved in principle. Waiting on Shauna for placement (Beads tab tile or "⋯" menu) and naming (album titles or mood and color names). Each preset strings era colors and matching charms; Undo restores. Keep the artist's name, logos, cover art, and lyrics out of the app.
+3. **More letter styles** if Shauna says yes: pink letters on white cubes, gold on black. Add to `LETTER_STYLES` in `src/beads.js` and the `.letter-chip` row; keep at most four.
+4. **Felt follow-up** if asked: a tint (blush, sage, charcoal) via `SURFACES.felt.tint` in `src/main.js`.
+5. **Velvet follow-up** if asked: warmer cone color and stronger edge sheen (`velvet` in `src/main.js`).
+6. **Heart hands model.** Shauna scans her sculpture (`_docs/findings/2026-10-08-heart-hands-model.md`) or finds an openly licensed model.
+7. **Wall decorating.** Only if it can be done well: fairy lights, photos on a wire, drag-to-place items, around the cones.
 
 ## Later, agreed in principle
 
-- Shadow box: a deep frame the player fills with bracelets and keepsakes. From Shauna's own shelf.
-- Keepsake ticket craft: the player designs a ticket (their own text and colors), shown in a clear acrylic frame.
-- Denim jacket craft with patches and pins.
-- Trading links: a bracelet encoded in a link, replayed for the recipient.
-- Unlockable charms. Leading idea: secret phrases plus a few milestones. An original easter-egg melody behind a secret phrase was offered as part of this.
-- Games home page redesign. On hold at Shauna's request. She plans to work on it in other sessions.
+- Name feature: ask the player's name, starter spells it, sign reads "<name>'s beads" (needs the sign's 12-character limit and no-apostrophe rule raised). Shauna: not yet.
+- Clasps and cord choices at the finish step.
+- Length budget: revisit (Shauna).
+- True-size beads with wrist sizes: on hold.
+- Unlockable charms behind secret phrases, with an original easter-egg melody.
+- Shadow box, keepsake ticket craft, denim jacket craft.
+- Games home page redesign (Shauna, other sessions).
 - Optional music player through an official embed.
-
-## Waiting on Shauna
-
-- Order of trading links and unlocks, once the wall is further along.
