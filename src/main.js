@@ -54,6 +54,8 @@ let beads = [], fallers = [], undoStack = [], redoStack = [];
 let letterStyle = 'white', letterShape = 'round';
 // Two strands: a second cord hangs below the first. New beads go on the active cord: 0 top, 1 bottom, 2 both.
 let twoCords = false, activeCord = 0, cordPx = 0;
+// The era name shown in the bead count pill for a few seconds after Surprise me.
+let eraLabel = '';
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
@@ -283,7 +285,9 @@ const usedLen = () => layoutCords(defs()).U;
 const fits = (d, more = []) => beads.length + more.length < MAX_COUNT && layoutCords([...defs(), ...more, d]).U <= BUDGET + 1e-6;
 function sync() {
   const n = beads.length, pct = Math.min(100, Math.round((usedLen() / BUDGET) * 100)), c = $('count');
-  c.firstChild.textContent = n + (n === 1 ? ' bead' : ' beads');
+  // Right after Surprise me, the pill names the era for a few seconds, then goes back to the count.
+  c.firstChild.textContent = eraLabel || n + (n === 1 ? ' bead' : ' beads');
+  c.classList.toggle('era', !!eraLabel);
   c.style.setProperty('--fill', pct + '%');
   c.classList.toggle('full', pct >= 100);
   c.setAttribute('aria-label', n + (n === 1 ? ' bead' : ' beads') + ' on the string, ' + pct + ' percent full');
@@ -1883,7 +1887,7 @@ function surpriseThumb() {
   return c.toDataURL('image/png');
 }
 // Surprise me: replaces the string with the next ready-made bracelet. Undo brings the old string back.
-let surpriseAt = Math.floor(Math.random() * PRESETS.length);
+let surpriseAt = Math.floor(Math.random() * PRESETS.length), eraTimer = 0;
 function surprise() {
   if (mode !== 'line') return;
   const p = PRESETS[surpriseAt++ % PRESETS.length];
@@ -1894,6 +1898,10 @@ function surprise() {
   sync();
   const list = p.beads.map((d) => (twoCords ? { ...d, c: 0 } : { ...d }));
   say('Surprise: ' + p.name + '. Undo brings your string back.');
+  clearTimeout(eraTimer);
+  eraLabel = p.name;
+  sync();
+  eraTimer = setTimeout(() => { eraLabel = ''; sync(); }, 3500);
   if (reduce) { list.forEach((d) => addBead(d, true, 'R')); return; }
   let step = 0;
   phraseTimer = setInterval(() => { const d = list.shift(); if (!d || !addBead(d, true, 'R', step++)) clearInterval(phraseTimer); }, 110);
