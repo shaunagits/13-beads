@@ -148,18 +148,27 @@ for (const sgn of [-1, 1]) {
 knot.visible = false;
 strand.add(knot);
 
-// Tie-off sparkle
-const SPARKS = 48;
-const sparkPos = new Float32Array(SPARKS * 3), sparkCol = new Float32Array(SPARKS * 3);
-const sparkVel = [];
-const sparkGeo = new THREE.BufferGeometry();
-sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-sparkGeo.setAttribute('color', new THREE.BufferAttribute(sparkCol, 3));
-const sparkMat = new THREE.PointsMaterial({ size: 9, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0, depthWrite: false });
-const sparks = new THREE.Points(sparkGeo, sparkMat);
-sparks.frustumCulled = false;
+// Tie-off confetti, like the paper confetti at a stadium show: soft pastel paper rectangles that tumble and
+// flutter down, with little maple leaves mixed in.
+const PAPER_N = 96, LEAF_N = 28;
+const CONFETTI_COLORS = [0xf7a8c8, 0xa9d6f2, 0xc8b4f2, 0xf6e2a2, 0xffffff, 0xf9c4a8].map((c) => new THREE.Color(c));
+function mapleShape() {
+  const pts = [[0, 0.5], [0.08, 0.32], [0.2, 0.38], [0.17, 0.13], [0.36, 0.3], [0.4, 0.2], [0.5, 0.22], [0.43, 0.05], [0.48, 0], [0.3, -0.13],
+    [0.34, -0.22], [0.06, -0.18], [0.035, -0.46], [-0.035, -0.46], [-0.06, -0.18], [-0.34, -0.22], [-0.3, -0.13], [-0.48, 0], [-0.43, 0.05],
+    [-0.5, 0.22], [-0.4, 0.2], [-0.36, 0.3], [-0.17, 0.13], [-0.2, 0.38], [-0.08, 0.32]];
+  const sh = new THREE.Shape();
+  pts.forEach(([x, y], i) => (i ? sh.lineTo(x, y) : sh.moveTo(x, y)));
+  return sh;
+}
+const confettiMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.55, metalness: 0, transparent: true, opacity: 1, depthWrite: false });
+const sparks = new THREE.Group();
+const paperMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1.55), confettiMat, PAPER_N);
+const leafMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(mapleShape(), 4), confettiMat, LEAF_N);
+for (const m of [paperMesh, leafMesh]) { m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); sparks.add(m); }
 sparks.visible = false;
 scene.add(sparks);
+const confetti = [];
+const cfObj = new THREE.Object3D();
 let sparkLife = 0;
 
 function readTheme() {
@@ -1032,17 +1041,23 @@ function stepRope(dt, n) {
 
 function burst() {
   if (reduce) return;
-  const R = Math.min(W, H) * 0.33, col = new THREE.Color();
-  sparkVel.length = 0;
-  for (let i = 0; i < SPARKS; i++) {
-    const a = Math.random() * TAU, sp = 60 + Math.random() * 170, b = beads[i % Math.max(1, beads.length)];
-    sparkPos.set([Math.cos(a) * R, Math.sin(a) * R, 40], i * 3);
-    sparkVel.push([Math.cos(a) * sp, Math.sin(a) * sp + 90]);
-    col.setHSL(((b && b.def.h != null ? b.def.h : [330, 48, 198, 272][i % 4]) / 360), 0.95, 0.62);
-    sparkCol.set([col.r, col.g, col.b], i * 3);
+  const R = Math.min(W, H) * 0.33;
+  confetti.length = 0;
+  for (let i = 0; i < PAPER_N + LEAF_N; i++) {
+    const leaf = i >= PAPER_N, a = Math.random() * TAU, sp = 120 + Math.random() * 260;
+    // Pops out from around the loop and up, then floats down.
+    confetti.push({
+      leaf, idx: leaf ? i - PAPER_N : i,
+      x: Math.cos(a) * R * 0.9, y: Math.sin(a) * R * 0.9, z: 40 + Math.random() * 60,
+      vx: Math.cos(a) * sp * 0.8, vy: Math.sin(a) * sp * 0.6 + 260 + Math.random() * 120,
+      rx: Math.random() * TAU, ry: Math.random() * TAU, rz: Math.random() * TAU,
+      wx: (Math.random() - 0.5) * 14, wy: (Math.random() - 0.5) * 10, wz: (Math.random() - 0.5) * 8,
+      size: leaf ? 15 + Math.random() * 6 : 8 + Math.random() * 4, ph: Math.random() * TAU, sw: 0.8 + Math.random() * 1.4,
+    });
+    (leaf ? leafMesh : paperMesh).setColorAt(leaf ? i - PAPER_N : i, CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]);
   }
-  sparkGeo.attributes.color.needsUpdate = true;
-  sparkLife = 1.3;
+  for (const m of [paperMesh, leafMesh]) if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  sparkLife = 3.4;
   sparks.visible = true;
 }
 
@@ -1177,14 +1192,24 @@ function frame(now) {
 
   if (sparkLife > 0) {
     sparkLife -= dt;
-    for (let i = 0; i < sparkVel.length; i++) {
-      const v = sparkVel[i];
-      v[1] -= 260 * dt;
-      sparkPos[i * 3] += v[0] * dt;
-      sparkPos[i * 3 + 1] += v[1] * dt;
+    // Paper falls slowly: strong air drag, a gentle side-to-side flutter, and a constant tumble.
+    const drag = Math.pow(0.18, dt);
+    for (const c of confetti) {
+      c.vy -= 520 * dt;
+      c.vx *= drag; c.vy *= drag;
+      if (c.vy < -95) c.vy = -95;
+      c.x += (c.vx + Math.sin(T * 3 * c.sw + c.ph) * 38) * dt;
+      c.y += c.vy * dt;
+      c.rx += c.wx * dt; c.ry += c.wy * dt; c.rz += c.wz * dt;
+      cfObj.position.set(c.x, c.y, c.z);
+      cfObj.rotation.set(c.rx, c.ry, c.rz);
+      cfObj.scale.setScalar(c.size);
+      cfObj.updateMatrix();
+      (c.leaf ? leafMesh : paperMesh).setMatrixAt(c.idx, cfObj.matrix);
     }
-    sparkGeo.attributes.position.needsUpdate = true;
-    sparkMat.opacity = clamp(sparkLife * 1.6, 0, 1);
+    paperMesh.instanceMatrix.needsUpdate = true;
+    leafMesh.instanceMatrix.needsUpdate = true;
+    confettiMat.opacity = clamp(sparkLife / 0.8, 0, 1);
     sparks.position.copy(strand.position);
     if (sparkLife <= 0) sparks.visible = false;
   }
