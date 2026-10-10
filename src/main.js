@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import qrcode from 'qrcode-generator';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { encodeBracelet, decodeBracelet, COLORS, colorBeads, FIXED, LETTERS, letterBeads, LETTER_STYLES, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
@@ -26,10 +27,18 @@ const WALL_COLORS = {
 };
 const SIGN_DEFAULT = '13 beads', SIGN_MAX = 12;
 const cleanSign = (t) => String(t || '').replace(/[^A-Za-z0-9 !?&]/g, '').replace(/\s+/g, ' ').slice(0, SIGN_MAX);
-let decor = { color: 'white', sign: SIGN_DEFAULT };
+// Neon sign colors. Rainbow gives each letter its own tube color.
+const NEON_COLORS = {
+  rainbow: ['#ff4fa3', '#ff9a3c', '#ffd93d', '#4fe08a', '#45b8ff', '#a66bff'],
+  white: ['#fff4e4'],
+  pink: ['#ff4fa3'],
+  blue: ['#45b8ff'],
+};
+let decor = { color: 'white', sign: SIGN_DEFAULT, neon: 'rainbow' };
 try {
   const d = JSON.parse(localStorage.getItem('13beads.wall') || 'null');
   if (d && WALL_COLORS[d.color]) decor.color = d.color;
+  if (d && NEON_COLORS[d.neon]) decor.neon = d.neon;
   if (d && typeof d.sign === 'string' && cleanSign(d.sign).trim()) decor.sign = cleanSign(d.sign).trim();
 } catch (e) { /* optional */ }
 const STACK_HINT = matchMedia('(pointer: coarse)').matches
@@ -364,23 +373,24 @@ function neonTexture(lit) {
     let px = (NEON_W - L.total) / 2;
     [...word].forEach((ch, i) => { x.strokeText(ch, px, cy); px += L.ws[i] + L.gap; });
   };
-  if (lit) {
-    // White neon: a soft warm glow, then the tube, then a bright core, kept thin so the letters stay readable.
-    x.shadowColor = 'rgba(255,214,170,.9)'; x.shadowBlur = 16;
-    x.strokeStyle = 'rgba(255,238,215,.85)'; x.lineWidth = 6;
-    strokeAll();
-    x.shadowBlur = 4;
-    x.strokeStyle = '#ffffff'; x.lineWidth = 2.6;
-    strokeAll();
-  } else {
-    // Unlit by day: clear glass tubes, with a soft shadow on the wall so they read on a light wall.
-    x.shadowColor = 'rgba(60,45,35,.32)'; x.shadowBlur = 5; x.shadowOffsetX = 3; x.shadowOffsetY = 4;
-    x.strokeStyle = '#fdfbf8'; x.lineWidth = 8;
-    strokeAll();
-    x.shadowColor = 'transparent';
-    x.strokeStyle = '#b5aa9f'; x.lineWidth = 2.6;
-    strokeAll();
+  // Always lit: a colored glow, the colored tube, then a hot white core. At night the glow spreads wider; by day a
+  // soft shadow on the wall keeps the tubes readable against a light paint color.
+  const cols = NEON_COLORS[decor.neon] || NEON_COLORS.rainbow;
+  const each = (fn) => {
+    let px = (NEON_W - L.total) / 2, ci = 0;
+    [...word].forEach((ch, i) => { if (ch !== ' ') { fn(ch, px, cols[ci % cols.length]); ci++; } px += L.ws[i] + L.gap; });
+  };
+  if (!lit) {
+    x.shadowColor = 'rgba(40,25,35,.35)'; x.shadowBlur = 6; x.shadowOffsetX = 3; x.shadowOffsetY = 5;
+    each((ch, px, col) => { x.strokeStyle = col; x.lineWidth = 7; x.strokeText(ch, px, cy); });
+    x.shadowOffsetX = 0; x.shadowOffsetY = 0;
   }
+  for (const [blur, lw, alpha] of lit ? [[30, 9, 0.9], [14, 6, 1]] : [[14, 6.5, 0.95]]) {
+    x.globalAlpha = alpha;
+    each((ch, px, col) => { x.shadowColor = col; x.shadowBlur = blur; x.strokeStyle = col; x.lineWidth = lw; x.strokeText(ch, px, cy); });
+  }
+  x.globalAlpha = 1;
+  each((ch, px, col) => { x.shadowColor = col; x.shadowBlur = 5; x.strokeStyle = lit ? '#ffffff' : '#fffaf6'; x.lineWidth = 2.4; x.strokeText(ch, px, cy); });
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -410,6 +420,7 @@ function applyMood() {
   scene.environmentIntensity = !onWall ? 0.55 : night ? 0.2 : 0.5;
   stageA.intensity = stageB.intensity = onWall ? 0.12 : reduce ? 0.5 : 1.0;
   wall.material.color.set(night ? (WALL_COLORS[decor.color] || WALL_COLORS.white).night : 0xffffff);
+  riserMat.color.set(RISER_COLORS[decor.color] || RISER_COLORS.white);
   // The craft table: evenly lit by day; in dark mode the room dims and a warm desk lamp pools light in the middle.
   const deskNight = !onWall && isDark();
   if (table.material.map) {
@@ -419,7 +430,8 @@ function applyMood() {
   deskLamp.intensity = deskNight ? 7 : 0;
   if (deskNight) { sun.intensity = 0.55; sun.color.set(0xffe2c4); scene.environmentIntensity = 0.35; stageA.intensity = stageB.intensity = 0.35; }
   lamp.intensity = night ? 2.4 : 0;
-  neonGlow.intensity = night ? 1.5 : 0;
+  neonGlow.intensity = night ? 1.8 : 0;
+  neonGlow.color.set(decor.neon === 'blue' ? 0x7fc8ff : decor.neon === 'white' ? 0xfff0dc : 0xff9ccc);
   if (!neonMaps.on) { neonMaps.on = neonTexture(true); neonMaps.off = neonTexture(false); }
   neon.material.map = night ? neonMaps.on : neonMaps.off;
   neon.material.blending = THREE.NormalBlending;
@@ -452,16 +464,42 @@ function woodTexture() {
 const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.75 });
 // The display: white velvet bracelet cones on a slim shelf. Bracelets stack around a cone the way they do on a
 // real one, each resting on the one below. Drag a cone to spin it and read the phrases; hold a bracelet to edit it.
-const velvet = new THREE.MeshPhysicalMaterial({ color: 0xf4f0ea, roughness: 0.92, sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xffffff) });
+// Velvet: a fine fibrous pile (a grain texture used as a bump map) under a strong soft sheen, so the cone glows
+// at its edges and reads as fabric rather than plaster.
+function pileTexture() {
+  const S = 256, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.fillStyle = '#808080';
+  x.fillRect(0, 0, S, S);
+  for (let i = 0; i < 9000; i++) {
+    const v = 90 + Math.random() * 90, px = Math.random() * S, py = Math.random() * S;
+    x.strokeStyle = `rgba(${v},${v},${v},.55)`;
+    x.lineWidth = 0.7 + Math.random() * 0.8;
+    x.beginPath(); x.moveTo(px, py); x.lineTo(px + (Math.random() - 0.5) * 2, py + 2 + Math.random() * 3); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(5, 6);
+  return t;
+}
+const pile = pileTexture();
+const velvet = new THREE.MeshPhysicalMaterial({
+  color: 0xf1ece6, roughness: 0.95, bumpMap: pile, bumpScale: 1.4, roughnessMap: pile,
+  sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color(0xffffff),
+});
+const RISER_COLORS = { white: 0xe9d6cc, pink: 0xe2b6c9, sage: 0xeee6d6 };
+const riserMat = new THREE.MeshPhysicalMaterial({ color: RISER_COLORS.white, roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 });
 const CONE_TILT = 0.24;
 // Where the cones go on this stage, in stage pixels (y measured down from the top).
 function wallGrid() {
   const maxCones = W < 520 ? 2 : 3, per = Math.ceil(STACK_MAX / maxCones);
   const n = Math.min(stack.length, STACK_MAX), cones = clamp(Math.ceil(n / per), 1, maxCones);
   const SIGN_ROOM = 118, BTN_ROOM = 92;
-  const shelf = H - BTN_ROOM - 10;
   const spacing = Math.min((W * 0.92) / Math.max(cones, maxCones === 2 ? 2 : 2.4), 250);
   const R = clamp(spacing * 0.36, 34, 74);
+  // The riser's front edge comes forward and down with the tilt, so leave room for it above the button.
+  const shelf = H - BTN_ROOM - 34 - R * 0.42;
   // Bracelet bead size: the same rule the loop uses everywhere else, so phrases stay readable.
   const S = clamp(R * 0.3, 13, 24), gap = S * 1.18;
   const avail = shelf - SIGN_ROOM - 12;
@@ -482,8 +520,15 @@ function buildStand(grid) {
     return m;
   };
   const shelfY = H / 2 - grid.shelf, R = grid.R, Hc = grid.coneH;
-  // Slim floating shelf.
-  solid(new THREE.BoxGeometry(Math.min(W * 0.98, grid.cones * grid.spacing + 140), 11, 140), woodMat, stand, 0, shelfY - 5.5, -20);
+  // A display riser instead of a shelf: a low lacquered block in a tone that suits the wall, tilted with the cones
+  // so its top shows, like a jewelry counter.
+  const riser = new THREE.Group();
+  riser.position.set(0, shelfY, 0);
+  riser.rotation.x = CONE_TILT;
+  stand.add(riser);
+  const rw = Math.min(W * 0.96, grid.cones * grid.spacing + 90), rd = R * 2.9;
+  const top = solid(new RoundedBoxGeometry(rw, 30, rd, 4, 9), riserMat, riser, 0, -15, 0);
+  top.receiveShadow = true;
   // A cone: a soft velvet taper with a rounded top, standing on a low round foot.
   // Slim, like a jewelry display cone: just wider than a bracelet at the foot, narrowing to a rounded tip.
   const Rb = R * 1.08, Rt = R * 0.2;
@@ -730,7 +775,8 @@ function openCustom() {
   const box = $('custom');
   box.hidden = false;
   $('customBtn').setAttribute('aria-expanded', 'true');
-  box.querySelector(`input[value="${decor.color}"]`).checked = true;
+  box.querySelector(`input[name="wallColor"][value="${decor.color}"]`).checked = true;
+  box.querySelector(`input[name="signColor"][value="${decor.neon}"]`).checked = true;
   $('signText').value = decor.sign;
   box.querySelector('input:checked').focus({ preventScroll: true });
 }
@@ -746,6 +792,7 @@ $('customBtn').addEventListener('click', () => { if ($('custom').hidden) openCus
 $('customDone').addEventListener('click', () => closeCustom());
 $('custom').addEventListener('keydown', (e) => trapTab(e, $('custom')));
 $('custom').addEventListener('change', (e) => {
+  if (e.target.name === 'signColor') { decor.neon = e.target.value; saveDecor(); applyDecor(); tick(1.2, 0.08); return; }
   if (e.target.name !== 'wallColor') return;
   decor.color = e.target.value;
   saveDecor();
