@@ -257,6 +257,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .sign-help { margin: -4px 0 0; font-size: 12px; color: var(--muted); }
 .custom .btn.primary { background: var(--ink); color: var(--bg); }
+#cardNote { font: 600 16px var(--body); }
 
 /* Stringing screen: the phrase field submits from an arrow inside it; the end switch is two arrow icons. */
 .phrase { position: relative; }

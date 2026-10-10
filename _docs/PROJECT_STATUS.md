@@ -12,6 +12,8 @@ Last updated: 2026-10-09 (session 3). Everything is on `main` and live. The sess
 - **Edit from the wall:** hold or right-click a bracelet on the stand: Edit it, Take it off, or Leave it. Edit puts it back on the string; a string already in progress hangs in its place (unless it is the untouched starter).
 - **Wall simplified:** plain painted wall with a soft fade and faint grain. The limewash clouds, plaster ridges, window light, depth-of-field blur, and bracelet shadows on the wall are gone.
 - **Sound:** the guitar no longer goes through the echo.
+- **Neon sign:** white neon, letters spaced like separate tubes, larger, centered between the stand and the top buttons. The stand layout leaves room for the sign and the Make another button.
+- **Share card:** on the tie-off screen the camera button opens "Make a share card" with an optional gift tag note (up to 40 characters). It saves a 1080 x 1920 story-sized picture: wordmark, the tied bracelet on the wood, the phrase, the date, the gift tag, and the site address. Phones get the share sheet. On the wall the camera still saves a photo of the wall.
 
 ## What exists
 

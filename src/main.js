@@ -274,6 +274,7 @@ function setMode(m) {
   $('count').hidden = m !== 'line';
   closePop(false);
   closeCustom(false);
+  closeShare(false);
   strand.visible = m !== 'stack';
   board.visible = m === 'stack';
   backdrop.visible = false;
@@ -768,6 +769,139 @@ function savePhoto() {
   }, 'image/png');
 }
 
+/* ---------- Share card: a story-sized picture of the tied bracelet, with its phrase, the date, and a gift tag ---------- */
+function openShare() {
+  closePop(false);
+  closeCustom(false);
+  $('shareCard').hidden = false;
+  $('photoBtn').setAttribute('aria-expanded', 'true');
+  $('cardNote').focus({ preventScroll: true });
+}
+function closeShare(restore = true) {
+  if ($('shareCard').hidden) return;
+  $('shareCard').hidden = true;
+  $('photoBtn').setAttribute('aria-expanded', 'false');
+  if (restore) $('photoBtn').focus({ preventScroll: true });
+}
+function deliverPng(c, name, done) {
+  c.toBlob(async (blob) => {
+    if (!blob) { say('The picture could not be made in this browser.'); return; }
+    const file = new File([blob], name, { type: 'image/png' });
+    // Phones get the share sheet, so the picture can go straight to stories, messages, or the camera roll.
+    if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: '13 Beads' }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    say(done);
+  }, 'image/png');
+}
+// The 13 BEADS wordmark as a row of letter beads on a string, centered at (cx, cy), t pixels tall.
+function drawMark(x, cx, cy, t, stringColor) {
+  const chars = ['1', '3', '', 'B', 'E', 'A', 'D', 'S'], gap = t * 0.15;
+  const total = chars.reduce((w, ch) => w + (ch ? t : t * 0.5) + gap, -gap);
+  let px = cx - total / 2;
+  const py = cy - t / 2;
+  x.fillStyle = stringColor;
+  x.fillRect(px - t * 0.4, cy - t * 0.04, total + t * 0.8, t * 0.08);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = `700 ${t * 0.62}px Fredoka, "Arial Rounded MT Bold", sans-serif`;
+  for (const ch of chars) {
+    const w = ch ? t : t * 0.5;
+    x.save();
+    x.shadowColor = 'rgba(30,15,40,.25)'; x.shadowBlur = t * 0.12; x.shadowOffsetY = t * 0.05;
+    x.fillStyle = ch ? '#ffffff' : '#d3217c';
+    x.beginPath(); x.roundRect(px, py, w, t, t * 0.27); x.fill();
+    x.restore();
+    if (ch) { x.fillStyle = '#1c1830'; x.fillText(ch, px + w / 2, cy + t * 0.04); }
+    px += w + gap;
+  }
+}
+function shareCard(note) {
+  const css = getComputedStyle(document.documentElement), v = (n, f) => css.getPropertyValue(n).trim() || f;
+  const ink = v('--ink', '#1c1830'), muted = v('--muted', '#6b6280');
+  // Render the stage sharp, then cut a square around the tied loop.
+  const pr = renderer.getPixelRatio();
+  renderer.setPixelRatio(Math.max(2, Math.min(3, pr * 1.5)));
+  renderer.setSize(W, H, false);
+  const sparkWas = sparks.visible;
+  sparks.visible = false;
+  renderer.render(scene, camera);
+  const k = cv.width / W, R = Math.min(W, H) * 0.33, side = Math.min(R * 2.9, W, H);
+  const sx = clamp(W / 2 - side / 2, 0, W - side), sy = clamp(H / 2 + R * 0.06 - side / 2, 0, H - side);
+  const CW = 1080, CH = 1920, c = document.createElement('canvas');
+  c.width = CW; c.height = CH;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, CH);
+  g.addColorStop(0, v('--stage-a', '#fff6fb'));
+  g.addColorStop(1, v('--stage-b', '#e2d6f1'));
+  x.fillStyle = g;
+  x.fillRect(0, 0, CW, CH);
+  drawMark(x, CW / 2, 150, 62, v('--string', '#7f7398'));
+  // The bracelet, in a rounded frame.
+  const P = 940, px = (CW - P) / 2, py = 270;
+  x.save();
+  x.shadowColor = 'rgba(30,15,40,.28)'; x.shadowBlur = 40; x.shadowOffsetY = 14;
+  x.beginPath(); x.roundRect(px, py, P, P, 56); x.fillStyle = '#3a2418'; x.fill();
+  x.restore();
+  x.save();
+  x.beginPath(); x.roundRect(px, py, P, P, 56); x.clip();
+  x.drawImage(cv, sx * k, sy * k, side * k, side * k, px, py, P, P);
+  x.restore();
+  renderer.setPixelRatio(pr);
+  renderer.setSize(W, H, false);
+  sparks.visible = sparkWas;
+  // The phrase, the date, and the gift tag.
+  // Letters in a row form a word; any other bead between them becomes a space.
+  const word = defs().map((d) => (d.k === 'letter' ? d.ch : ' ')).join('').replace(/\s+/g, ' ').trim();
+  let y = py + P + 150;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  if (word) {
+    let size = 120;
+    x.font = `${size}px Pacifico, "Brush Script MT", cursive`;
+    const w = x.measureText(word).width;
+    if (w > CW - 140) { size = Math.floor((size * (CW - 140)) / w); x.font = `${size}px Pacifico, "Brush Script MT", cursive`; }
+    x.fillStyle = ink;
+    x.fillText(word, CW / 2, y);
+    y += size * 0.55 + 50;
+  } else y -= 40;
+  x.font = `500 40px Figtree, system-ui, sans-serif`;
+  x.fillStyle = muted;
+  x.fillText(new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }), CW / 2, y);
+  if (note) {
+    // A paper tag on a string, tilted a little.
+    y += 150;
+    x.save();
+    x.translate(CW / 2, y);
+    x.rotate(-0.045);
+    x.font = `600 46px Fredoka, "Arial Rounded MT Bold", sans-serif`;
+    const tw = Math.min(CW - 220, Math.max(380, x.measureText(note).width + 150)), th = 140;
+    x.strokeStyle = v('--string', '#7f7398'); x.lineWidth = 4;
+    x.beginPath(); x.moveTo(-tw / 2 + 34, 0); x.quadraticCurveTo(-tw / 2 - 40, -70, -tw / 2 - 90, -40); x.stroke();
+    x.shadowColor = 'rgba(30,15,40,.18)'; x.shadowBlur = 18; x.shadowOffsetY = 6;
+    x.fillStyle = '#fffaf2';
+    x.beginPath();
+    x.moveTo(-tw / 2 + 50, -th / 2); x.lineTo(tw / 2 - 18, -th / 2); x.quadraticCurveTo(tw / 2, -th / 2, tw / 2, -th / 2 + 18);
+    x.lineTo(tw / 2, th / 2 - 18); x.quadraticCurveTo(tw / 2, th / 2, tw / 2 - 18, th / 2); x.lineTo(-tw / 2 + 50, th / 2);
+    x.lineTo(-tw / 2, 0); x.closePath(); x.fill();
+    x.shadowColor = 'transparent';
+    x.fillStyle = v('--stage-b', '#e2d6f1');
+    x.beginPath(); x.arc(-tw / 2 + 34, 0, 10, 0, TAU); x.fill();
+    x.fillStyle = '#1c1830';
+    x.fillText(note, 25, 3, tw - 120);
+    x.restore();
+  }
+  x.font = `500 32px Figtree, system-ui, sans-serif`;
+  x.fillStyle = muted;
+  x.fillText('games.shauna.digital/13-beads', CW / 2, CH - 70);
+  deliverPng(c, '13-beads-card.png', 'Card saved as 13-beads-card.png.');
+}
+
 /* ---------- Geometry helpers (2D layout in stage pixels, then lifted into 3D) ---------- */
 function cumOf(p) {
   const c = [0];
@@ -1056,6 +1190,7 @@ cv.addEventListener('pointerdown', (e) => {
     spinVY = 0; spinVX = 0;
     grabRing = mode === 'stack' ? ringAt(p) : null;
     if (!$('custom').hidden) { closeCustom(false); spin.dismiss = true; }
+    else if (!$('shareCard').hidden) { closeShare(false); spin.dismiss = true; }
     else if (popRing) { closePop(false); spin.dismiss = true; }
     else if (grabRing) {
       // Press and hold a bracelet to get the option to take it off.
@@ -1380,7 +1515,19 @@ $('tie').addEventListener('click', () => {
 });
 $('untie').addEventListener('click', () => setMode('line'));
 $('wear').addEventListener('click', () => { arm(); wear(); });
-$('photoBtn').addEventListener('click', savePhoto);
+// On the tie-off screen the camera makes a share card; on the wall it saves a photo of the wall.
+$('photoBtn').addEventListener('click', () => {
+  if (mode !== 'tied') { savePhoto(); return; }
+  if ($('shareCard').hidden) openShare(); else closeShare();
+});
+$('shareCard').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const note = $('cardNote').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+  closeShare();
+  shareCard(note);
+});
+$('cardCancel').addEventListener('click', () => closeShare());
+$('shareCard').addEventListener('keydown', (e) => trapTab(e, $('shareCard')));
 $('another').addEventListener('click', () => setMode('line'));
 $('takeOff').addEventListener('click', () => {
   const i = rings.indexOf(popRing), fromKeys = popOpener && popOpener.classList.contains('ring-btn');
@@ -1423,6 +1570,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (popRing) closePop();
   else if (!$('custom').hidden) closeCustom();
+  else if (!$('shareCard').hidden) closeShare();
 });
 cv.addEventListener('contextmenu', (e) => {
   e.preventDefault();

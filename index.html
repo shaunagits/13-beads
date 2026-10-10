@@ -94,6 +94,16 @@
             <button class="btn danger" id="takeOff" type="button">Take it off</button>
           </div>
         </div>
+        <form class="pop custom" id="shareCard" role="dialog" aria-modal="true" aria-labelledby="shareTitle" hidden>
+          <p class="pop-title" id="shareTitle">Make a share card</p>
+          <label class="sign-field" for="cardNote">Gift tag note (optional)
+            <input id="cardNote" type="text" maxlength="40" autocomplete="off" placeholder="For Maya, from Shauna">
+          </label>
+          <div class="pop-actions">
+            <button class="btn" id="cardCancel" type="button">Cancel</button>
+            <button class="btn primary" type="submit">Save card</button>
+          </div>
+        </form>
         <div class="pop custom" id="custom" role="dialog" aria-modal="true" aria-labelledby="customTitle" hidden>
           <p class="pop-title" id="customTitle">Decorate your wall</p>
           <fieldset class="swatches">
