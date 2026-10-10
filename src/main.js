@@ -5,12 +5,14 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { BEADS, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey } from './beads.js';
+import { COLORS, colorBeads, FIXED, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
 
-const MAX = 26, TAU = Math.PI * 2, N = 90;
+// The string holds beads by length, not count. The budget is 25 pony-bead widths' worth of units (26 letter cubes),
+// so no bead ever draws smaller on a phone than a full string of letters. MAX_COUNT is a safety cap.
+const BUDGET = 25, MAX_COUNT = 120, TAU = Math.PI * 2, N = 90;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -197,7 +199,8 @@ function mk(def, placed, from) {
 const defs = () => beads.map((b) => b.def);
 function setBeads(list) {
   beads.forEach((b) => strand.remove(b.obj));
-  beads = list.filter((d) => d && UNIT[d.k]).slice(0, MAX).map((d) => mk(d, true));
+  // Saved strings keep every bead, even ones from before the length budget.
+  beads = list.filter((d) => d && UNIT[d.k]).slice(0, MAX_COUNT).map((d) => mk(d, true));
 }
 // On the tie-off and wall screens, messages show as a note on the canvas that fades after a few seconds.
 let noteTimer = 0;
@@ -210,12 +213,21 @@ function say(m) {
   if (mode !== 'stack' || stack.length) noteTimer = setTimeout(() => n.classList.add('gone'), m === STACK_HINT || m === TIED_HINT || m === HINT ? 7000 : 3500);
 }
 function save() { try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
-function sync() { $('count').textContent = beads.length + ' / ' + MAX; save(); }
+const usedLen = () => beads.reduce((a, b) => a + UNIT[b.def.k], 0);
+const fits = (d, extra = 0) => beads.length < MAX_COUNT && usedLen() + extra + UNIT[d.k] <= BUDGET + 1e-6;
+function sync() {
+  const n = beads.length, pct = Math.min(100, Math.round((usedLen() / BUDGET) * 100)), c = $('count');
+  c.firstChild.textContent = n + (n === 1 ? ' bead' : ' beads');
+  c.style.setProperty('--fill', pct + '%');
+  c.classList.toggle('full', pct >= 100);
+  c.setAttribute('aria-label', n + (n === 1 ? ' bead' : ' beads') + ' on the string, ' + pct + ' percent full');
+  save();
+}
 function pushUndo() { undoStack.push(JSON.stringify(defs())); if (undoStack.length > 40) undoStack.shift(); }
 
 function addBead(def, noUndo, end = side, step = null) {
   if (mode !== 'line') return false;
-  if (beads.length >= MAX) { say('That is a full wrist. Pull a bead off to add more.'); return false; }
+  if (!fits(def)) { say('That is a full wrist. Pull a bead off to add more.'); return false; }
   if (!noUndo) pushUndo();
   const b = mk(def, reduce, end);
   b.step = step;
@@ -243,7 +255,9 @@ function stringPhrase(text) {
     else if (ch === ' ' && list.length) list.push({ k: 'spacer' });
   }
   if (!list.length) { say('Type letters, numbers, or ! ? & to spell a phrase.'); return; }
-  const room = MAX - beads.length;
+  // Count how much of the phrase fits in the room left on the string.
+  let room = 0, len = 0;
+  while (room < list.length && fits(list[room], len)) len += UNIT[list[room++].k];
   if (room <= 0) { say('That is a full wrist. Pull a bead off to add more.'); return; }
   if (list.length > room) say('Only ' + room + ' beads fit, so the phrase was cut short.');
   pushUndo();
@@ -548,15 +562,16 @@ function buildRing(list, grid) {
   const S = Math.min(clamp(grid.rMax * 0.27, 14, 26), (TAU * R - 10) / Math.max(U, 1));
   const g = new THREE.Group(), loop = new THREE.Group(), hangs = [], DROP = 13;
   let acc = (-U * S) / 2;
-  for (const d of list) {
+  list.forEach((d, i) => {
     const w = UNIT[d.k] * S, o = makeBead(d), phi = (acc + w / 2) / R;
     acc += w;
+    if (o.userData.cup) o.userData.cup.rotation.y = capFacing(list, i) > 0 ? 0 : Math.PI;
     o.scale.setScalar(S);
     o.position.set(R * Math.sin(phi), -DROP - R - R * Math.cos(phi), 0);
     o.rotation.z = phi;
     if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
     loop.add(o);
-  }
+  });
   const cord = new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72), stringMat);
   cord.position.y = -DROP - R;
   cord.castShadow = true;
@@ -846,7 +861,7 @@ const RX = new Float32Array(N + 1), RY = new Float32Array(N + 1), OX = new Float
 const RW = new Float32Array(N + 1);
 let ropeKey = '', ropeSeg = 0;
 function ropeShape(n) {
-  return { ay: H * 0.16, sag: lerp(0.14, 1, Math.min(1, n / MAX)) * Math.min(H * 0.6, W * 0.6) };
+  return { ay: H * 0.16, sag: lerp(0.14, 1, Math.min(1, usedLen() / BUDGET)) * Math.min(H * 0.6, W * 0.6) };
 }
 function ropeLength(n) {
   const { ay, sag } = ropeShape(n);
@@ -1030,6 +1045,8 @@ function frame(now) {
     knot.scale.setScalar((k - 0.5) * 2);
   }
 
+  const defList = defs();
+  beads.forEach((b, i) => { if (b.obj.userData.cup) b.obj.userData.cup.rotation.y = capFacing(defList, i) > 0 ? 0 : Math.PI; });
   for (const b of beads) {
     const f = lerp(b.s / lineLen, 0.5 + (b.off * (Sc / sizeCur)) / C, k), p = pointAt(pts, cum, f * Lm);
     b.S = S;
@@ -1258,13 +1275,19 @@ if (!reduce && typeof DeviceOrientationEvent !== 'undefined') {
 cv.addEventListener('pointerleave', () => { parTX = 0; parTY = 0; });
 
 /* ---------- Tray (thumbnails are real renders of each 3D bead) ---------- */
-const TABS = { colors: BEADS, letters: LETTERS, charms: CHARMS, dangles: DANGLES };
+// The Beads tab shows one compartment per bead type, in the color picked on the color strip.
+let colorIdx = 0;
+try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0, 0, COLORS.length - 1); } catch (e) { /* optional */ }
+const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => LETTERS, charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
-function renderThumbs() {
+// One small offscreen renderer draws thumbnails as they are needed, so each color is only drawn the first time it is picked.
+let thumbKit = null;
+function thumbRenderer() {
+  if (thumbKit) return thumbKit;
   const c = document.createElement('canvas');
   let r;
-  try { r = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true, preserveDrawingBuffer: true }); } catch (e) { return; }
+  try { r = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true, preserveDrawingBuffer: true }); } catch (e) { return null; }
   r.setPixelRatio(1);
   r.setSize(112, 112, false);
   r.toneMapping = THREE.NeutralToneMapping;
@@ -1272,42 +1295,74 @@ function renderThumbs() {
   const pm = new THREE.PMREMGenerator(r);
   s.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
   s.environmentIntensity = 0.6;
+  pm.dispose();
   const l = new THREE.DirectionalLight(0xffffff, 1.8);
   l.position.set(-1, 2, 3);
   s.add(l);
   const cam = new THREE.OrthographicCamera(-0.68, 0.68, 0.68, -0.68, 0.1, 10);
   cam.position.z = 4;
-  const box = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
-  for (const item of [...BEADS, ...LETTERS, ...CHARMS, ...DANGLES]) {
+  return (thumbKit = { c, r, s, cam });
+}
+const tbox = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
+function renderThumbs(items) {
+  const todo = items.filter((it) => !thumbs[defKey(it.def)]);
+  if (!todo.length) return;
+  const kit = thumbRenderer();
+  if (!kit) return;
+  const { c, r, s, cam } = kit;
+  for (const item of todo) {
     const o = makeBead(item.def);
     if (o.userData.hang) {
       // Hanging charms vary in size, so fit each one to the thumbnail.
       o.rotation.set(0, -0.3, 0);
       o.updateMatrixWorld(true);
-      box.setFromObject(o).getSize(size);
-      box.getCenter(mid);
+      tbox.setFromObject(o).getSize(size);
+      tbox.getCenter(mid);
       const fit = 1.2 / Math.max(size.x, size.y);
       o.scale.setScalar(fit);
       o.position.set(-mid.x * fit, -mid.y * fit, 0);
-    } else o.rotation.set(0.25, -0.3, 0);
+    } else o.rotation.set(0.25, item.def.k === 'clay' ? -1.05 : -0.3, 0);
     if (o.userData.flap) { o.userData.flap[0].rotation.y = -0.35; o.userData.flap[1].rotation.y = 0.35; }
     s.add(o);
     r.render(s, cam);
     thumbs[defKey(item.def)] = c.toDataURL('image/png');
     s.remove(o);
   }
-  pm.dispose();
-  r.dispose();
-  r.forceContextLoss();
 }
-function buildTray() {
-  const tray = $('tray');
+function buildSwatches() {
+  const strip = $('swatches');
+  strip.textContent = '';
+  COLORS.forEach((col, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', i === colorIdx ? 'true' : 'false');
+    b.setAttribute('aria-label', col.name);
+    b.title = col.name;
+    b.style.setProperty('--c', `hsl(${col.h} ${col.s}% ${col.l}%)`);
+    b.addEventListener('click', () => {
+      if (i === colorIdx) return;
+      colorIdx = i;
+      try { localStorage.setItem('13beads.color', String(i)); } catch (e) { /* optional */ }
+      strip.querySelectorAll('.swatch').forEach((o, j) => o.setAttribute('aria-checked', j === i ? 'true' : 'false'));
+      tick(1 + i * 0.02, 0.08);
+      buildTray(true);
+    });
+    strip.appendChild(b);
+  });
+}
+function buildTray(keepScroll) {
+  const tray = $('tray'), items = TABS[curTab](), x = tray.scrollLeft;
+  $('swatches').hidden = curTab !== 'colors';
+  renderThumbs(items);
   tray.textContent = '';
-  for (const item of TABS[curTab]) {
+  for (const item of items) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'bead-btn';
     btn.setAttribute('aria-label', 'Add ' + item.name);
+    btn.title = item.name;
     const img = document.createElement('img');
     img.alt = '';
     img.src = thumbs[defKey(item.def)] || '';
@@ -1315,7 +1370,7 @@ function buildTray() {
     btn.addEventListener('click', () => { arm(); addBead(item.def); });
     tray.appendChild(btn);
   }
-  tray.scrollLeft = 0;
+  tray.scrollLeft = keepScroll ? x : 0;
 }
 // Fold the bead case away, or open it again.
 $('caseToggle').addEventListener('click', () => {
@@ -1356,7 +1411,7 @@ $('undo').addEventListener('click', () => {
 });
 // The starter bracelet mirrors the logo: 1 3, a hot pink bead, B E A D S, framed with sparkles, gold glitter, and pearls.
 const STARTER = (() => {
-  const L = (ch) => ({ k: 'letter', ch }), pink = { k: 'pony', h: 330, s: 90, l: 58 }, gold = { k: 'glitter', h: 44 };
+  const L = (ch) => ({ k: 'letter', ch }), pink = { k: 'pony', h: 330, s: 90, l: 58 }, gold = { k: 'glitter', h: 48, s: 98, l: 56 };
   return [{ k: 'pearl' }, gold, { k: 'sparkle' }, L('1'), L('3'), pink, ...'BEADS'.split('').map(L), { k: 'sparkle' }, gold, { k: 'pearl' }];
 })();
 // Beads slide on one by one, each playing the next note of the tune.
@@ -1453,8 +1508,10 @@ async function start() {
   readTheme();
   resize();
   new ResizeObserver(resize).observe(cv);
-  renderThumbs();
+  buildSwatches();
   buildTray();
+  // Draw the other tabs' thumbnails once the game is up, so switching tabs is instant.
+  setTimeout(() => renderThumbs([...LETTERS, ...CHARMS, ...DANGLES]), 400);
 
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('13beads.strand') || 'null'); } catch (e) { /* optional */ }

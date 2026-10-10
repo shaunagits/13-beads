@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Width each bead takes up along the string, as a fraction of bead size.
-export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
+export const UNIT = { pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
   lucky13: 1.04, snake: 1.06, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
@@ -14,25 +14,44 @@ export const UNIT = { pony: 0.78, letter: 0.96, pearl: 0.92, glitter: 0.78, glow
 // Charms that hang below the string from a ring instead of sitting on it.
 export const DANGLE = new Set(['guitar', 'mic', 'chair', 'ladder', 'cardigan', 'scarf', 'boot', 'coupe', 'minibead', 'teacup', 'rod', 'redwood', 'feather', 'hat', 'discube', 'globe']);
 
+// The color strip above the Beads tab. Every bead type below that takes a color uses the one picked here.
 export const COLORS = [
   ['Hot pink', 330, 90, 58], ['Red', 355, 85, 52], ['Orange', 24, 95, 56], ['Yellow', 48, 98, 56],
   ['Lime', 95, 75, 50], ['Teal', 174, 75, 42], ['Sky', 198, 90, 60], ['Blue', 226, 80, 54],
   ['Purple', 272, 70, 56], ['Lavender', 262, 75, 76], ['Black', 260, 12, 10], ['White', 260, 15, 94],
-].map(([name, h, s, l]) => ({ name: name + ' bead', def: { k: 'pony', h, s, l } }));
+].map(([name, h, s, l]) => ({ name, h, s, l }));
+
+// Bead types that come in every strip color. A bead's def is { k, h, s, l }.
+export const COLOR_TYPES = [
+  ['pony', 'pony bead'], ['clay', 'clay disc'], ['round', 'round bead'], ['crystal', 'crystal'], ['cube', 'cube bead'],
+  ['smiley', 'smiley bead'], ['jelly', 'jelly bead'], ['metal', 'metallic bead'], ['glitter', 'glitter bead'], ['glow', 'glow bead'],
+];
+export const colorBeads = (c) => COLOR_TYPES.map(([k, label]) => ({
+  name: c.name + ' ' + label, def: { k, h: c.h, s: c.s, l: c.l },
+}));
 
 export const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?&'.split('')
   .map((ch) => ({ name: 'Letter ' + ch, def: { k: 'letter', ch } }));
 
-export const FINISHES = [
+// Beads with one fixed look, shown after the colored ones.
+export const FIXED = [
   { name: 'Pearl', def: { k: 'pearl' } },
-  { name: 'Pink glitter', def: { k: 'glitter', h: 325 } },
-  { name: 'Gold glitter', def: { k: 'glitter', h: 44 } },
-  { name: 'Blue glitter', def: { k: 'glitter', h: 215 } },
-  { name: 'Green glow', def: { k: 'glow', h: 135 } },
-  { name: 'Pink glow', def: { k: 'glow', h: 315 } },
   { name: 'Silver spacer', def: { k: 'spacer' } },
+  { name: 'Gold ball spacer', def: { k: 'ball' } },
+  { name: 'Silver daisy spacer', def: { k: 'daisy' } },
+  { name: 'Rhinestone rondelle', def: { k: 'rondelle' } },
+  { name: 'Gold bead cap', def: { k: 'cap', m: 'gold' } },
+  { name: 'Silver bead cap', def: { k: 'cap', m: 'silver' } },
 ];
-export const BEADS = [...COLORS, ...FINISHES];
+// Spacers and caps are the small metal findings. A bead cap's cup faces its nearest real bead: the next one if it is
+// a bead, otherwise the one before. Returns 1 to face the next bead (toward +x), -1 to face the one before.
+export const FINDING = new Set(['spacer', 'ball', 'daisy', 'rondelle', 'cap']);
+export function capFacing(list, i) {
+  const solid = (d) => d && !FINDING.has(d.k);
+  if (solid(list[i + 1])) return 1;
+  if (solid(list[i - 1])) return -1;
+  return 1;
+}
 
 const named = (list) => list.map(([name, k]) => ({ name, def: { k } }));
 export const CHARMS = named([
@@ -53,6 +72,8 @@ export const defKey = (d) => JSON.stringify(d);
 const BOOST = { mic: 1.35, boot: 1.35, cardigan: 1.35, scarf: 1.35, coupe: 1.35, chair: 1.35, ladder: 1.3, minibead: 1.75, shades: 1.15, note: 1.3, vinyl: 1.25, cassette: 1.22, ticket: 1.22, chihuahua: 1.3, lips: 1.3,
   teacup: 1.4, rod: 1.3, redwood: 1.3, feather: 1.3, hat: 1.4, discube: 1.4, globe: 1.4 };
 const hsl = (h, s, l) => new THREE.Color().setHSL(h / 360, s / 100, l / 100);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TAU = Math.PI * 2;
 
 /* ---------- Geometry (built once, at size 1, string axis = x) ---------- */
 const geo = {};
@@ -66,6 +87,69 @@ function ponyGeo() {
   const g = new THREE.LatheGeometry(pts, 48);
   g.rotateZ(Math.PI / 2);
   return (geo.pony = g);
+}
+// A polymer clay disc (heishi): a thin washer with flat faces and a softly rounded rim.
+function clayGeo() {
+  if (geo.clay) return geo.clay;
+  const pts = [], rin = 0.13, rout = 0.5, half = 0.125;
+  for (let i = 0; i <= 24; i++) {
+    const t = (i / 24) * Math.PI;
+    pts.push(new THREE.Vector2(rin + (rout - rin) * Math.pow(Math.sin(t), 0.16), -half * Math.cos(t)));
+  }
+  const g = new THREE.LatheGeometry(pts, 40);
+  g.rotateZ(Math.PI / 2);
+  return (geo.clay = g);
+}
+// A flat daisy spacer: eight round petals around a hole, face-on to the string.
+function daisyGeo() {
+  if (geo.daisy) return geo.daisy;
+  const s = new THREE.Shape(), n = 8;
+  for (let i = 0; i <= 96; i++) {
+    const a = (i / 96) * TAU, r = 0.3 + 0.09 * Math.pow(Math.abs(Math.cos((a * n) / 2)), 0.6);
+    i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 0.09, 0, TAU, true);
+  s.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 8 });
+  g.translate(0, 0, -0.04);
+  g.rotateY(Math.PI / 2);
+  return (geo.daisy = g);
+}
+// A bead cap: a shallow scalloped metal cup, open toward +x.
+function capGeo() {
+  if (geo.cap) return geo.cap;
+  const pts = [[0.08, 0], [0.14, 0.01], [0.24, 0.05], [0.32, 0.11], [0.37, 0.18], [0.39, 0.22]].map(V2);
+  const g = new THREE.LatheGeometry(pts, 64), p = g.attributes.position;
+  // Scallop the rim: petals grow toward the open edge.
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x), w = y / 0.22;
+    const f = 1 + 0.1 * w * w * Math.cos(a * 8);
+    p.setXYZ(i, x * f, y - 0.05 * w * w * (1 - Math.cos(a * 8)) * 0.5, z * f);
+  }
+  g.computeVertexNormals();
+  g.translate(0, -0.11, 0);
+  g.rotateZ(-Math.PI / 2);
+  return (geo.cap = g);
+}
+// A faceted bicone crystal: two cones point to point, with few sides so the facets catch the light.
+function crystalGeo() {
+  if (geo.crystal) return geo.crystal;
+  const pts = [[0.1, -0.42], [0.16, -0.4], [0.5, -0.03], [0.5, 0.03], [0.16, 0.4], [0.1, 0.42]].map(V2);
+  const g = new THREE.LatheGeometry(pts, 10);
+  g.rotateZ(Math.PI / 2);
+  return (geo.crystal = g);
+}
+// The smiley's face is a grid bent onto the front of the squashed sphere, so the print hugs the curve.
+function smileyFaceGeo() {
+  if (geo.smileyFace) return geo.smileyFace;
+  const g = new THREE.PlaneGeometry(0.66, 0.66, 16, 16), p = g.attributes.position, R = 0.45, Z = 0.45 * 0.72;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), q = Math.max(0, 1 - (x * x + y * y) / (R * R));
+    p.setZ(i, Z * Math.sqrt(q) + 0.004);
+  }
+  g.computeVertexNormals();
+  return (geo.smileyFace = g);
 }
 function extruded(shape, depth, scale) {
   const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.07, bevelSegments: 5, curveSegments: 14 });
@@ -246,6 +330,18 @@ function sparkTex() {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(3, 1);
   return (tex.spark = t);
+}
+function smileyTex(ink) {
+  return (tex['smile' + ink] ||= canvasTex(128, (x, s) => {
+    x.fillStyle = ink;
+    x.strokeStyle = ink;
+    x.lineCap = 'round';
+    x.lineWidth = s * 0.075;
+    for (const ex of [0.36, 0.64]) { x.beginPath(); x.ellipse(s * ex, s * 0.38, s * 0.05, s * 0.085, 0, 0, Math.PI * 2); x.fill(); }
+    x.beginPath();
+    x.arc(s / 2, s * 0.47, s * 0.22, Math.PI * 0.2, Math.PI * 0.8);
+    x.stroke();
+  }));
 }
 function haloTex() {
   return (tex.halo ||= canvasTex(128, (x, s) => {
@@ -891,15 +987,81 @@ export function makeBead(d) {
     case 'pony':
       group.add(mesh(ponyGeo(), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
       break;
+    case 'ball':
+      group.add(mesh((geo.ball ||= new THREE.SphereGeometry(0.22, 24, 16)), goldMat()));
+      break;
+    case 'daisy':
+      group.add(mesh(daisyGeo(), silverMat()));
+      break;
+    case 'rondelle': {
+      group.add(mesh((geo.rondelle ||= new THREE.TorusGeometry(0.26, 0.11, 14, 36).rotateY(Math.PI / 2)), silverMat()));
+      const stone = mat('rhinestone', () => new THREE.MeshPhysicalMaterial({
+        color: 0xf4f8ff, roughness: 0, metalness: 0.1, clearcoat: 1, iridescence: 0.8, iridescenceIOR: 1.6, flatShading: true, emissive: 0x30384a,
+      }));
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * TAU, st = mesh((geo.stone ||= new THREE.OctahedronGeometry(0.075, 0)), stone);
+        st.position.set(0, Math.cos(a) * 0.36, Math.sin(a) * 0.36);
+        st.rotation.x = a;
+        group.add(st);
+      }
+      break;
+    }
+    case 'cap': {
+      // The cup sits in its own group so the strand can turn it to face a neighboring bead.
+      const cup = new THREE.Group();
+      cup.add(mesh(capGeo(), mat('cap' + d.m, () => new THREE.MeshPhysicalMaterial({
+        color: d.m === 'gold' ? 0xffc533 : 0xdfe3ee, metalness: d.m === 'gold' ? 0.75 : 1, roughness: 0.2, clearcoat: 0.6, side: THREE.DoubleSide,
+      }))));
+      group.add(cup);
+      group.userData.cup = cup;
+      break;
+    }
     case 'spacer':
       group.add(mesh(
         (geo.spacer ||= new THREE.TorusGeometry(0.2, 0.13, 16, 32).rotateY(Math.PI / 2)),
         mat('spacer', () => new THREE.MeshPhysicalMaterial({ color: 0xdfe3ee, metalness: 1, roughness: 0.18 }))));
       break;
+    case 'clay':
+      group.add(mesh(clayGeo(), mat(defKey(d), () => new THREE.MeshStandardMaterial({ color: hsl(d.h, d.s * 0.92, d.l), roughness: 0.78 }))));
+      break;
+    case 'round':
+      group.add(mesh((geo.round ||= new THREE.SphereGeometry(0.43, 36, 24)), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      break;
+    case 'cube':
+      group.add(mesh((geo.solidCube ||= new RoundedBoxGeometry(0.82, 0.82, 0.82, 4, 0.14)), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      break;
+    case 'crystal':
+      group.add(mesh(crystalGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+        color: hsl(d.h, d.s, clamp(d.l + 8, 22, 86)), emissive: hsl(d.h, d.s, d.l * 0.3), transparent: true, opacity: 0.84,
+        roughness: 0.03, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0, iridescence: 0.55, iridescenceIOR: 1.5, specularIntensity: 1, flatShading: true,
+      }))));
+      break;
+    case 'jelly':
+      group.add(mesh(ponyGeo(), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+        color: hsl(d.h, d.s, clamp(d.l, 38, 82)), emissive: hsl(d.h, d.s, d.l * 0.22), transparent: true, opacity: 0.58,
+        roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03,
+      }))));
+      break;
+    case 'metal':
+      group.add(mesh((geo.metal ||= new THREE.SphereGeometry(0.4, 36, 24)), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+        color: hsl(d.h, d.s * 0.8, clamp(d.l, 34, 78)), metalness: 1, roughness: 0.2, clearcoat: 0.6, clearcoatRoughness: 0.1,
+      }))));
+      break;
+    case 'smiley': {
+      group.add(mesh((geo.smiley ||= new THREE.SphereGeometry(0.45, 36, 24).scale(1, 1, 0.72)), mat(defKey(d), () => plastic(hsl(d.h, d.s, d.l)))));
+      const ink = d.l < 30 ? '#ffffff' : '#1c1830';
+      const face = new THREE.Mesh(smileyFaceGeo(), mat('smile' + ink, () => new THREE.MeshBasicMaterial({
+        map: smileyTex(ink), transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2,
+      })));
+      const back = face.clone();
+      back.rotation.y = Math.PI;
+      group.add(face, back);
+      break;
+    }
     case 'glitter':
       group.add(mesh(ponyGeo(), mat(defKey(d), () => {
         const m = new THREE.MeshPhysicalMaterial({
-          color: hsl(d.h, 85, 52), metalness: 0.75, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.1,
+          color: d.s == null ? hsl(d.h, 85, 52) : hsl(d.h, Math.min(d.s, 85), clamp(d.l, 22, 72)), metalness: 0.75, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.1,
           bumpMap: sparkTex(), bumpScale: 1.2, emissive: 0xffffff, emissiveMap: sparkTex(), emissiveIntensity: 0.6,
         });
         m.userData = { kind: 'glitter', ph: d.h };
@@ -908,14 +1070,14 @@ export function makeBead(d) {
       })));
       break;
     case 'glow': {
-      const c = hsl(d.h, 100, 58);
+      const gs = d.s == null ? 100 : d.s, c = hsl(d.h, gs, 58);
       group.add(mesh(ponyGeo(), mat(defKey(d), () => {
-        const m = plastic(hsl(d.h, 100, 72), { emissive: c, emissiveIntensity: 1.1 });
+        const m = plastic(hsl(d.h, gs, 72), { emissive: c, emissiveIntensity: 1.1 });
         m.userData = { kind: 'glow', ph: d.h };
         animated.push(m);
         return m;
       })));
-      const halo = new THREE.Sprite(mat('halo' + d.h, () => new THREE.SpriteMaterial({
+      const halo = new THREE.Sprite(mat('halo' + defKey(d), () => new THREE.SpriteMaterial({
         map: haloTex(), color: c, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending,
       })));
       halo.scale.setScalar(2.3);

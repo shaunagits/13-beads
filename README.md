@@ -35,15 +35,15 @@ The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tie
 
 ## Add a bead or charm
 
-1. Add an entry to `BEADS`, `CHARMS`, or `DANGLES` in `src/beads.js`.
-2. Give it a width in `UNIT`. Hanging charms also go in the `DANGLE` set.
-3. Add a builder for its shape in `CHARM_BUILDERS`. Hanging charms start with `hanger(g)`.
+1. Add an entry to `COLOR_TYPES` (a bead type that comes in every color on the color strip), `FIXED` (a bead with one look), `CHARMS`, or `DANGLES` in `src/beads.js`.
+2. Give it a width in `UNIT`. The string holds beads by total width (`BUDGET` in `src/main.js`), not by count. Hanging charms also go in the `DANGLE` set.
+3. Add a builder for its shape: a `case` in `makeBead` for colored beads, or an entry in `CHARM_BUILDERS` for charms. Hanging charms start with `hanger(g)`.
 4. Optionally give it a sound role in `KIND` in `src/audio.js`: `bell` (adds a bell an octave up), `low` (an octave down), or `soft` (a soft swell).
 
 ## Design rules
 
 - `vite.config.js` sets `base: './'` so the game works both at a domain root and under `/13-beads`. Keep asset paths relative.
-- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), `13beads.wall` (wall color and neon sign word), and `13beads.theme` (light or dark, set by the header toggle).
+- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), `13beads.wall` (wall color and neon sign word), `13beads.theme` (light or dark, set by the header toggle), and `13beads.color` (the color picked on the bead case's color strip).
 
 ## Project docs
 

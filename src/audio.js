@@ -71,7 +71,8 @@ function out(a, { pan = 0, vol = 0.2, room = 1, echo = 1 } = {}) {
   if (a.createStereoPanner) { const p = a.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; }
   node.connect(bus);
   const r = a.createGain(), e = a.createGain();
-  r.gain.value = room; e.gain.value = echo;
+  // The guitar plays dry of the echo (it made plucked notes sound doubled); the room reverb still gives it space.
+  r.gain.value = room; e.gain.value = instrument === 'guitar' ? 0 : echo;
   node.connect(r); r.connect(roomSend);
   node.connect(e); e.connect(echoSend);
   return g;
@@ -219,6 +220,7 @@ const KIND = {
   mirror: 'bell', snake: 'bell', clock: 'bell', ladder: 'bell', mic: 'bell', leaf: 'bell',
   note: 'bell', teacup: 'bell', rod: 'bell', discube: 'bell', globe: 'bell',
   guitar: 'low', chair: 'low', boot: 'low', redwood: 'low',
+  crystal: 'bell', metal: 'bell', ball: 'bell', daisy: 'bell', rondelle: 'bell', cap: 'bell',
   shades: 'bell', cardigan: 'soft', scarf: 'soft', gull: 'soft', feather: 'soft', hat: 'soft', ticket: 'soft',
 };
 const play = (a, semi, v = 1, at = 0, pan = (Math.random() - 0.5) * 0.5) => VOICES[instrument](a, hz(semi) * vary(0.002), v * vary(0.08), a.currentTime + at, pan);
