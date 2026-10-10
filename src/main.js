@@ -227,10 +227,11 @@ function sync() {
   c.style.setProperty('--fill', pct + '%');
   c.classList.toggle('full', pct >= 100);
   c.setAttribute('aria-label', n + (n === 1 ? ' bead' : ' beads') + ' on the string, ' + pct + ' percent full');
+  $('clear').disabled = !n;
   save();
 }
 function pushUndo() { undoStack.push(JSON.stringify(defs())); if (undoStack.length > 40) undoStack.shift(); redoStack.length = 0; syncUndo(); }
-function syncUndo() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; }
+function syncUndo() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; $('clear').disabled = !beads.length; }
 
 function addBead(def, noUndo, end = side, step = null) {
   if (mode !== 'line') return false;
@@ -1824,7 +1825,7 @@ document.addEventListener('pointerdown', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !$('menu').hidden) { setMenu(false); $('moreBtn').focus({ preventScroll: true }); }
 });
-['restart', 'clear'].forEach((id) => $(id).addEventListener('click', () => setMenu(false)));
+$('restart').addEventListener('click', () => setMenu(false));
 
 // Letter bead color: white or black cubes. Applies to the Letters tab and to typed phrases.
 document.querySelectorAll('.letter-chip').forEach((b) => b.addEventListener('click', () => {
