@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { COLORS, colorBeads, FIXED, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
+import { COLORS, colorBeads, FIXED, LETTERS, letterBeads, LETTER_STYLES, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import { arm, setMuted, land, tick, chime, buzz, note, twang, whoosh, thud } from './audio.js';
@@ -38,7 +38,8 @@ const EMPTY_WALL = 'Nothing on display yet. Finish a bracelet and hang it here.'
 const STACK_MAX = 12;
 
 /* ---------- State ---------- */
-let beads = [], fallers = [], undoStack = [];
+let beads = [], fallers = [], undoStack = [], redoStack = [];
+let letterStyle = 'white';
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
@@ -216,7 +217,8 @@ function sync() {
   c.setAttribute('aria-label', n + (n === 1 ? ' bead' : ' beads') + ' on the string, ' + pct + ' percent full');
   save();
 }
-function pushUndo() { undoStack.push(JSON.stringify(defs())); if (undoStack.length > 40) undoStack.shift(); }
+function pushUndo() { undoStack.push(JSON.stringify(defs())); if (undoStack.length > 40) undoStack.shift(); redoStack.length = 0; syncUndo(); }
+function syncUndo() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; }
 
 function addBead(def, noUndo, end = side, step = null) {
   if (mode !== 'line') return false;
@@ -244,7 +246,7 @@ function removeBead(b) {
 function stringPhrase(text) {
   const list = [];
   for (const ch of text.toUpperCase()) {
-    if (/[A-Z0-9!?&]/.test(ch)) list.push({ k: 'letter', ch });
+    if (/[A-Z0-9!?&]/.test(ch)) list.push(letterStyle === 'black' ? { k: 'letter', ch, st: 'black' } : { k: 'letter', ch });
     else if (ch === ' ' && list.length) list.push({ k: 'spacer' });
   }
   if (!list.length) { say('Type letters, numbers, or ! ? & to spell a phrase.'); return; }
@@ -1343,7 +1345,7 @@ cv.addEventListener('pointerleave', () => { parTX = 0; parTY = 0; });
 // The Beads tab shows one compartment per bead type, in the color picked on the color strip.
 let colorIdx = 0;
 try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0, 0, COLORS.length - 1); } catch (e) { /* optional */ }
-const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => LETTERS, charms: () => CHARMS, dangles: () => DANGLES };
+const TABS = { colors: () => [...colorBeads(COLORS[colorIdx]), ...FIXED], letters: () => letterBeads(letterStyle), charms: () => CHARMS, dangles: () => DANGLES };
 let curTab = 'colors';
 const thumbs = {};
 // One small offscreen renderer draws thumbnails as they are needed, so each color is only drawn the first time it is picked.
@@ -1420,7 +1422,7 @@ function buildSwatches() {
 function buildTray(keepScroll) {
   const tray = $('tray'), items = TABS[curTab](), x = tray.scrollLeft;
   $('colorStrip').hidden = curTab !== 'colors';
-  $('phraseForm').hidden = curTab !== 'letters';
+  $('letterRow').hidden = curTab !== 'letters';
   renderThumbs(items);
   tray.textContent = '';
   for (const item of items) {
@@ -1466,14 +1468,26 @@ $('phraseForm').addEventListener('submit', (e) => {
   i.value = '';
   i.blur();
 });
-$('undo').addEventListener('click', () => {
+// Undo and redo: each keeps snapshots of the string. A new change clears the redo history.
+function stepHistory(from, to, pitch, empty) {
   arm();
-  const s = undoStack.pop();
-  if (!s) { say('Nothing to undo yet.'); return; }
+  const s = from.pop();
+  if (!s) { say(empty); return; }
+  to.push(JSON.stringify(defs()));
   clearInterval(phraseTimer);
   setBeads(JSON.parse(s));
   sync();
-  tick(0.8, 0.12);
+  syncUndo();
+  tick(pitch, 0.12);
+}
+$('undo').addEventListener('click', () => stepHistory(undoStack, redoStack, 0.8, 'Nothing to undo yet.'));
+$('redo').addEventListener('click', () => stepHistory(redoStack, undoStack, 1.1, 'Nothing to redo.'));
+// Keyboard: Cmd or Ctrl + Z to undo, with Shift (or Ctrl + Y) to redo, while stringing and not typing in a field.
+document.addEventListener('keydown', (e) => {
+  if (mode !== 'line' || !(e.metaKey || e.ctrlKey) || e.target.closest('input')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); $('undo').click(); }
+  else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); $('redo').click(); }
 });
 // The starter bracelet mirrors the logo: 1 3, a hot pink bead, B E A D S, framed with sparkles, gold glitter, and pearls.
 const STARTER = (() => {
@@ -1560,6 +1574,8 @@ $('editRing').addEventListener('click', () => {
   clearInterval(phraseTimer);
   setBeads(list);
   undoStack.length = 0;
+  redoStack.length = 0;
+  syncUndo();
   sync();
   kLin = 0;
   setMode('line');
@@ -1620,6 +1636,14 @@ document.addEventListener('keydown', (e) => {
 });
 ['restart', 'clear'].forEach((id) => $(id).addEventListener('click', () => setMenu(false)));
 
+// Letter bead color: white or black cubes. Applies to the Letters tab and to typed phrases.
+document.querySelectorAll('.letter-chip').forEach((b) => b.addEventListener('click', () => {
+  letterStyle = b.dataset.st;
+  document.querySelectorAll('.letter-chip').forEach((o) => o.setAttribute('aria-checked', o === b ? 'true' : 'false'));
+  tick(letterStyle === 'black' ? 0.9 : 1.1, 0.08);
+  buildTray(true);
+}));
+
 /* ---------- Boot ---------- */
 async function start() {
   // Letter beads are drawn with the display font, so wait briefly for it.
@@ -1629,6 +1653,7 @@ async function start() {
   new ResizeObserver(resize).observe(cv);
   buildSwatches();
   buildTray();
+  syncUndo();
   // Draw the other tabs' thumbnails once the game is up, so switching tabs is instant.
   setTimeout(() => renderThumbs([...LETTERS, ...CHARMS, ...DANGLES]), 400);
 

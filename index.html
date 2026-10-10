@@ -74,6 +74,9 @@
           <button class="icon-btn" id="undo" type="button" data-show="line" aria-label="Undo" title="Undo">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8.5 5.5 4 10l4.5 4.5M4.5 10H14a5.5 5.5 0 0 1 0 11h-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
+          <button class="icon-btn" id="redo" type="button" data-show="line" aria-label="Redo" title="Redo">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15.5 5.5 20 10l-4.5 4.5M19.5 10H10a5.5 5.5 0 0 0 0 11h2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button class="icon-btn" id="photoBtn" type="button" data-show="tied stack" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.4" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
         </div>
         <div class="ring-btns" id="ringBtns" data-show="stack" role="group" aria-label="Bracelets on the wall"></div>
@@ -138,12 +141,18 @@
             </div>
           </div>
           <div class="color-strip" id="colorStrip" role="radiogroup" aria-label="Bead color"></div>
-          <form class="phrase" id="phraseForm" hidden>
-            <input id="phrase" type="text" maxlength="26" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type a word or phrase" aria-label="Phrase to spell in letter beads" enterkeyhint="done">
-            <button class="phrase-go" type="submit" aria-label="String it" title="String it">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h13M13 6.5 18.5 12 13 17.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </form>
+          <div class="letter-row" id="letterRow" hidden>
+            <div class="letter-style" role="radiogroup" aria-label="Letter bead color">
+              <button class="letter-chip" type="button" role="radio" data-st="white" aria-checked="true" aria-label="White letter beads" title="White letters">A</button>
+              <button class="letter-chip black" type="button" role="radio" data-st="black" aria-checked="false" aria-label="Black letter beads" title="Black letters">A</button>
+            </div>
+            <form class="phrase" id="phraseForm">
+              <input id="phrase" type="text" maxlength="26" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type a word or phrase" aria-label="Phrase to spell in letter beads" enterkeyhint="done">
+              <button class="phrase-go" type="submit" aria-label="String it" title="String it">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h13M13 6.5 18.5 12 13 17.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </form>
+          </div>
           <div class="tray" id="tray"></div>
         </div>
       </div>

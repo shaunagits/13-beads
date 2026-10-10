@@ -30,8 +30,14 @@ export const colorBeads = (c) => COLOR_TYPES.map(([k, label]) => ({
   name: c.name + ' ' + label, def: { k, h: c.h, s: c.s, l: c.l },
 }));
 
-export const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?&'.split('')
-  .map((ch) => ({ name: 'Letter ' + ch, def: { k: 'letter', ch } }));
+// Letter beads come in two looks: white cubes with dark letters (the default, saved with no st), and black cubes
+// with white letters (st: 'black').
+export const LETTER_STYLES = { white: { cube: 0xfbf9ff, ink: '#1c1830', label: 'White' }, black: { cube: 0x1d1a24, ink: '#ffffff', label: 'Black' } };
+const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?&'.split('');
+export const letterBeads = (st) => CHARS.map((ch) => ({
+  name: (st === 'black' ? 'Black letter ' : 'Letter ') + ch, def: st === 'black' ? { k: 'letter', ch, st } : { k: 'letter', ch },
+}));
+export const LETTERS = letterBeads('white');
 
 // Beads with one fixed look, shown after the colored ones.
 export const FIXED = [
@@ -1090,10 +1096,11 @@ export function makeBead(d) {
       break;
     }
     case 'letter': {
-      group.add(mesh((geo.cube ||= new RoundedBoxGeometry(0.94, 0.94, 0.72, 5, 0.17)), mat('cube', () => plastic(0xfbf9ff, { roughness: 0.28 }))));
+      const ls = LETTER_STYLES[d.st] || LETTER_STYLES.white, sk = d.st === 'black' ? 'black' : '';
+      group.add(mesh((geo.cube ||= new RoundedBoxGeometry(0.94, 0.94, 0.72, 5, 0.17)), mat('cube' + sk, () => plastic(ls.cube, { roughness: 0.28 }))));
       const face = new THREE.Mesh(
         (geo.face ||= new THREE.PlaneGeometry(0.8, 0.8)),
-        mat('L' + d.ch, () => new THREE.MeshBasicMaterial({ map: letterTex(d.ch), transparent: true, depthWrite: false, toneMapped: false })));
+        mat('L' + d.ch + sk, () => new THREE.MeshBasicMaterial({ map: letterTex(d.ch, ls.ink), transparent: true, depthWrite: false, toneMapped: false })));
       face.position.z = 0.362;
       const faceBack = face.clone();
       faceBack.position.z = -0.362;
