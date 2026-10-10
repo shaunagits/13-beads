@@ -202,15 +202,12 @@ function setBeads(list) {
   // Saved strings keep every bead, even ones from before the length budget.
   beads = list.filter((d) => d && UNIT[d.k]).slice(0, MAX_COUNT).map((d) => mk(d, true));
 }
-// On the tie-off and wall screens, messages show as a note on the canvas that fades after a few seconds.
-let noteTimer = 0;
+// Messages are not shown on screen (a pop-up note covered the string). They still go to a hidden live region,
+// so screen readers announce them.
 function say(m) {
-  $('status').textContent = m;
-  const n = $('note');
-  n.textContent = m;
-  n.classList.remove('gone');
-  clearTimeout(noteTimer);
-  if (mode !== 'stack' || stack.length) noteTimer = setTimeout(() => n.classList.add('gone'), m === STACK_HINT || m === TIED_HINT || m === HINT ? 7000 : 3500);
+  const st = $('status');
+  st.textContent = '';
+  requestAnimationFrame(() => { st.textContent = m; });
 }
 function save() { try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
 const usedLen = () => beads.reduce((a, b) => a + UNIT[b.def.k], 0);
@@ -275,6 +272,7 @@ function setMode(m) {
   $('buildPanel').hidden = m !== 'line';
   $('hud').hidden = false;
   $('hud').dataset.mode = m;
+  $('menu').dataset.mode = m;
   $('stackBtn').setAttribute('aria-pressed', m === 'stack' ? 'true' : 'false');
 
   $('count').hidden = m !== 'line';
@@ -974,11 +972,12 @@ function frame(now) {
   const line = stepRope(dt, n);
   const lc = cumOf(line);
   lineLen = lc[N];
-  const SMAX = clamp(W / 10, 28, 48);
+  // Zoomed out a little: beads are drawn smaller than the string has room for, so more cord and table show.
+  const ZOOM = 0.82, SMAX = clamp(W / 10, 28, 48) * ZOOM;
   // Keep the end beads fully on screen: measure how much string is lost past each edge.
   let edge = 0;
   for (let i = 0; i <= N; i++) { if (line[i].x >= sizeCur * 0.62 + 10) { edge = lc[i]; break; } }
-  const sizeT = U ? Math.min(SMAX, (lineLen - 2 * edge) / U) : SMAX;
+  const sizeT = U ? Math.min(SMAX, ((lineLen - 2 * edge) / U) * ZOOM) : SMAX;
   sizeCur += (sizeT - sizeCur) * (reduce ? 1 : 0.2);
 
   let acc = (lineLen - U * sizeCur) / 2;
@@ -1105,7 +1104,8 @@ function frame(now) {
   camera.lookAt(0, 0, 0);
   stageA.position.set(Math.cos(T * 0.45) * W * 0.6, H * 0.2 + Math.sin(T * 0.6) * H * 0.3, 240);
   table.scale.set(W * 1.6, H * 1.6, 1);
-  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 760, (H * 1.6) / 760);
+  // The wood grain is drawn finer to match, as if the table is a little farther away.
+  if (table.material.map) table.material.map.repeat.set((W * 1.6) / 620, (H * 1.6) / 620);
   stageB.position.set(Math.cos(T * 0.38 + 2.6) * W * 0.6, H * 0.1 + Math.sin(T * 0.5 + 1.7) * H * 0.3, 240);
   deskLamp.position.set(-W * 0.08, H * 0.12, 230);
   deskLamp.distance = Math.max(W, H) * 0.9;
@@ -1355,6 +1355,7 @@ function buildSwatches() {
 function buildTray(keepScroll) {
   const tray = $('tray'), items = TABS[curTab](), x = tray.scrollLeft;
   $('colorStrip').hidden = curTab !== 'colors';
+  $('phraseForm').hidden = curTab !== 'letters';
   renderThumbs(items);
   tray.textContent = '';
   for (const item of items) {
@@ -1488,6 +1489,7 @@ function syncThemeBtn() {
   const dark = isDark();
   $('themeBtn').setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
   $('themeBtn').title = dark ? 'Light mode' : 'Dark mode';
+  $('themeLabel').textContent = dark ? 'Light mode' : 'Dark mode';
 }
 syncThemeBtn();
 onTheme(syncThemeBtn);
@@ -1498,8 +1500,25 @@ $('sound').addEventListener('click', () => {
   arm();
   setMuted(muted);
   $('sound').setAttribute('aria-pressed', muted ? 'false' : 'true');
+  $('soundState').textContent = muted ? 'Off' : 'On';
   if (!muted) tick(1);
 });
+
+// The More menu opens from the header and closes on a tap outside it, on Escape, or after a one-off action.
+function setMenu(open, focusFirst) {
+  $('menu').hidden = !open;
+  $('moreBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && focusFirst) $('menu').querySelector('button').focus({ preventScroll: true });
+}
+// Opened from the keyboard (no pointer, so detail is 0), focus moves into the menu.
+$('moreBtn').addEventListener('click', (e) => { arm(); setMenu($('menu').hidden, e.detail === 0); });
+document.addEventListener('pointerdown', (e) => {
+  if (!$('menu').hidden && !$('menu').contains(e.target) && !$('moreBtn').contains(e.target)) setMenu(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('menu').hidden) { setMenu(false); $('moreBtn').focus({ preventScroll: true }); }
+});
+['restart', 'clear'].forEach((id) => $(id).addEventListener('click', () => setMenu(false)));
 
 /* ---------- Boot ---------- */
 async function start() {
