@@ -1,6 +1,17 @@
 # Project status
 
-Last updated: 2026-10-09 (end of session 2). Everything below is on `main` and deployed to production, except the docs and README screenshot refresh from this checkpoint (staged, not yet committed).
+Last updated: 2026-10-09 (session 3). Everything is on `main` and live. The session 3 list below overrides older details further down where they disagree.
+
+## Session 3 changes (2026-10-09)
+
+- **Bead case:** one compartment per bead type, colored from a 12-color strip above the Beads tab (saved as `13beads.color`). Types: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow (all in every color), plus pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, gold and silver bead caps (a cap turns its cup toward the nearest bead). Bead colors are drawn deeper in mid tones so beads match their dots.
+- **Length budget:** the string holds beads by total width (`BUDGET` in `src/main.js`, about 32 pony beads or 26 letters), not a 26-bead count. The counter shows a fill bar. Shauna wants to revisit this.
+- **View:** the original hanging string, zoomed out a little (beads drawn about 18 percent smaller, finer wood grain). A bead board view (open C on a tilted table) was built, put live, and rejected; it is on branch `bead-board` for reference.
+- **Controls:** no pop-up hint box anywhere (messages go only to a screen-reader live region). Sound, light or dark mode, which end new beads go on, Start over, and Clear live in a header More menu. Undo stays on the canvas. The phrase field is in the Letters tab.
+- **Preview:** "See it finished" ties the loop; that screen offers "Keep editing" and "Add to my wall".
+- **Edit from the wall:** hold or right-click a bracelet on the stand: Edit it, Take it off, or Leave it. Edit puts it back on the string; a string already in progress hangs in its place (unless it is the untouched starter).
+- **Wall simplified:** plain painted wall with a soft fade and faint grain. The limewash clouds, plaster ridges, window light, depth-of-field blur, and bracelet shadows on the wall are gone.
+- **Sound:** the guitar no longer goes through the echo.
 
 ## What exists
 

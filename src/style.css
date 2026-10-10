@@ -211,6 +211,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: 999px; padding: 11px 18px 11px 14px; font: 600 14.5px var(--body); letter-spacing: .01em; white-space: nowrap;
   background: var(--ink); color: var(--bg); border-color: transparent; box-shadow: 0 6px 20px var(--shadow);
 }
+/* The tie-off screen offers two ways on: back to the string, or onto the wall. */
+.fab-row { bottom: 14px; left: 50%; translate: -50% 0; display: flex; gap: 8px; width: max-content; max-width: calc(100% - 20px); }
+.fab-row .fab { position: static; translate: none; }
+.fab.ghost { background: var(--glass); color: var(--ink); border-color: color-mix(in srgb, var(--line) 70%, transparent); box-shadow: 0 4px 16px var(--shadow); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+@media (max-width: 360px) { .fab-row .fab { padding-inline: 12px 14px; font-size: 13.5px; } }
 .note {
   bottom: 70px; left: 50%; translate: -50% 0; width: max-content; max-width: min(340px, calc(100% - 32px));
   margin: 0; padding: 6px 12px; border-radius: 16px; text-align: center; font-size: 12.5px; line-height: 1.35; color: var(--ink);

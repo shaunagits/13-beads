@@ -1,10 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { COLORS, colorBeads, FIXED, LETTERS, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
@@ -22,7 +18,7 @@ const HINT = 'Tap a bead below to add it. On the string: tap to remove, drag to 
 const TIED_HINT = 'Drag to spin it. Tap for sparkles.';
 // Wall decoration: a few curated colors, and the word on the neon sign.
 const WALL_COLORS = {
-  // shade: the deeper tone in the limewash clouds. night: how the wall reads under lamp and neon light.
+  // shade: the deeper tone toward the bottom of the wall. night: how the wall reads under lamp and neon light.
   white: { base: '#f4f0e8', shade: '#ddd3c4', night: 0x8a8ea8 },
   pink: { base: '#f7d3e4', shade: '#e9b3cc', night: 0x9a7fb4 },
   sage: { base: '#cfdecb', shade: '#b4c8b1', night: 0x7d9a94 },
@@ -36,8 +32,8 @@ try {
   if (d && typeof d.sign === 'string' && cleanSign(d.sign).trim()) decor.sign = cleanSign(d.sign).trim();
 } catch (e) { /* optional */ }
 const STACK_HINT = matchMedia('(pointer: coarse)').matches
-  ? 'Tap a bracelet to jingle it. Hold to take it off.'
-  : 'Click a bracelet to jingle it. Hold or right-click to take it off.';
+  ? 'Tap a bracelet to jingle it. Hold it to edit it or take it off.'
+  : 'Click a bracelet to jingle it. Hold or right-click it to edit it or take it off.';
 const EMPTY_WALL = 'Nothing on display yet. Finish a bracelet and hang it here.';
 const STACK_MAX = 12;
 
@@ -296,98 +292,34 @@ const board = new THREE.Group();
 board.visible = false;
 scene.add(board);
 
-// Tileable value noise, layered into soft clouds. Used for the limewash paint and the plaster relief.
-function noiseField(period, seed) {
-  const g = new Float32Array(period * period);
-  let st = seed * 9301 + 49297;
-  for (let i = 0; i < g.length; i++) { st = (st * 9301 + 49297) % 233280; g[i] = st / 233280; }
-  // Coordinates run 0 to 1 across one tile; the lattice wraps at the edge so the texture repeats seamlessly.
-  return (x, y) => {
-    x *= period; y *= period;
-    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
-    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
-    const x0 = ((xi % period) + period) % period, y0 = ((yi % period) + period) % period;
-    const x1 = (x0 + 1) % period, y1 = (y0 + 1) % period;
-    const a = g[y0 * period + x0], b = g[y0 * period + x1], c = g[y1 * period + x0], d = g[y1 * period + x1];
-    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-  };
-}
-function fbm(fields, x, y) {
-  let sum = 0, amp = 0.5, norm = 0;
-  for (const f of fields) { sum += f(x, y) * amp; norm += amp; amp *= 0.5; }
-  return sum / norm;
-}
 const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-// Limewash: one base color with slow cloudy shifts in tone and a little brushed mottling, like a hand-painted wall.
+// A plain painted wall: one color, a touch lighter at the top and a touch deeper toward the shelf, with a faint
+// grain so it does not read as flat plastic. (A limewash, plaster relief, and window light were too busy.)
 function paintTexture(name) {
-  const col = WALL_COLORS[name] || WALL_COLORS.white, S = 768;
+  const col = WALL_COLORS[name] || WALL_COLORS.white, S = 256;
   const c = document.createElement('canvas');
   c.width = c.height = S;
-  const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
-  const clouds = [0, 1, 2, 3, 4].map((o) => noiseField(4 << o, 11 + o)), mott = [0, 1, 2].map((o) => noiseField(48 << o, 40 + o));
+  const x = c.getContext('2d');
   const [r0, g0, b0] = hexRGB(col.base), [rs, gs, bs] = hexRGB(col.shade);
-  for (let j = 0; j < S; j++) {
-    for (let i = 0; i < S; i++) {
-      const u = i / S, v = j / S;
-      // Warp the clouds with themselves so the patches look brushed rather than blobby.
-      const w = fbm(clouds, u + 0.13, v + 0.71) - 0.5;
-      const n = fbm(clouds, u + w * 0.35, v + w * 0.2);
-      const m = fbm(mott, u, v);
-      const k = Math.min(1, Math.max(0, (n - 0.38) * 1.9)) * 0.85 + (m - 0.5) * 0.12;
-      const lift = 1 + (m - 0.5) * 0.035;
-      const o = (j * S + i) * 4;
-      px[o] = (r0 + (rs - r0) * k) * lift; px[o + 1] = (g0 + (gs - g0) * k) * lift; px[o + 2] = (b0 + (bs - b0) * k) * lift; px[o + 3] = 255;
-    }
+  const mix = (k) => `rgb(${Math.round(r0 + (rs - r0) * k)},${Math.round(g0 + (gs - g0) * k)},${Math.round(b0 + (bs - b0) * k)})`;
+  const g = x.createLinearGradient(0, 0, 0, S);
+  g.addColorStop(0, mix(0));
+  g.addColorStop(1, mix(0.35));
+  x.fillStyle = g;
+  x.fillRect(0, 0, S, S);
+  for (let i = 0; i < 2600; i++) {
+    x.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,.025)' : 'rgba(255,255,255,.04)';
+    x.fillRect(Math.random() * S, Math.random() * S, 1, 1);
   }
-  x.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-// Plaster relief: fine grain plus soft trowel ridges, so raking light picks out a real wall surface.
-function plasterTexture() {
-  const S = 512, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const x = c.getContext('2d'), img = x.createImageData(S, S), px = img.data;
-  const grain = [0, 1, 2].map((o) => noiseField(64 << o, 70 + o)), ridge = [0, 1, 2].map((o) => noiseField(6 << o, 90 + o));
-  for (let j = 0; j < S; j++) {
-    for (let i = 0; i < S; i++) {
-      const u = i / S, v = j / S;
-      const r = fbm(ridge, u, v), ridges = 1 - Math.abs(r - 0.5) * 2;
-      const val = 128 + (fbm(grain, u, v) - 0.5) * 120 + Math.pow(ridges, 6) * 46;
-      const o = (j * S + i) * 4;
-      px[o] = px[o + 1] = px[o + 2] = val; px[o + 3] = 255;
-    }
-  }
-  x.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
-const plaster = plasterTexture();
-const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(decor.color), roughness: 0.95, bumpMap: plaster, bumpScale: 3 }));
-wall.receiveShadow = true;
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: paintTexture(decor.color), roughness: 0.95 }));
+// No shadows on the wall: the bracelets hang well in front of it, so their shadows landed far below them as gray ghosts.
+wall.receiveShadow = false;
 wall.position.z = -70;
 board.add(wall);
-
-// Daylight: a soft patch of window light across the wall, with the shadow of the window frame.
-function windowTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 512;
-  const x = c.getContext('2d');
-  x.filter = 'blur(9px)';
-  x.transform(1, 0.22, -0.3, 1, 150, -40);
-  x.fillStyle = 'rgba(255,238,205,.9)';
-  for (let col = 0; col < 2; col++) for (let row = 0; row < 3; row++) x.fillRect(90 + col * 150, 70 + row * 130, 134, 114);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-const windowLight = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
-  map: windowTexture(), transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-}));
-windowLight.position.z = -68.5;
-board.add(windowLight);
 
 // A neon-style sign in script. It glows at night and sits unlit by day.
 function neonTexture(lit) {
@@ -445,7 +377,6 @@ function applyMood() {
   scene.environmentIntensity = !onWall ? 0.55 : night ? 0.2 : 0.5;
   stageA.intensity = stageB.intensity = onWall ? 0.12 : reduce ? 0.5 : 1.0;
   wall.material.color.set(night ? (WALL_COLORS[decor.color] || WALL_COLORS.white).night : 0xffffff);
-  windowLight.visible = onWall && !night;
   // The craft table: evenly lit by day; in dark mode the room dims and a warm desk lamp pools light in the middle.
   const deskNight = !onWall && isDark();
   if (table.material.map) {
@@ -464,23 +395,6 @@ function applyMood() {
 onTheme(applyMood);
 
 // Depth of field on the wall: bracelets stay sharp, the wall behind falls slightly soft, like a phone photo.
-let composer = null, bokeh = null, composerKey = '';
-// With reduced motion the blur is off, but the pipeline stays so the window light and neon are tone mapped the same.
-function renderWall(dist) {
-  if (!composer) {
-    composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4, 4, { samples: 4, type: THREE.HalfFloatType }));
-    composer.addPass(new RenderPass(scene, camera));
-    bokeh = new BokehPass(scene, camera, { focus: dist, aperture: 0.000022, maxblur: 0.003 });
-    bokeh.enabled = !reduce;
-    composer.addPass(bokeh);
-    composer.addPass(new OutputPass());
-  }
-  const key = W + 'x' + H + '@' + renderer.getPixelRatio();
-  if (key !== composerKey) { composerKey = key; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(W, H); }
-  bokeh.uniforms.focus.value = dist;
-  composer.render();
-}
-
 // The display piece: a gold T-bar jewelry stand on a wood shelf. Bracelets hang from its bars on
 // small hooks, facing forward so every phrase can be read, and swing when touched.
 const stand = new THREE.Group();
@@ -647,9 +561,6 @@ function wear() {
 }
 function updateStack(dt) {
   wall.scale.set(W * 1.4, H * 1.4, 1);
-  plaster.repeat.set((W * 1.4) / 360, (H * 1.4) / 360);
-  windowLight.scale.set(Math.max(W, H) * 1.15, Math.max(W, H) * 1.15, 1);
-  windowLight.position.set(W * 0.12, H * 0.06, -68.5);
   {
     const g = wallGrid(), signH = clamp(g.top - 50, 30, 70), topY = H / 2 - g.top;
     neon.scale.set(signH * 2.14, signH, 1);
@@ -717,7 +628,7 @@ function openPop(r, opener) {
   if (y + ph > H - 74) y = top - ph - 8;
   pop.style.left = clamp(cx - pw / 2, 10, W - pw - 10) + 'px';
   pop.style.top = clamp(y, 10, H - ph - 10) + 'px';
-  $('popKeep').focus({ preventScroll: true });
+  $('editRing').focus({ preventScroll: true });
 }
 function closePop(restore = true) {
   if (!popRing) return;
@@ -1111,7 +1022,7 @@ function frame(now) {
   deskLamp.distance = Math.max(W, H) * 0.9;
   if (mode === 'stack') updateStack(dt);
   tickMaterials(T);
-  if (mode === 'stack') renderWall(dist); else renderer.render(scene, camera);
+  renderer.render(scene, camera);
 }
 
 /* ---------- Pointer: tap to pull off, drag to reorder ---------- */
@@ -1467,6 +1378,28 @@ $('takeOff').addEventListener('click', () => {
   if (fromKeys) { const n = $('ringBtns').children[Math.min(i, rings.length - 1)]; (n || $('another')).focus({ preventScroll: true }); }
 });
 $('popKeep').addEventListener('click', closePop);
+// Edit a bracelet from the wall: it comes off the stand and back onto the string. A string already in progress is
+// not lost: it hangs on the stand in the edited bracelet's place (unless it is just the untouched starter).
+$('editRing').addEventListener('click', () => {
+  const i = rings.indexOf(popRing);
+  closePop(false);
+  if (i < 0) return;
+  const at = stack.length - 1 - i, list = stack[at];
+  const current = defs(), isStarter = JSON.stringify(current) === JSON.stringify(STARTER);
+  if (current.length && !isStarter) stack[at] = current;
+  else stack.splice(at, 1);
+  saveStack();
+  rebuildStack();
+  syncStack();
+  clearInterval(phraseTimer);
+  setBeads(list);
+  undoStack.length = 0;
+  sync();
+  kLin = 0;
+  setMode('line');
+  tick(1.2, 0.12);
+  say(current.length && !isStarter ? 'Back on the string. Your string in progress went on the wall in its place.' : 'Back on the string. Edit it, then add it to your wall again.');
+});
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (popRing) closePop();
