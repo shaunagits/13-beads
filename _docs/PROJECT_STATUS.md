@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and live, including these docs.
+Last updated: 2026-10-11 (end of session 4). Everything below is on `main` and live, including these docs.
 
 ## What exists
 
@@ -10,7 +10,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 - A 3D cord simulated as a weighted rope (Verlet chain with gravity): beads weigh it down, a pluck bends it at the finger, phone tilt tips gravity. Drawn zoomed out a little (`ZOOM = 0.82` in `frame` in `src/main.js`): beads are about 18 percent smaller than the cord has room for.
 - Tabletop: gray felt like a bead mat by default (`src/assets/felt.jpg` and `felt-normal.jpg`, CC0 ambientCG "Fabric 034"), or dark wood (`src/assets/table-dark.jpg`, CC0 Poly Haven "Dark Wood"). Picked in the More menu (Table: Felt / Wood), saved as `13beads.table`. The cord is lavender gray on felt and pale on wood. In dark mode the room dims under a warm desk lamp. The table is drawn beneath everything and is partly self-lit so stage lights do not tint it much.
 - Canvas controls: bead count with a fill bar (top left); Undo, Redo, and Clear (trash) icons (top right, each grayed out when it would do nothing); "See it finished" (bottom center). No pop-up hint box anywhere: messages go only to a hidden screen-reader live region (`#status`).
-- Header: wordmark, Tilt (iPhone only, until allowed), Your wall (with count badge), and a "⋯" More menu: Sound, Light or Dark mode, Table (Felt / Wood), which end new beads go on, and Start over.
+- Header: wordmark, Tilt (iPhone only, until allowed), Your wall (with count badge), and a "⋯" More menu: Sound, Light or Dark mode, Table (Felt / Wood), Strands (One / Two), which end new beads go on, and Start over.
 - Touch: tap a case compartment to add a bead (it slides on and plays the next note). On the string: tap to pull a bead off, drag to reorder, pluck the cord (press must start on it), swipe fast to strum. Cmd or Ctrl + Z undoes; with Shift, or Ctrl + Y, redoes.
 - Length budget: the string holds beads by total width (`BUDGET = 25` units, about 32 pony beads or 26 letters, or about 80 clay discs), not by count. Older saved strings over the budget keep all their beads.
 - Starter bracelet (first visit, and Start over): pearl, gold glitter, sparkle, 1 3, hot pink, B E A D S, sparkle, gold glitter, pearl. Round white letters; an older saved cube starter still counts as the untouched starter (`LEGACY_STARTER` in `src/main.js`).
@@ -32,7 +32,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 **Bead case** (clear plastic organizer, lid folds it away; tabs Beads, Letters, Charms, Dangles)
 - Beads tab: a 16-color strip (saved as `13beads.color`; blush, baby blue, cream, and navy were added at the end of `COLORS` and placed by `COLOR_ORDER`), then one compartment per type in that color: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow, matte, star bead, dice, small faceted crystal, seed bead, frosted glitter seed bead, silver-lined seed bead. Then pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, marbled pearl, moonstone, clear, pearl, and gunmetal seed beads, frosted square seed bead, gunmetal spacer, gold and silver bead caps. Seed beads are about a third of a pony bead wide (about 89 fit). Tiny beads are drawn larger in their compartments (`TINY` in `src/main.js`). A cap turns its cup toward the nearest bead. Mid-tone colors are drawn deeper (`deep` in `src/beads.js`) so beads match their dots.
 - Letters tab: a row with the shape switch (Round, the default, or Cube) and five looks (White, Black, Pink letters on white, Gold letters on black, Frosted clear with gold letters), then the phrase field ("Type a word or phrase"), then A to Z, a pink heart bead, 0 to 9, ! ? &. Typing a heart (or <3) in the phrase adds a heart bead. Saved as `{ k: 'letter', ch, st?, sh? }`: no `st` is white, no `sh` is a cube, so every bracelet saved before round letters keeps its cubes. Shape and look are not remembered between visits.
-- Charms (26) and Dangles (20 hanging charms; the last four, from Shauna's photos: lucky rock, evil eye, heart and arrow, potted cactus); sizes in `BOOST` in `src/beads.js`.
+- Charms (26) and Dangles (20 hanging charms; the last four, from Shauna's photos: lucky rock, evil eye, heart and arrow, potted cactus in 3D); sizes in `BOOST` in `src/beads.js`. The snake charm is an S-curve with a diamond head lying along the string (`snakeGeo`, `snakeHeadGeo`), about two beads wide; compartment pictures shrink long charms to fit.
 
 **Tie-off (mode `tied`)**
 - The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 85 shiny pastel foil stars and 30 small maple leaves that tumble and flutter down (off with reduced motion).
@@ -52,12 +52,12 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 **Sound (`src/audio.js`)**: musical, D major. Stringing plays a melody over I, V, vi, IV; charms add bells; strumming arpeggiates; hanging resolves home. Acoustic guitar voice by default, through a small room reverb. The ping-pong echo is off for the guitar (it made plucks sound doubled); the other voices still use it.
 
-**Footer**: "‹ More games" and "Made by Shauna".
+**Footer**: "‹ More games" and "Made by Shauna", with "Fan-made. Not affiliated with any artist or label." centered below.
 
 ## Not verified
 
-- Two strands on a real phone: the cord picker and moved finish button, dragging beads between cords, and how the Cross and Diamond patterns read at phone size.
-
+- Two strands on a real phone: the cord picker and moved finish button, tapping a cord to pick it, dragging beads between cords, and how Cross, Diamond, and Bubble read at phone size. Shauna said she will test Bubble.
+- Session 4 beads and charms on a phone (seed beads, round letters, the new dangles, the S snake), and the jump chips and Recent row.
 - Shake to spill on a real phone (only simulated motion events were tested), and whether two 17 m/s² jolts is the right strength.
 - Tilt and the iPhone permission button.
 - The phone share sheet for Save card, Send link, and Save photo (only desktop downloads and clipboard were exercised).
@@ -67,7 +67,9 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 
 ## Open with Shauna
 
-- Twist and Daisy patterns, and whether pattern joining beads get a second color (automatic contrast or a picker).
+- Bubble pattern (she will test), then Twist and Daisy; whether pattern joining beads get a second color (automatic contrast or a picker).
+- "Some of the beads are missing" (2026-10-10 phone screenshot): read as the empty compartments, which were removed. If she meant beads missing from a bracelet, which era.
+- Snake color: keep green, or silver, or add a black version for Reputation.
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
 - Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
@@ -163,6 +165,7 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 | 2026-10-10 | Surprise me names | Album titles, plus a fan-made note in the footer | Shauna picked option A. Still never the artist's name, logos or title lettering, cover art, or lyrics. Revisit if the game ever becomes paid or sponsored. |
 | 2026-10-10 | Surprise me name | Spelled in letter beads on the bracelet; the count pill label was removed | Shauna: she wants the name in the bracelet with the other styled beads, not in the corner of the screen. |
 | 2026-10-10 | Snake charm | Redrawn as an S-curve (diamond head, tail tapering to a point) lying along the string, replacing the coil | Shauna's reference: a simple S-shaped snake silhouette. Drawn fresh in code, not traced. Width 2.05 units; compartment thumbnails shrink long charms to fit. |
+| 2026-10-10 | Design board | A Claude design canvas with editable mockups built from the real CSS plus live screenshots | Shauna wanted somewhere to refine the screens. Built in the game's own look, not a design system (her pick). See `_docs/findings/2026-10-11-design-board.md`. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
@@ -191,3 +194,10 @@ Last updated: 2026-10-10 (end of session 3). Everything below is on `main` and l
 - `pkill -f "vite preview"` from the shell killed the shell itself. Start the preview with `setsid` on a fresh port instead.
 - In tests, Playwright's `$eval(click)` has `detail` 0, so the More menu opens as if from the keyboard and focuses its first item. That focus ring in screenshots is expected.
 - The share card's QR canvas sat under a global `.stage canvas` rule (absolute, full size). Scope canvas rules to the game canvas.
+- Session 4: `pkill -f "vite preview"` killed the shell again. Start each preview on a new port with `setsid` instead; the preview also stopped by itself between some tool calls, so check it answers before screenshotting.
+- Session 4: the device link cannot push (no GitHub login on the Mac) and the first `add_repo` request was refused by the permission check; on the second try it went through. Shauna pushed the confetti commit herself in between. Fetch before assuming what is on `main`.
+- Session 4: git on the Mac needed delete permission for the folder (lock files). Granted once per session via the delete permission prompt.
+- Era bracelet names went through three versions in one evening: a 3.5 second label in the count pill (missed), the label kept while customizing (she did not want a label at all), then the name spelled in letter beads on the bracelet. Ask where text should live before building a label.
+- Frosted gold letters read too faintly on the felt at bracelet size; gold on black or white letters read well.
+- Empty spacer compartments (to start each tray group on a new column) looked like missing beads on her phone. Do not leave empty wells in the case.
+- The first S snake was too small and thin on the string; it needed about twice the length and a thicker tube to read.
