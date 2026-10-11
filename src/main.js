@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import qrcode from 'qrcode-generator';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing, layoutCords, cordGap, cordOf, withCord, PRESETS } from './beads.js';
+import { encodeBracelet, decodeBracelet, COLORS, COLOR_ORDER, PARTNER, colorBeads, FIXED, LETTERS, letterBeads, letterDef, isLetterChar, HEART, LETTER_STYLE_ORDER, CHARMS, DANGLES, UNIT, DANGLE, makeBead, tickMaterials, defKey, capFacing, layoutCords, cordGap, cordOf, withCord, PRESETS } from './beads.js';
 import { isDark, onTheme, toggleTheme } from './theme.js';
 import tableUrl from './assets/table-dark.jpg';
 import feltUrl from './assets/felt.jpg';
@@ -1732,7 +1732,8 @@ try { colorIdx = clamp(parseInt(localStorage.getItem('13beads.color'), 10) || 0,
 const PATTERN_NAMES = { cross: 'Cross', diamond: 'Diamond', bubble: 'Bubble' };
 const patterns = () => (twoCords ? Object.keys(PATTERN_NAMES).map((p) => {
   const c = COLORS[colorIdx];
-  return { name: PATTERN_NAMES[p] + ' pattern in ' + c.name.toLowerCase(), pattern: p, def: { k: 'pattern', p, h: c.h, s: c.s, l: c.l } };
+  const pc = COLORS[PARTNER[colorIdx]], with_ = p === 'bubble' ? ' with pearls' : ' and ' + pc.name.toLowerCase();
+  return { name: PATTERN_NAMES[p] + ' pattern in ' + c.name.toLowerCase() + with_, pattern: p, def: { k: 'pattern', p, h: c.h, s: c.s, l: c.l, j: PARTNER[colorIdx] } };
 }) : []);
 // The first compartment strings a ready-made bracelet; each tap brings the next one.
 const SURPRISE = { name: 'Surprise me', surprise: true, def: { k: 'surprise' } };
@@ -1835,14 +1836,16 @@ function patternThumb(d) {
   c.width = c.height = s;
   const col = `hsl(${d.h} ${d.s}% ${Math.min(d.l, 70)}%)`, dark = `hsl(${d.h} ${d.s}% ${Math.max(8, d.l - 26)}%)`;
   x.strokeStyle = 'rgba(120, 110, 150, .7)'; x.lineWidth = 2;
-  const bead = (bx, by, r, fill) => {
+  const pc = COLORS[d.j ?? 0], jcol = `hsl(${pc.h} ${pc.s}% ${Math.min(pc.l, 70)}%)`, jdark = `hsl(${pc.h} ${pc.s}% ${Math.max(8, pc.l - 26)}%)`;
+  const bead = (bx, by, r, fill, shade = dark) => {
     const g = x.createRadialGradient(bx - r * 0.35, by - r * 0.35, r * 0.1, bx, by, r);
-    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, fill); g.addColorStop(1, dark);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, fill); g.addColorStop(1, shade);
     x.fillStyle = g; x.beginPath(); x.arc(bx, by, r, 0, Math.PI * 2); x.fill();
   };
   if (d.p === 'cross') {
     x.beginPath(); x.moveTo(8, 56); x.quadraticCurveTo(56, 14, 104, 56); x.moveTo(8, 56); x.quadraticCurveTo(56, 98, 104, 56); x.stroke();
-    for (const [bx, by] of [[30, 56], [82, 56], [56, 34], [56, 78]]) bead(bx, by, 11, col);
+    for (const [bx, by] of [[56, 34], [56, 78]]) bead(bx, by, 11, col);
+    for (const bx of [30, 82]) bead(bx, 56, 11, jcol, jdark);
   } else if (d.p === 'bubble') {
     x.beginPath(); x.ellipse(56, 56, 36, 26, 0, 0, Math.PI * 2); x.stroke();
     for (let i = 0; i < 5; i++) { const a = Math.PI * (0.18 + (i / 4) * 0.64); bead(56 - Math.cos(a) * 36, 56 - Math.sin(a) * 26, 6, col); bead(56 - Math.cos(a) * 36, 56 + Math.sin(a) * 26, 6, col); }
@@ -1850,7 +1853,7 @@ function patternThumb(d) {
   } else {
     x.beginPath(); x.moveTo(6, 56); x.lineTo(56, 28); x.lineTo(106, 56); x.lineTo(56, 84); x.closePath(); x.stroke();
     for (const [bx, by] of [[38, 38], [56, 30], [74, 38], [38, 74], [56, 82], [74, 74]]) bead(bx, by, 7, col);
-    for (const bx of [18, 94]) bead(bx, 56, 12, col);
+    for (const bx of [18, 94]) bead(bx, 56, 12, jcol, jdark);
   }
   return c.toDataURL('image/png');
 }
@@ -1859,10 +1862,12 @@ function patternThumb(d) {
 function addPattern(p) {
   if (mode !== 'line' || !twoCords) return;
   const c = COLORS[colorIdx], col = { h: c.h, s: c.s, l: c.l }, end = side;
+  const pc = COLORS[PARTNER[colorIdx]], join = { h: pc.h, s: pc.s, l: pc.l };
   const edge = beads.length ? (end === 'L' ? beads[0] : beads[beads.length - 1]).def : null;
   const joined = edge && cordOf(edge) === 2;
   // Bubble: a pearl on both cords, five seed beads on each cord, then another pearl, for big airy loops.
-  const shared = p === 'cross' ? { k: 'seed', ...col, c: 2 } : p === 'bubble' ? { k: 'pearl', c: 2 } : { k: 'facet', ...col, c: 2 };
+  // The beads where the cords meet take the partner color (Bubble keeps its pearls).
+  const shared = p === 'cross' ? { k: 'seed', ...join, c: 2 } : p === 'bubble' ? { k: 'pearl', c: 2 } : { k: 'facet', ...join, c: 2 };
   const seed = (cd) => ({ k: 'seed', ...col, c: cd });
   const each = p === 'cross' ? 1 : p === 'bubble' ? 5 : 3;
   const run = [...Array(each).fill(0).map(() => seed(0)), ...Array(each).fill(0).map(() => seed(1))];

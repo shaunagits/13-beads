@@ -23,6 +23,9 @@ export const COLORS = [
   // by its place in this list; COLOR_ORDER sets where each one shows on the strip.
   ['Blush', 14, 60, 80], ['Baby blue', 200, 78, 80], ['Cream', 40, 70, 90], ['Navy', 228, 70, 28],
 ].map(([name, h, s, l]) => ({ name, h, s, l }));
+// Two-strand patterns put a partner color on the beads where the cords meet, so the shape reads. One hand-picked
+// partner per strip color, by index into COLORS (Shauna approved automatic pairing over a picker, 2026-10-11).
+export const PARTNER = [11, 11, 14, 15, 15, 14, 11, 3, 11, 8, 11, 10, 0, 15, 15, 14];
 export const COLOR_ORDER = [0, 12, 1, 2, 3, 14, 4, 5, 6, 13, 7, 15, 8, 9, 10, 11];
 
 // Bead types that come in every strip color. A bead's def is { k, h, s, l }.
@@ -118,14 +121,15 @@ const B = (k, color) => ({ k, ...tint(color) });
 // Each era bracelet spells its name in letter beads in the middle, styled to the era, with its charm right after the
 // word and the era's beads on both sides. The two longest titles use their short forms.
 const spell = (word, st) => [...word].map((ch) => (ch === ' ' ? { k: 'spacer' } : letterDef(ch, st, 'round')));
-const era = (name, word, st, half, charm) => ({ name, beads: [...half, ...spell(word, st), charm, ...half.slice().reverse()] });
+// An optional second charm (pre) goes right before the word.
+const era = (name, word, st, half, charm, pre) => ({ name, beads: [...half, ...(pre ? [pre] : []), ...spell(word, st), charm, ...half.slice().reverse()] });
 export const PRESETS = [
   era('Midnights', 'MIDNIGHTS', 'white', [B('seed', 'Navy'), B('facet', 'Navy'), B('starb', 'Blue'), B('facet', 'Navy'), B('starb', 'Baby blue'), { k: 'moon2' }], { k: 'moon' }),
   era('Fearless', 'FEARLESS', 'gold', [{ k: 'pearl' }, B('glitter', 'Yellow'), B('pony', 'Cream'), B('glitter', 'Yellow'), { k: 'ball' }], { k: 'guitar' }),
   era('Speak Now', 'SPEAK NOW', 'white', [B('jelly', 'Lavender'), B('glitter', 'Purple'), { k: 'rondelle' }, B('crystal', 'Purple')], { k: 'butterfly' }),
   era('Red', 'RED', 'black', [B('pony', 'Black'), B('pony', 'Red'), B('pony', 'White'), B('pony', 'Red'), B('metal', 'Red'), B('pony', 'Red')], { k: 'scarf' }),
   era('1989', '1989', 'white', [B('pony', 'Baby blue'), B('pony', 'White'), B('round', 'Sky'), B('pony', 'White'), { k: 'spacer' }, B('pony', 'Baby blue')], { k: 'photo' }),
-  era('Reputation', 'REPUTATION', 'black', [B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], { k: 'snake', m: 'black' }),
+  era('Reputation', 'REPUTATION', 'black', [B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], { k: 'snake' }, { k: 'snake', m: 'black' }),
   era('Lover', 'LOVER', 'pink', [B('pony', 'Blush'), B('pony', 'Baby blue'), B('pony', 'Lavender'), { k: 'pearl' }, B('jelly', 'Hot pink'), B('pony', 'Blush')], { k: 'pheart' }),
   era('Folklore', 'FOLKLORE', 'white', [B('clay', 'Cream'), B('matte', 'White'), B('round', 'Black'), B('clay', 'Cream'), { k: 'pearl' }], { k: 'cardigan' }),
   era('Evermore', 'EVERMORE', 'white', [B('clay', 'Orange'), B('round', 'Cream'), B('matte', 'Orange'), { k: 'ball' }, B('round', 'Teal')], { k: 'leaf' }),
