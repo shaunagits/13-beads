@@ -355,6 +355,8 @@ function setMode(m) {
   $('hud').dataset.mode = m;
   $('menu').dataset.mode = m;
   $('stackBtn').setAttribute('aria-pressed', m === 'stack' ? 'true' : 'false');
+  $('backArrow').setAttribute('aria-label', m === 'line' ? 'Back to all games' : 'Back to your string');
+  $('backArrow').title = m === 'line' ? 'All games' : 'Back to your string';
 
   $('count').hidden = m !== 'line';
   closePop(false);
@@ -2221,6 +2223,14 @@ $('shareCard').addEventListener('submit', (e) => {
 $('cardCancel').addEventListener('click', () => closeShare());
 $('shareCard').addEventListener('keydown', (e) => trapTab(e, $('shareCard')));
 $('another').addEventListener('click', () => setMode('line'));
+// The header's back arrow: on the stringing screen it goes to the games site; on Finished and the wall it goes back
+// to the string (Shauna, 2026-10-11).
+$('backArrow').addEventListener('click', (e) => {
+  if (mode === 'line') return;
+  e.preventDefault();
+  arm();
+  setMode('line');
+});
 $('takeOff').addEventListener('click', () => {
   const i = rings.indexOf(popRing), fromKeys = popOpener && popOpener.classList.contains('ring-btn');
   closePop(false);

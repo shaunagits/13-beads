@@ -10,7 +10,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - A 3D cord simulated as a weighted rope (Verlet chain with gravity): beads weigh it down, a pluck bends it at the finger, phone tilt tips gravity. Drawn zoomed out a little (`ZOOM = 0.82` in `frame` in `src/main.js`): beads are about 18 percent smaller than the cord has room for.
 - Tabletop: gray felt like a bead mat by default (`src/assets/felt.jpg` and `felt-normal.jpg`, CC0 ambientCG "Fabric 034"), or dark wood (`src/assets/table-dark.jpg`, CC0 Poly Haven "Dark Wood"). Picked in the More menu (Table: Felt / Wood), saved as `13beads.table`. The cord is lavender gray on felt and pale on wood. In dark mode the room dims under a warm desk lamp. The table is drawn beneath everything and is partly self-lit so stage lights do not tint it much.
 - Nothing sits on the canvas while stringing (redesign of 2026-10-11). A command bar under it (`#cmdBar` in `#lineBar`): Undo, Redo, Clear as bare 44px icons on the left (grayed out when they would do nothing), the bead count over a 56 x 4 fill bar in the middle, and "See it finished" (loop-and-knot icon, the one dark button) on the right. On two strands, the Top / Bottom / Both picker is a full-width row above it. No pop-up hint box anywhere: messages go only to a hidden screen-reader live region (`#status`), which also says the color picked ("Navy beads").
-- Header: a back arrow to the games site before the wordmark, Tilt (iPhone only, until allowed), Your wall (with count badge), and a "⋯" More menu: Sound, Light or Dark mode, Table (Felt / Wood), Strands (One / Two), which end new beads go on, and Start over. Every header button is 44px.
+- Header: a back arrow before the wordmark (to the games site while stringing; back to the string on Finished and the wall), Tilt (iPhone only, until allowed), Your wall (with count badge), and a "⋯" More menu: Sound, Light or Dark mode, Table (Felt / Wood), Strands (One / Two), which end new beads go on, and Start over. Every header button is 44px.
 - The game fills one screen (100dvh); the footer sits below it, one swipe down.
 - Wide screens (900px and up): the bead case is a 360px panel on the right, full height, scrolling down in labeled groups with colors in two rows of eight; the bracelet and command bar take the left. On Finished and Wall the canvas spans the full width (those screens are not redesigned yet).
 - Touch: tap a case compartment to add a bead (it slides on and plays the next note). On the string: tap to pull a bead off, drag to reorder, pluck the cord (press must start on it), swipe fast to strum. Cmd or Ctrl + Z undoes; with Shift, or Ctrl + Y, redoes.
@@ -72,7 +72,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
-- Finished and Wall redesign: reviewed (`_docs/findings/2026-10-11-finished-wall-ux-review.md`); next step is boards for Shauna to approve. Open: should the back arrow go back to stringing on Finished and Wall, or always to the games site?
+- Finished and Wall redesign: reviewed (`_docs/findings/2026-10-11-finished-wall-ux-review.md`); next step is boards for Shauna to approve. 
 - Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
 - True-size beads: on hold.
 
@@ -179,6 +179,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-11 | Edit the sign from the wall | Tap the neon sign to open the sign editor, same limits (12 characters, letters, numbers, spaces, ! ? &) | Shauna asked. Reuses Decorate so there is one editor. |
 | 2026-10-11 | Stringing redesign | Built and live: controls off the canvas, command bar, fixed-height case, desktop right panel, footer below the fold | Shauna asked to see it on the live site after the boards. |
 | 2026-10-11 | Back to the games site | Back arrow before the wordmark (her option B) | Shauna's pick of three ideas. |
+| 2026-10-11 | Back arrow on Finished and Wall | Goes back to the stringing screen; on stringing it goes to the games site | Shauna. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
