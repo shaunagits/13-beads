@@ -4,8 +4,8 @@ Top item is the next thing to do.
 
 ## Next
 
-1. **Stringing screen redesign, after Shauna approves the board.** Boards "Stringing, clear view" (phone) and "Stringing, desktop clear view" on the design board; spec in `_docs/findings/2026-10-11-stringing-ux-review.md`. Needs a back-to-games link placement first. Do not build before her approval.
-2. **Phone checks.** On a real phone: shake to spill (tap Tilt first on iPhone; tune the 17 m/s² threshold in `listenShake` if needed), trade links end to end with a QR scan, the share sheet for Save card and Send link, cone spinning and press-and-hold, and Tilt. Also session 4 and 5: the black snake, two strands (and the partner colors in Cross and Diamond) (cord picker, tap a cord, drag between cords, Cross, Diamond, Bubble), the new beads and charms, the jump chips, and Surprise me.
+1. **Finished and Wall redesign boards.** Mock up the reviewer's proposal (`_docs/findings/2026-10-11-finished-wall-ux-review.md`) on the design board for Shauna to approve before building.
+2. **Phone checks.** Include the new stringing layout: swipe on the case header, the fold, the command bar on a real phone, and the footer below the fold. On a real phone: shake to spill (tap Tilt first on iPhone; tune the 17 m/s² threshold in `listenShake` if needed), trade links end to end with a QR scan, the share sheet for Save card and Send link, cone spinning and press-and-hold, and Tilt. Also session 4 and 5: the black snake, two strands (and the partner colors in Cross and Diamond) (cord picker, tap a cord, drag between cords, Cross, Diamond, Bubble), the new beads and charms, the jump chips, and Surprise me.
 3. **Heart hands model.** Shauna scans her sculpture (`_docs/findings/2026-10-08-heart-hands-model.md`) or finds an openly licensed model.
 4. **Wall decorating.** Only if it can be done well: fairy lights, photos on a wire, drag-to-place items, around the cones.
 

@@ -43,8 +43,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .back span { display: none; }
 @media (min-width: 560px) { .back span { display: inline; } .back { padding-right: 10px; } }
 header { justify-content: flex-start; flex-wrap: nowrap; }
-@media (max-width: 430px) { .head-right { gap: 0; } .hbtn { width: 36px; height: 36px; } .mark { gap: 2px; } .mark span { width: 22px; } .mark span.dot { width: 10px; } }
-@media (max-width: 380px) { .mark span { width: 19px; height: 21px; font-size: 13px; } .mark span.dot { width: 8px; } .hbtn { width: 34px; } .back { margin-left: -8px; padding-inline: 4px; } }
+@media (max-width: 430px) { .head-right { gap: 0; } .mark { gap: 2px; } .mark span { width: 22px; } .mark span.dot { width: 10px; } }
+@media (max-width: 380px) { .mark span { width: 19px; height: 21px; font-size: 13px; } .mark span.dot { width: 8px; } }
 .head-right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 /* The More menu: settings and the less frequent stringing actions, folded behind one header button. */
 header { position: relative; z-index: 5; }
@@ -69,11 +69,7 @@ header { position: relative; z-index: 5; }
 .menu-row .mi-label { font-size: 13.5px; }
 .menu-rule { height: 1px; margin: 4px 8px; background: var(--line); }
 @media (prefers-reduced-motion: reduce) { .menu { animation: none; } }
-.count { position: absolute; top: 12px; left: 12px; z-index: 1; padding: 4px 10px 7px; border-radius: 999px; background: rgba(20, 12, 8, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); font: 600 12.5px var(--body); color: #fff; font-variant-numeric: tabular-nums; pointer-events: none; }
 /* How full the string is: the bracelet holds beads by length, so a thin bar fills instead of a count running out. */
-.count-bar { position: absolute; left: 10px; right: 10px; bottom: 3px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .25); overflow: hidden; }
-.count-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); background: #fff; border-radius: inherit; transition: width .25s; }
-.count.full .count-bar::after { background: #ffb3d9; }
 @media (prefers-reduced-motion: reduce) { .count-bar::after { transition: none; } }
 .btn:disabled { opacity: .45; cursor: default; }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -205,21 +201,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: inset 0 3px 6px var(--well-shade), inset 0 -1px 0 var(--plastic-edge);
 }
 .bead-btn img { width: 50px; height: 50px; display: block; pointer-events: none; }
-/* The case's top edge is its lid: tap it to fold the case away and give the string more room. */
-.case-lid {
-  position: relative; z-index: 2; width: 100%; display: flex; align-items: center; justify-content: space-between;
-  min-height: 34px; padding: 4px 6px; border: 0; background: transparent; color: var(--muted); font: 600 12.5px var(--body);
-}
-.case-lid::before {
-  content: ""; position: absolute; left: 50%; top: 6px; width: 38px; height: 4px; translate: -50% 0; border-radius: 2px; background: var(--well-shade);
-}
-.lid-chev { transition: rotate .2s; }
-.case.closed .lid-chev { rotate: 180deg; }
-.case-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
-.case.closed .case-body { display: none; }
-.case.closed { padding-bottom: 4px; }
-.case .row { padding: 0 2px; }
-@media (prefers-reduced-motion: reduce) { .lid-chev { transition: none; } }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .actions .btn { flex: 1; }
 .actions .btn.primary { flex: 2; }
@@ -320,12 +301,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .side .seg { width: 36px; height: 30px; padding: 0; display: grid; place-items: center; }
 .side .seg.surf, .side .seg.strands { width: auto; padding: 0 11px; font-size: 13px; }
 .icon-btn:disabled { opacity: .35; }
-/* Two strands: which cord new beads go on, at the bottom left of the canvas. */
-.hud .cord-pick { left: 10px; bottom: 17px; gap: 2px; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); }
-.hud .cord-pick[hidden] { display: none !important; }
-.hud.two #tie { left: auto; right: 10px; translate: none; }
-.cord-pick .seg { height: 34px; padding: 0 11px; display: grid; place-items: center; color: var(--ink); font-size: 13px; }
-.cord-pick .seg[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
 .hud .side { left: 10px; bottom: 17px; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); }
 
 /* A quiet line at the very bottom: back to the arcade, and the credit. */
@@ -333,3 +308,149 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .fan-note { flex-basis: 100%; margin: 0 0 4px; text-align: center; color: var(--muted); font: 500 11px var(--body); opacity: .8; }
 .credit a { display: inline-flex; align-items: center; gap: 2px; min-height: 32px; color: var(--muted); text-decoration: none; font: 500 12.5px var(--body); }
 .credit a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Stringing redesign (2026-10-11): nothing on the canvas, a command bar under it, a fixed-height bead case ---------- */
+:root {
+  --track: rgba(35, 26, 54, .06); --seg-on: #ffffff; --seg-shadow: 0 1px 3px rgba(45, 20, 80, .18);
+  --tint-bg: #fbe1ee; --tint-ink: #a3165f; --bar-track: rgba(35, 26, 54, .12); --ring-gap: #f6f4fa;
+  --grab: rgba(40, 30, 70, .18); --soft-shadow: rgba(45, 20, 80, .25);
+}
+:root[data-theme="dark"] {
+  --track: rgba(255, 255, 255, .07); --seg-on: #352a50; --seg-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  --tint-bg: rgba(255, 95, 174, .16); --tint-ink: #ffb3d9; --bar-track: rgba(255, 255, 255, .14); --ring-gap: #1d1730;
+  --grab: rgba(255, 255, 255, .22); --soft-shadow: rgba(0, 0, 0, .5);
+}
+/* The game fills one screen; the footer waits below it, a swipe away. */
+html, body { height: auto; min-height: 100%; }
+.app { height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: 520px; gap: 8px; padding-block: 12px 8px; }
+.credit { max-width: 760px; margin: 0 auto; padding: 8px 2px 16px; }
+.stage { min-height: 200px; }
+/* Header: a back arrow to the games site, then the wordmark; every button a full 44px. */
+header { gap: 8px; min-height: 44px; }
+.back-arrow {
+  flex: none; width: 44px; height: 44px; margin: 0 -8px 0 -14px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--muted); text-decoration: none;
+}
+.back-arrow:hover { color: var(--ink); }
+.hbtn { width: 44px; height: 44px; }
+.badge { top: 3px; right: 2px; }
+/* While stringing, the canvas corner is empty: undo and the rest live in the bar below. */
+.hud[data-mode="line"] .corner { display: none; }
+.line-bar { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.line-bar[hidden] { display: none; }
+.cord-pick { height: 44px; box-sizing: border-box; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--track); }
+.cord-pick[hidden] { display: none; }
+.cord-pick .seg { flex: 1; height: 38px; padding: 0; border-radius: 999px; font: 600 14px var(--body); color: var(--muted); }
+.cord-pick .seg[aria-checked="true"] { background: var(--seg-on); color: var(--ink); box-shadow: var(--seg-shadow); }
+.cmd-bar { height: 48px; display: flex; align-items: center; gap: 8px; }
+.bar-left { display: flex; align-items: center; margin-left: -6px; }
+.bar-btn {
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; padding: 0; border: 0; background: transparent;
+  color: color-mix(in srgb, var(--ink) 85%, transparent);
+}
+.bar-btn:hover:not(:disabled) { background: var(--track); }
+.bar-btn:disabled { opacity: .4; cursor: default; }
+.bar-btn:active:not(:disabled) { transform: scale(.92); }
+.count {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  font: 600 12px var(--body); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.count-bar { position: relative; width: 56px; height: 4px; border-radius: 2px; background: var(--bar-track); overflow: hidden; }
+.count-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); background: var(--ink); border-radius: inherit; transition: width .25s; }
+.count.full .count-bar::after { background: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .count-bar::after { transition: none; } }
+.finish {
+  flex: none; height: 44px; display: flex; align-items: center; gap: 7px; padding: 0 16px 0 12px; border: 0; border-radius: 999px;
+  background: var(--ink); color: var(--bg); font: 600 14.5px var(--body); white-space: nowrap; box-shadow: 0 6px 18px var(--soft-shadow);
+}
+.finish:active { transform: scale(.96); }
+@media (max-width: 360px) { .finish { padding: 0 12px 0 10px; font-size: 13.5px; gap: 5px; } .bar-left { margin-left: -8px; } }
+
+/* The bead case: one header row (grabber, tabs, fold chevron), then a band of options, then the compartments.
+   Its height never changes between tabs, so the string above never jumps. */
+.case {
+  border-radius: 22px; padding: 10px 8px 4px;
+  background: linear-gradient(170deg, rgba(255, 255, 255, .84), rgba(226, 232, 246, .6));
+  border: 1px solid rgba(255, 255, 255, .95);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 28px rgba(45, 20, 80, .16);
+  transition: padding-bottom .22s cubic-bezier(.2, .8, .2, 1);
+}
+.case::after { opacity: .5; }
+[data-theme="dark"] .case {
+  --well: rgba(255, 255, 255, .03); --well-shade: rgba(0, 0, 0, .55); --plastic-edge: rgba(255, 255, 255, .08);
+  background: linear-gradient(170deg, rgba(255, 255, 255, .09), rgba(160, 170, 220, .04));
+  border-color: rgba(255, 255, 255, .14); box-shadow: 0 10px 28px rgba(0, 0, 0, .5);
+}
+.case-head { position: relative; z-index: 2; display: flex; align-items: center; gap: 4px; height: 44px; touch-action: none; }
+.grabber { position: absolute; left: 50%; top: -7px; width: 36px; height: 4px; translate: -50% 0; border-radius: 2px; background: var(--grab); pointer-events: none; }
+.tabs { flex: 1; min-width: 0; height: 40px; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--track); }
+.tab { flex: 1; min-width: 0; height: 34px; padding: 0; border-radius: 999px; font: 600 14px var(--body); color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--seg-on); color: var(--ink); box-shadow: var(--seg-shadow); }
+.case.closed .tab[aria-selected="true"] { background: transparent; color: var(--muted); box-shadow: none; }
+.case-chev { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--muted); }
+.case-chev svg { transition: rotate .22s cubic-bezier(.2, .8, .2, 1); }
+.case.closed .case-chev svg { rotate: 180deg; }
+.case-body {
+  position: relative; z-index: 1; display: flex; flex-direction: column; gap: 4px; height: 218px; margin-top: 4px; overflow: hidden;
+  transition: height .22s cubic-bezier(.2, .8, .2, 1), margin-top .22s cubic-bezier(.2, .8, .2, 1), visibility 0s;
+}
+.case.closed { padding-bottom: 0; }
+.case.closed .case-body { display: flex; height: 0; margin-top: 0; visibility: hidden; transition: height .22s cubic-bezier(.2, .8, .2, 1), margin-top .22s cubic-bezier(.2, .8, .2, 1), visibility 0s .22s; }
+@media (prefers-reduced-motion: reduce) { .case, .case-body, .case.closed .case-body, .case-chev svg { transition: none; } }
+/* Colors: 28px dots in full-size touch targets, scrolling with a soft fade at the edge that still has more. */
+.color-strip {
+  flex: none; height: 44px; gap: 0; padding: 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+}
+.color-strip.at-end { -webkit-mask-image: none; mask-image: none; }
+.color-dot { flex: none; width: 44px; height: 44px; min-width: 0; max-width: none; aspect-ratio: auto; box-shadow: none; }
+.color-dot::before { width: 28px; height: 28px; }
+.color-dot[aria-checked="true"] { box-shadow: none; }
+.color-dot[aria-checked="true"]::before {
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, .18), inset 0 2px 2px rgba(255, 255, 255, .45), 0 0 0 2px var(--ring-gap), 0 0 0 4px var(--ink);
+}
+/* Jump chips: a soft pink tint marks the group in view, so the one dark button stays the finish button. */
+.jump-row { flex: none; height: 44px; align-items: center; gap: 2px; padding: 0; }
+.jump { position: relative; height: 32px; padding: 0 12px; border: 0; background: transparent; color: var(--muted); font: 600 13px var(--body); }
+.jump::before { content: ""; position: absolute; inset: -6px 0; }
+.jump[aria-pressed="true"] { background: var(--tint-bg); color: var(--tint-ink); }
+/* Letters: shape and look on one row, the phrase field below, together the same height as colors and chips. */
+.letter-row { flex: none; height: 88px; gap: 0; justify-content: space-between; }
+.letter-opts { height: 44px; }
+.shape-chip, .letter-chip { width: 40px; height: 40px; }
+.phrase input { height: 44px; padding-block: 0; }
+/* Compartments: 60px wells, snapping as the case scrolls. Charms and dangles have no options, so they get three rows. */
+.tray { flex: none; height: 126px; gap: 6px; scroll-snap-type: x proximity; }
+.bead-btn { border-radius: 12px; scroll-snap-align: start; }
+.bead-btn img { width: 48px; height: 48px; }
+.bead-btn.surprise::after { font-size: 11px; }
+.case[data-tab="charms"] .tray, .case[data-tab="dangles"] .tray { grid-template-rows: repeat(3, 60px); height: 192px; }
+.tray-head { display: none; }
+
+/* Wide screens: the bead case becomes a full-height panel on the right, and the bracelet gets the whole left side. */
+@media (min-width: 900px) {
+  .app {
+    max-width: 1280px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr) auto;
+    column-gap: 24px; row-gap: 12px;
+  }
+  header { grid-column: 1 / -1; }
+  .stage { grid-column: 1; grid-row: 2; }
+  .line-bar { grid-column: 1; grid-row: 3; }
+  #buildPanel { grid-column: 2; grid-row: 2 / span 2; min-height: 0; }
+  .app:has(#buildPanel[hidden]) .stage { grid-column: 1 / -1; grid-row: 2 / span 2; }
+  .credit { max-width: 1280px; }
+  .case { height: 100%; display: flex; flex-direction: column; padding: 10px; }
+  .grabber, .case-chev { display: none; }
+  .case-body, .case.closed .case-body { flex: 1; min-height: 0; height: auto; margin-top: 6px; visibility: visible; }
+  .color-strip { height: auto; flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+  .color-dot { width: 12.5%; height: 42px; }
+  .tray, .case[data-tab="charms"] .tray, .case[data-tab="dangles"] .tray {
+    flex: 1; min-height: 0; height: auto; grid-auto-flow: row; grid-template-rows: none; grid-auto-rows: min-content;
+    grid-template-columns: repeat(5, 60px); justify-content: center; align-content: start;
+    overflow-x: hidden; overflow-y: auto; scroll-snap-type: none; padding-bottom: 6px;
+  }
+  .tray-head { display: block; grid-column: 1 / -1; margin: 6px 2px 0; font: 700 12px var(--body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .tray-head:first-child { margin-top: 0; }
+}
+/* The phrase arrow takes the soft tint, so the finish button stays the only dark button. */
+.phrase-go { background: var(--tint-bg); color: var(--tint-ink); }

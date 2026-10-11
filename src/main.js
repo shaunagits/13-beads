@@ -350,6 +350,7 @@ function setMode(m) {
   if (m !== 'line') clearLoose();
   mode = m;
   $('buildPanel').hidden = m !== 'line';
+  $('lineBar').hidden = m !== 'line';
   $('hud').hidden = false;
   $('hud').dataset.mode = m;
   $('menu').dataset.mode = m;
@@ -1948,7 +1949,7 @@ function setTwo(on, quiet) {
     sync();
   }
   twoCords = on;
-  if (on && !quiet) { activeCord = 0; say('Two strands. Pick the top cord, the bottom cord, or both, at the bottom left.'); }
+  if (on && !quiet) { activeCord = 0; say('Two strands. Pick the top cord, the bottom cord, or both, just under the bracelet.'); }
   syncTwoUI();
   // The Beads tab shows the patterns only on two strands.
   if (curTab === 'colors') buildTray(true);
@@ -1978,13 +1979,45 @@ function buildSwatches() {
       try { localStorage.setItem('13beads.color', String(i)); } catch (e) { /* optional */ }
       strip.querySelectorAll('.color-dot').forEach((o) => o.setAttribute('aria-checked', o === b ? 'true' : 'false'));
       tick(1 + i * 0.02, 0.08);
+      say(col.name + ' beads');
       buildTray(true);
     });
     strip.appendChild(b);
   });
+  // The picked color scrolls into view (a color from the end of the strip would otherwise be hidden).
+  requestAnimationFrame(() => {
+    const on = strip.querySelector('[aria-checked="true"]');
+    if (on && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.clientWidth / 2 + on.offsetWidth / 2);
+    stripEdge();
+  });
+}
+// The strip's edge fade shows only while there are more colors to scroll to.
+function stripEdge() {
+  const strip = $('colorStrip');
+  strip.classList.toggle('at-end', strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2);
+}
+$('colorStrip').addEventListener('scroll', stripEdge, { passive: true });
+// Wide screens show the case as a tall panel that scrolls down instead of across.
+const wideCase = matchMedia('(min-width: 900px)');
+const trayDown = () => wideCase.matches;
+wideCase.addEventListener('change', () => { buildTray(); stripEdge(); });
+// On phones the case scrolls across in two rows that fill top then bottom, so letters are reordered to read
+// A to M along the top and N to Z along the bottom.
+function acrossOrder(list) {
+  const half = Math.ceil(list.length / 2), top = list.slice(0, half), bottom = list.slice(half), out = [];
+  for (let i = 0; i < half; i++) { out.push(top[i]); if (bottom[i]) out.push(bottom[i]); }
+  return out;
+}
+function letterOrder(list) {
+  const letters = list.filter((it) => /^[A-Z]$/.test(it.def.ch)), rest = list.filter((it) => !/^[A-Z]$/.test(it.def.ch));
+  return [...acrossOrder(letters), ...acrossOrder(rest)];
 }
 function buildTray(keepScroll) {
-  const tray = $('tray'), items = TABS[curTab](), x = tray.scrollLeft;
+  const down = trayDown();
+  let items = TABS[curTab]();
+  if (curTab === 'letters' && !down) items = letterOrder(items);
+  const tray = $('tray'), x = down ? tray.scrollTop : tray.scrollLeft;
+  $('case').dataset.tab = curTab;
   $('colorStrip').hidden = curTab !== 'colors';
   $('letterRow').hidden = curTab !== 'letters';
   renderThumbs(items);
@@ -1996,6 +2029,14 @@ function buildTray(keepScroll) {
   items.forEach((item, i) => {
     if (item.group && (i === 0 || items[i - 1].group !== item.group)) {
       starts.push({ group: item.group, col: Math.floor(count / 2) });
+      if (down) {
+        const h = document.createElement('p');
+        h.className = 'tray-head';
+        h.textContent = GROUP_LABELS[item.group];
+        h.setAttribute('aria-hidden', 'true');
+        tray.appendChild(h);
+        starts[starts.length - 1].el = h;
+      }
     }
     count++;
     const btn = document.createElement('button');
@@ -2014,6 +2055,8 @@ function buildTray(keepScroll) {
       else if (item.pattern) addPattern(item.pattern);
       else if (addBead(item.def)) noteRecent(item);
     });
+    const st = starts[starts.length - 1];
+    if (st && !st.el) st.el = btn;
     tray.appendChild(btn);
   });
   // Jump chips, one per group. The chip for the group in view is highlighted as the tray scrolls.
@@ -2028,7 +2071,7 @@ function buildTray(keepScroll) {
       tray.dataset.gliding = '1';
       clearTimeout(glideTimer);
       glideTimer = setTimeout(() => { delete tray.dataset.gliding; markJump(); }, reduce ? 0 : 600);
-      tray.scrollTo({ left: st.col * 65, behavior: reduce ? 'auto' : 'smooth' });
+      tray.scrollTo({ [down ? 'top' : 'left']: trayPos(st), behavior: reduce ? 'auto' : 'smooth' });
       markJump();
       tick(1.1, 0.05);
     });
@@ -2036,39 +2079,58 @@ function buildTray(keepScroll) {
     jump.appendChild(c);
   }
   traySections = starts;
-  tray.scrollLeft = keepScroll ? x : 0;
+  if (down) { tray.scrollLeft = 0; tray.scrollTop = keepScroll ? x : 0; } else { tray.scrollTop = 0; tray.scrollLeft = keepScroll ? x : 0; }
   markJump();
 }
+// Where a group starts in the tray, across on phones and down on wide screens.
+const trayPos = (st) => (trayDown() ? st.el.offsetTop - 4 : st.el.offsetLeft);
 let traySections = [], jumpPick = null, glideTimer = 0;
 function markJump() {
-  const tray = $('tray'), left = tray.scrollLeft + 20, max = tray.scrollWidth - tray.clientWidth;
+  if (!traySections.length) return;
+  const tray = $('tray'), down = trayDown(), at = down ? tray.scrollTop : tray.scrollLeft;
+  const max = down ? tray.scrollHeight - tray.clientHeight : tray.scrollWidth - tray.clientWidth;
   let cur = traySections[0];
   // When two groups share a column, the earlier one wins.
-  for (const st of traySections) if (st.col * 65 <= left && st.col > cur.col) cur = st;
+  for (const st of traySections) if (trayPos(st) <= at + 20 && trayPos(st) > trayPos(cur)) cur = st;
   // A chip just tapped stays lit while the tray glides to it, and when the tray cannot scroll that far.
   if (jumpPick && traySections.includes(jumpPick)) {
-    const goal = Math.min(jumpPick.col * 65, max);
-    if (Math.abs(tray.scrollLeft - goal) < 4 || tray.dataset.gliding) cur = jumpPick;
+    const goal = Math.min(trayPos(jumpPick), max);
+    if (Math.abs(at - goal) < 4 || tray.dataset.gliding) cur = jumpPick;
   }
   for (const st of traySections) st.chip.setAttribute('aria-pressed', st === cur ? 'true' : 'false');
 }
 $('tray').addEventListener('scroll', markJump, { passive: true });
 // Fold the bead case away, or open it again.
-$('caseToggle').addEventListener('click', () => {
-  const closed = $('case').classList.toggle('closed');
+function setCase(open) {
+  const closed = !open;
+  if ($('case').classList.contains('closed') === closed) return;
+  $('case').classList.toggle('closed', closed);
   $('caseToggle').setAttribute('aria-expanded', closed ? 'false' : 'true');
   $('caseToggle').setAttribute('aria-label', closed ? 'Show the bead case' : 'Hide the bead case');
-  $('caseToggle').querySelector('.lid-label').textContent = closed ? 'Show beads' : 'Bead case';
   tick(closed ? 0.8 : 1.2, 0.1);
+}
+$('caseToggle').addEventListener('click', () => setCase($('case').classList.contains('closed')));
+// Swipe the case's header row down to fold it away, up to open it.
+let caseSwipe = null, caseSwiped = false;
+$('caseHead').addEventListener('pointerdown', (e) => { caseSwipe = { y: e.clientY, id: e.pointerId }; caseSwiped = false; });
+$('caseHead').addEventListener('pointermove', (e) => {
+  if (!caseSwipe || e.pointerId !== caseSwipe.id || trayDown()) return;
+  const dy = e.clientY - caseSwipe.y;
+  if (Math.abs(dy) > 22) { setCase(dy < 0); caseSwiped = true; caseSwipe = null; }
 });
+window.addEventListener('pointerup', () => { caseSwipe = null; });
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  if (caseSwiped) { caseSwiped = false; return; }
+  const wasClosed = $('case').classList.contains('closed');
+  setCase(true);
+  if (wasClosed && curTab === t.dataset.tab) return;
   curTab = t.dataset.tab;
   document.querySelectorAll('.tab').forEach((o) => o.setAttribute('aria-selected', o === t ? 'true' : 'false'));
   buildTray();
 }));
-document.querySelectorAll('.seg').forEach((t) => t.addEventListener('click', () => {
+document.querySelectorAll('.seg[data-side]').forEach((t) => t.addEventListener('click', () => {
   side = t.dataset.side;
-  document.querySelectorAll('.seg').forEach((o) => o.setAttribute('aria-pressed', o === t ? 'true' : 'false'));
+  document.querySelectorAll('.seg[data-side]').forEach((o) => o.setAttribute('aria-pressed', o === t ? 'true' : 'false'));
   say(side === 'L' ? 'New beads slide on from the left end.' : 'New beads slide on from the right end.');
 }));
 
