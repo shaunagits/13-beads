@@ -69,6 +69,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
+- Stringing redesign: Shauna is reviewing the clear view boards; where the back-to-games link goes (ideas given 2026-10-11).
 - Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
 - True-size beads: on hold.
 
@@ -169,6 +170,9 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-11 | Reputation bracelet charm | Both snakes: black before the word, green after | Shauna: stay green, or add the black as a second one. |
 | 2026-10-11 | Pattern joining beads | Automatic partner color per strip color, no picker; Bubble keeps pearls | Claude's recommendation, Shauna approved. Keeps patterns one tap and makes Cross readable. |
 | 2026-10-11 | "Some of the beads are missing" | Resolved | Shauna: all good now (it was the empty compartments). |
+| 2026-10-11 | Stringing screen redesign | Proposal on the design board (phone and desktop "clear view"); not built until Shauna reviews, refines, and approves it there | Shauna: she wants to see the board and approve before anything is built. See `_docs/findings/2026-10-11-stringing-ux-review.md`. |
+| 2026-10-11 | Footer in the redesign | Moves below the fold; a way back to the games site is still needed on screen | Shauna: OK, she can add them back; asked for back-link ideas. |
+| 2026-10-11 | Desktop layout in the redesign | Bead case becomes a 360 px panel on the right, canvas takes the full height | Shauna approved the reviewer's idea. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
