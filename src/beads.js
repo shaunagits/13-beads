@@ -99,6 +99,8 @@ export const CHARMS = named([
   ['Instant photo', 'photo'], ['Bow and arrow', 'arrow'], ['Music note', 'note'], ['Vinyl record', 'vinyl'], ['Cassette tape', 'cassette'],
   ['Ticket stub', 'ticket'], ['Chihuahua', 'chihuahua'], ['Red lips', 'lips'], ['Heart sunglasses', 'shades'],
 ]);
+// The black snake is the same charm in glossy black, placed right after the green one.
+CHARMS.splice(CHARMS.findIndex((c) => c.def.k === 'snake') + 1, 0, { name: 'Black snake', def: { k: 'snake', m: 'black' } });
 export const DANGLES = named([
   ['Acoustic guitar', 'guitar'], ['Microphone', 'mic'], ['Cowboy boot', 'boot'], ['Cardigan', 'cardigan'], ['Red scarf', 'scarf'],
   ['Champagne glass', 'coupe'], ['Chair', 'chair'], ['Ladder', 'ladder'], ['Storm in a teacup', 'teacup'], ['Lightning rod', 'rod'],
@@ -123,7 +125,7 @@ export const PRESETS = [
   era('Speak Now', 'SPEAK NOW', 'white', [B('jelly', 'Lavender'), B('glitter', 'Purple'), { k: 'rondelle' }, B('crystal', 'Purple')], { k: 'butterfly' }),
   era('Red', 'RED', 'black', [B('pony', 'Black'), B('pony', 'Red'), B('pony', 'White'), B('pony', 'Red'), B('metal', 'Red'), B('pony', 'Red')], { k: 'scarf' }),
   era('1989', '1989', 'white', [B('pony', 'Baby blue'), B('pony', 'White'), B('round', 'Sky'), B('pony', 'White'), { k: 'spacer' }, B('pony', 'Baby blue')], { k: 'photo' }),
-  era('Reputation', 'REPUTATION', 'black', [B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], { k: 'snake' }),
+  era('Reputation', 'REPUTATION', 'black', [B('metal', 'Black'), { k: 'seedx', m: 'gunmetal' }, B('crystal', 'Black'), { k: 'spacer' }, B('matte', 'Black')], { k: 'snake', m: 'black' }),
   era('Lover', 'LOVER', 'pink', [B('pony', 'Blush'), B('pony', 'Baby blue'), B('pony', 'Lavender'), { k: 'pearl' }, B('jelly', 'Hot pink'), B('pony', 'Blush')], { k: 'pheart' }),
   era('Folklore', 'FOLKLORE', 'white', [B('clay', 'Cream'), B('matte', 'White'), B('round', 'Black'), B('clay', 'Cream'), { k: 'pearl' }], { k: 'cardigan' }),
   era('Evermore', 'EVERMORE', 'white', [B('clay', 'Orange'), B('round', 'Cream'), B('matte', 'Orange'), { k: 'ball' }, B('round', 'Teal')], { k: 'leaf' }),
@@ -232,7 +234,7 @@ function decodeOne(t, out) {
   if (t[0] === '-') {
     const [k, m] = t.slice(1).split(':');
     if (!UNIT[k] || TYPE_CODE[k] || k === 'letter') return;
-    out.push(m && /^(gold|silver|clear|pearl|gunmetal|square)$/.test(m) ? { k, m } : { k });
+    out.push(m && /^(gold|silver|clear|pearl|gunmetal|square|black)$/.test(m) ? { k, m } : { k });
     return;
   }
   if (/^o[01][0-4]/.test(t)) {
@@ -1622,10 +1624,17 @@ export function makeBead(d) {
       }))));
       break;
     case 'snake': {
-      const skin = mat('snake', () => new THREE.MeshPhysicalMaterial({
-        color: 0x0fae72, metalness: 0.55, roughness: 0.26, clearcoat: 1, clearcoatRoughness: 0.1,
-        iridescence: 0.25, iridescenceIOR: 1.4, bumpMap: scaleTex(), bumpScale: 0.7,
-      }));
+      // Green by default; m: 'black' is glossy black with a faint oil-slick sheen on the scales.
+      const black = d.m === 'black';
+      const skin = black
+        ? mat('snakeBlack', () => new THREE.MeshPhysicalMaterial({
+          color: 0x16161b, metalness: 0.6, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06,
+          iridescence: 0.55, iridescenceIOR: 1.5, bumpMap: scaleTex(), bumpScale: 0.7,
+        }))
+        : mat('snake', () => new THREE.MeshPhysicalMaterial({
+          color: 0x0fae72, metalness: 0.55, roughness: 0.26, clearcoat: 1, clearcoatRoughness: 0.1,
+          iridescence: 0.25, iridescenceIOR: 1.4, bumpMap: scaleTex(), bumpScale: 0.7,
+        }));
       // The S lies along the string, head pointing along the bracelet.
       const body = new THREE.Group();
       body.rotation.z = -Math.PI / 2;

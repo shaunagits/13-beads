@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-10-11 (end of session 4). Everything below is on `main` and live, including these docs.
+Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, including these docs.
 
 ## What exists
 
@@ -32,7 +32,7 @@ Last updated: 2026-10-11 (end of session 4). Everything below is on `main` and l
 **Bead case** (clear plastic organizer, lid folds it away; tabs Beads, Letters, Charms, Dangles)
 - Beads tab: a 16-color strip (saved as `13beads.color`; blush, baby blue, cream, and navy were added at the end of `COLORS` and placed by `COLOR_ORDER`), then one compartment per type in that color: pony, clay disc, round, crystal, solid cube, smiley, jelly, metallic, glitter, glow, matte, star bead, dice, small faceted crystal, seed bead, frosted glitter seed bead, silver-lined seed bead. Then pearl, silver spacer, gold ball spacer, silver daisy spacer, rhinestone rondelle, marbled pearl, moonstone, clear, pearl, and gunmetal seed beads, frosted square seed bead, gunmetal spacer, gold and silver bead caps. Seed beads are about a third of a pony bead wide (about 89 fit). Tiny beads are drawn larger in their compartments (`TINY` in `src/main.js`). A cap turns its cup toward the nearest bead. Mid-tone colors are drawn deeper (`deep` in `src/beads.js`) so beads match their dots.
 - Letters tab: a row with the shape switch (Round, the default, or Cube) and five looks (White, Black, Pink letters on white, Gold letters on black, Frosted clear with gold letters), then the phrase field ("Type a word or phrase"), then A to Z, a pink heart bead, 0 to 9, ! ? &. Typing a heart (or <3) in the phrase adds a heart bead. Saved as `{ k: 'letter', ch, st?, sh? }`: no `st` is white, no `sh` is a cube, so every bracelet saved before round letters keeps its cubes. Shape and look are not remembered between visits.
-- Charms (26) and Dangles (20 hanging charms; the last four, from Shauna's photos: lucky rock, evil eye, heart and arrow, potted cactus in 3D); sizes in `BOOST` in `src/beads.js`. The snake charm is an S-curve with a diamond head lying along the string (`snakeGeo`, `snakeHeadGeo`), about two beads wide; compartment pictures shrink long charms to fit.
+- Charms (27) and Dangles (20 hanging charms; the last four, from Shauna's photos: lucky rock, evil eye, heart and arrow, potted cactus in 3D); sizes in `BOOST` in `src/beads.js`. The snake charm is an S-curve with a diamond head lying along the string (`snakeGeo`, `snakeHeadGeo`), about two beads wide; compartment pictures shrink long charms to fit. A black snake (`{ k: 'snake', m: 'black' }`, glossy black with an oil-slick sheen) sits right after the green one and is the Reputation bracelet's charm; trade links carry it as `-snake:black`.
 
 **Tie-off (mode `tied`)**
 - The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 85 shiny pastel foil stars and 30 small maple leaves that tumble and flutter down (off with reduced motion).
@@ -56,7 +56,7 @@ Last updated: 2026-10-11 (end of session 4). Everything below is on `main` and l
 
 ## Not verified
 
-- Two strands on a real phone: the cord picker and moved finish button, tapping a cord to pick it, dragging beads between cords, and how Cross, Diamond, and Bubble read at phone size. Shauna said she will test Bubble.
+- Two strands on a real phone: the cord picker and moved finish button, tapping a cord to pick it, dragging beads between cords, and how Cross, Diamond, and Bubble read at phone size.
 - Session 4 beads and charms on a phone (seed beads, round letters, the new dangles, the S snake), and the jump chips and Recent row.
 - Shake to spill on a real phone (only simulated motion events were tested), and whether two 17 m/s² jolts is the right strength.
 - Tilt and the iPhone permission button.
@@ -67,9 +67,7 @@ Last updated: 2026-10-11 (end of session 4). Everything below is on `main` and l
 
 ## Open with Shauna
 
-- Bubble pattern (she will test), then Twist and Daisy; whether pattern joining beads get a second color (automatic contrast or a picker).
-- "Some of the beads are missing" (2026-10-10 phone screenshot): read as the empty compartments, which were removed. If she meant beads missing from a bracelet, which era.
-- Snake color: keep green, or silver, or add a black version for Reputation.
+- Whether pattern joining beads get a second color: recommendation given 2026-10-11 (automatic pairing, no picker), waiting on her answer.
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
 - Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
@@ -167,6 +165,9 @@ Last updated: 2026-10-11 (end of session 4). Everything below is on `main` and l
 | 2026-10-10 | Snake charm | Redrawn as an S-curve (diamond head, tail tapering to a point) lying along the string, replacing the coil | Shauna's reference: a simple S-shaped snake silhouette. Drawn fresh in code, not traced. Width 2.05 units; compartment thumbnails shrink long charms to fit. |
 | 2026-10-10 | Design board | A Claude design canvas with editable mockups built from the real CSS plus live screenshots | Shauna wanted somewhere to refine the screens. Built in the game's own look, not a design system (her pick). See `_docs/findings/2026-10-11-design-board.md`. |
 | 2026-10-10 | Confetti | Pastel foil stars with small maple leaves, replacing the paper | Shauna asked. |
+| 2026-10-11 | Twist and Daisy patterns | Dropped for now | Shauna: not right now. |
+| 2026-10-11 | Snake color | Green stays; a black snake added as its own charm and used on the Reputation bracelet | Shauna: keep green, add black if possible. |
+| 2026-10-11 | "Some of the beads are missing" | Resolved | Shauna: all good now (it was the empty compartments). |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
