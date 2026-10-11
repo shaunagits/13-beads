@@ -407,6 +407,8 @@ wall.position.z = -70;
 board.add(wall);
 
 // A neon-style sign in script. It glows at night and sits unlit by day.
+// How much of the sign's width the word takes up, so a tap on the sign can tell the word from the bare wall.
+let signFrac = 0.6;
 function neonTexture(lit) {
   const c = document.createElement('canvas');
   c.width = NEON_W; c.height = NEON_H;
@@ -423,6 +425,7 @@ function neonTexture(lit) {
   let size = 130, L = lay(size);
   const room = NEON_W - 60;
   if (L.total > room) { size = Math.max(56, Math.floor((size * room) / L.total)); L = lay(size); }
+  signFrac = Math.min(1, L.total / NEON_W);
   x.textAlign = 'left'; x.textBaseline = 'middle';
   x.lineJoin = 'round'; x.lineCap = 'round';
   const cy = NEON_H / 2 + 4;
@@ -785,6 +788,13 @@ function coneAt(p) {
   return best;
 }
 // Which bracelet is under the pointer: the nearest ring whose band (its screen ellipse) the point falls in.
+// Is the pointer on the neon sign's word? (Stage pixels, y down.) A tap there opens the sign editor.
+function signAt(p) {
+  if (mode !== 'stack' || !neon.visible) return false;
+  const c = toScreen(neon, 0, 0), e = toScreen(neon, 0.5, 0.5);
+  const hw = Math.max(60, Math.abs(e.x - c.x) * signFrac + 16), hh = Math.max(28, Math.abs(e.y - c.y) * 0.7);
+  return Math.abs(p.x - c.x) < hw && Math.abs(p.y - c.y) < hh;
+}
 function ringAt(p) {
   let best = null, bd = 1e9;
   for (const r of rings) {
@@ -841,7 +851,7 @@ function applyDecor() {
   if (neonMaps.on) { neonMaps.on.dispose(); neonMaps.off.dispose(); neonMaps.on = null; }
   applyMood();
 }
-function openCustom() {
+function openCustom(focusSign = false) {
   closePop(false);
   const box = $('custom');
   box.hidden = false;
@@ -849,7 +859,15 @@ function openCustom() {
   box.querySelector(`input[name="wallColor"][value="${decor.color}"]`).checked = true;
   box.querySelector(`input[name="signColor"][value="${decor.neon}"]`).checked = true;
   $('signText').value = decor.sign;
-  box.querySelector('input:checked').focus({ preventScroll: true });
+  // Opened from the sign itself: drop the editor just below the sign so the word stays in view while it changes.
+  box.style.top = '';
+  if (focusSign) {
+    const c = toScreen(neon, 0, 0), e = toScreen(neon, 0.5, 0.5);
+    const below = c.y + Math.abs(e.y - c.y) * 0.75 + 6;
+    box.style.top = Math.round(Math.max(62, Math.min(below, H - box.offsetHeight - 8))) + 'px';
+  }
+  if (focusSign) { const f = $('signText'); f.focus({ preventScroll: true }); f.select(); }
+  else box.querySelector('input:checked').focus({ preventScroll: true });
 }
 function closeCustom(restore = true) {
   const box = $('custom');
@@ -1457,6 +1475,7 @@ cv.addEventListener('pointerdown', (e) => {
     grabRing = mode === 'stack' ? ringAt(p) : null;
     grabCone = mode === 'stack' ? (grabRing ? grabRing.cone : coneAt(p)) : null;
     if (grabCone) grabCone.spinV = 0;
+    spin.sign = mode === 'stack' && !grabCone && signAt(p);
     if (!$('custom').hidden) { closeCustom(false); spin.dismiss = true; }
     else if (!$('shareCard').hidden) { closeShare(false); spin.dismiss = true; }
     else if (popRing) { closePop(false); spin.dismiss = true; }
@@ -1566,7 +1585,9 @@ function release() {
     // A tap on the tied bracelet makes it hop and throw sparkles.
     if (!spin.moved && mode === 'tied' && kLin >= 1) { hop = 0; burst(); chime(); buzz(20); }
     clearTimeout(holdTimer);
-    if (!spin.moved && !spin.held && !spin.dismiss && mode === 'stack' && (grabRing || grabCone)) {
+    // A tap on the neon sign opens the editor with the sign's word ready to retype.
+    if (!spin.moved && !spin.dismiss && spin.sign) { openCustom(true); chime(); }
+    else if (!spin.moved && !spin.held && !spin.dismiss && mode === 'stack' && (grabRing || grabCone)) {
       // A tap jingles: the bracelet bounces on its cone, or the cone gives a little turn.
       if (grabRing) grabRing.wobv += 6;
       else grabCone.spinV += (Math.random() < 0.5 ? -1 : 1) * 2.2;
@@ -1600,6 +1621,12 @@ function release() {
   grab = null;
 }
 cv.addEventListener('pointerup', release);
+// A pointer cursor over the sign on the wall hints that it can be tapped.
+cv.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse' || e.buttons) return;
+  const on = mode === 'stack' && (signAt(pos(e)) || ringAt(pos(e)));
+  cv.style.cursor = on ? 'pointer' : '';
+});
 cv.addEventListener('pointercancel', release);
 
 /* ---------- Tilt: the string and hanging charms lean with the phone ---------- */

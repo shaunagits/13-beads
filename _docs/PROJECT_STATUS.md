@@ -47,7 +47,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - Plain painted wall (white, pink, or sage) with a soft top-to-bottom fade and faint grain; no shadows on it.
 - Display: white velvet bracelet cones (pile texture plus sheen) on a lacquered riser whose color follows the wall; cones and riser tilt slightly toward the viewer. Bracelets stack as level rings around a cone, oldest lowest, letters facing out. Up to 12 shown (2 cones of 6 on phones, 3 cones of 4 wider), up to 24 remembered.
 - Drag sideways on a cone to spin it; tap to jingle; hold or right-click a bracelet for Edit it, Take it off, or Leave it. Edit puts it on the string; a string in progress hangs in its place unless it is the untouched starter.
-- Neon sign: always lit, letters spaced like separate tubes, centered between the cones and the top buttons. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`.
+- Neon sign: always lit, letters spaced like separate tubes, centered between the cones and the top buttons. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`. Tapping the sign's word on the wall opens Decorate just below the sign with the word selected, so typing replaces it and the sign updates in view (`signAt` in `src/main.js`); a mouse shows a pointer over the sign and bracelets.
 - Keyboard: Tab reaches each bracelet, Enter or Delete opens its options, popovers trap Tab and close on Escape.
 
 **Sound (`src/audio.js`)**: musical, D major. Stringing plays a melody over I, V, vi, IV; charms add bells; strumming arpeggiates; hanging resolves home. Acoustic guitar voice by default, through a small room reverb. The ping-pong echo is off for the guitar (it made plucks sound doubled); the other voices still use it.
@@ -173,6 +173,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-11 | Stringing screen redesign | Proposal on the design board (phone and desktop "clear view"); not built until Shauna reviews, refines, and approves it there | Shauna: she wants to see the board and approve before anything is built. See `_docs/findings/2026-10-11-stringing-ux-review.md`. |
 | 2026-10-11 | Footer in the redesign | Moves below the fold; a way back to the games site is still needed on screen | Shauna: OK, she can add them back; asked for back-link ideas. |
 | 2026-10-11 | Desktop layout in the redesign | Bead case becomes a 360 px panel on the right, canvas takes the full height | Shauna approved the reviewer's idea. |
+| 2026-10-11 | Edit the sign from the wall | Tap the neon sign to open the sign editor, same limits (12 characters, letters, numbers, spaces, ! ? &) | Shauna asked. Reuses Decorate so there is one editor. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
