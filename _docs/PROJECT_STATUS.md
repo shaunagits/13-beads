@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and live, including these docs.
+Last updated: 2026-10-12 (session 6). Everything below is on `main` and live, including these docs.
 
 ## What exists
 
@@ -49,14 +49,21 @@ Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and l
 
 **The wall (mode `stack`)**
 - Plain painted wall (white, pink, or sage) with a soft top-to-bottom fade and faint grain; no shadows on it.
-- Display: white velvet bracelet cones (pile texture plus sheen) on a lacquered riser whose color follows the wall; cones and riser tilt slightly toward the viewer. Bracelets stack as level rings around a cone, oldest lowest, letters facing out. Up to 12 shown (2 cones of 6 on phones, 3 cones of 4 wider), up to 24 remembered.
-- Nothing on the canvas (redesign of 2026-10-12). Under it (`#wallPanel`): a labeled "Decorate", Save photo (camera icon, only ever saves a photo), and the dark button, "Make another" or "Back to my string" when a string is in progress. An empty wall says "Nothing on display yet" above the bar. The wall badge hides while on the wall.
-- With one cone in use, the bracelets are drawn larger so phrases read (`one` in `wallGrid`).
-- Drag sideways on a cone to spin it; tap to jingle; hold or right-click a bracelet for a sheet titled with its phrase: Edit it (dark), Leave it, and a quiet red Take it off. Edit puts it on the string; a string in progress hangs in its place unless it is the untouched starter. The held bracelet is not lifted or the others dimmed (reviewer idea, not built).
-- Decorate opens as a sheet from the bottom, so the sign stays in view while it changes: 52px swatches (the picked one has a dark ring and a check; keyboard focus a pink outline), the sign word, Done. Tapping the sign opens it with the word selected.
-- Wide screens: the right-hand panel holds Decorate (always open) and "On your wall", a list of the hung bracelets by phrase with Edit and Take off, then Save photo and Make another.
-- Neon sign: always lit, letters spaced like separate tubes, centered above the cones. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`. Tapping the sign's word on the wall opens the Decorate sheet with the word selected, so typing replaces it while the sign updates above the sheet (`signAt` in `src/main.js`); a mouse shows a pointer over the sign and bracelets.
-- Keyboard: Tab reaches each bracelet, Enter or Delete opens its options, popovers trap Tab and close on Escape.
+- Display (2026-10-12, session 6): lacquered peg rails across the wall, in a tone that follows the wall color, with brass pegs. Every finished bracelet hangs from its own peg as a loop facing the viewer (`loopPath` in `src/main.js`: narrow at the peg, round at the bottom), the phrase along the bottom where it reads, a small knot on the peg. Newest hangs on the first peg (top left) and the rest shift along. 2 columns on phones, 3 at 520 to 759px, 4 from 760px; rows are added as needed; up to 24 shown (the whole remembered wall). A tall wall scrolls: drag it, use a mouse wheel, or Tab to a bracelet (the sign scrolls with it).
+- Tags: a kraft paper tag hangs from the peg on its own thread inside the loop, with a name (default "Mine") and the day it was hung; a bracelet that arrived by trade link gets a blush tag with a red "Traded" stamp and the sender's note as its name. Drawn to a canvas texture (`tagTexture`). Saved per entry as `n`, `d` (YYYY-MM-DD), and `t: 'trade'`; bare bead-list saves from before load as entries named "Mine" with no date.
+- Touch: tap a bracelet (it lifts and jingles) for its options sheet: the tag name field, a Made it / Traded switch, "Hung <date>", Edit it (dark), Done, and a quiet red Take it off. Hold a bracelet (300ms, it lifts) and drag it to another peg; the others step aside and the new order is saved. Loops swing about their peg: on landing, on a tap, when dropped, and when the phone tilts. Reduced motion: no swing, no fly-in.
+- "Add to my wall" flies the loop up from below onto the first peg while the rest glide along a peg, then it lands with a thud, a chime, and a swing.
+- Under the canvas (`#wallPanel`): a count line ("7 bracelets on your wall · 2 traded", or "Nothing on display yet"), then Decorate (ghost), Share (ghost: a sheet with Save photo and Send link), and the dark button, "Make another" or "Back to my string" when a string is in progress.
+- Wide screens: the right-hand panel holds Decorate (always open), "On your wall · n · t traded", a list of the hung bracelets by phrase with tag and date under each and Edit and Take off, then Share your wall (always open) and Make another.
+- Night (dark mode): the neon sign is the room's main light, washing its color down the wall and over the pegs; the wall keeps its own night tone per color.
+- Neon sign: always lit, letters spaced like separate tubes, centered above the first rail. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`. Tapping the sign's word opens the Decorate sheet with the word selected (`signAt`); a mouse shows a pointer over the sign and bracelets.
+- Keyboard: Tab reaches each bracelet (the wall scrolls to it), Enter or Delete opens its options, popovers trap Tab and close on Escape.
+
+**Visit my wall** (2026-10-12): Share on the wall, then Send link (share sheet on phones, clipboard on computers). The link is `#w=` plus one entry per bracelet (bead code, tag name, date, `t` for traded, joined by commas; entries by semicolons) and `c`, `k`, `s` for the wall color, sign color, and sign word (`wallLink` / `readVisit` in `src/main.js`). About 80 characters per bracelet. Opening it shows that wall read-only: the visitor's own wall and decor are set aside in memory (never saved over, `saveStack` is a no-op while visiting), Decorate and Share are hidden, and the dark button reads "Back to my wall". Tapping a bracelet offers "Take a copy": it strings itself like a trade and ties off, tagged "From <sign word>" (or "From a friend" when the sign is the default), and hangs as traded. Leaving the wall any way ends the visit.
+
+**Installable** (2026-10-12): `public/manifest.webmanifest` (standalone, icons 192 and 512, maskable), apple-touch-icon, and `public/sw.js`, registered on https. The worker fetches pages fresh and falls back to the kept copy, keeps hashed build files and Google Fonts once seen, and drops old caches on activate (`CACHE` version in `sw.js`). The app icons are the favicon bracelet drawn larger (generated with Python PIL; the script is not in the repository).
+
+**Haptics**: `buzz` in `src/audio.js` (`navigator.vibrate`): a bead landing, the knot tying, a tap on a bracelet, lifting one, dropping one. Android only; iPhone Safari has no vibrate API.
 
 **Sound (`src/audio.js`)**: musical, D major. Stringing plays a melody over I, V, vi, IV; charms add bells; strumming arpeggiates; hanging resolves home. Acoustic guitar voice by default, through a small room reverb. The ping-pong echo is off for the guitar (it made plucks sound doubled); the other voices still use it.
 
@@ -64,6 +71,7 @@ Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and l
 
 ## Not verified
 
+- Session 6 on a real phone: the hook wall (tap, hold and drag between pegs, scroll by drag, swing on tilt), the tag field above the keyboard, Share your wall through the share sheet, opening a wall link and taking a copy, adding to the home screen and opening with no signal (the service worker was only checked by a build; it is not exercised by the cloud renderer), and wall performance with 24 bracelets on an older phone (24 loops of beads is a lot more geometry than 12 rings were).
 - Everything from the session 5 redesigns on a real phone: swiping the bead case header, the fold animation, the command bar, the footer below the fold, the Share, Decorate, and bracelet options sheets (especially that they sit above the keyboard in iPhone Safari, via `visualViewport`), and the live card preview's speed on an older phone. Only the cloud software renderer was used.
 - Desktop at sizes between 900 and 1280px wide, and very short desktop windows (the right-hand panels scroll, untested at small heights).
 - Two strands on a real phone: the cord picker row, tapping a cord to pick it, dragging beads between cords, and how Cross, Diamond, and Bubble read at phone size.
@@ -72,7 +80,6 @@ Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and l
 - Tilt and the iPhone permission button.
 - The phone share sheet for Save card, Send link, and Save photo (only desktop downloads and clipboard were exercised).
 - Trade links on a phone end to end, and QR scanning with a real camera.
-- Cone spinning and press-and-hold on a real phone; wall performance on older phones.
 - Screen reader announcements (keyboard only was tested).
 
 ## Open with Shauna
@@ -187,6 +194,13 @@ Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and l
 | 2026-10-11 | Back to the games site | Back arrow before the wordmark (her option B) | Shauna's pick of three ideas. |
 | 2026-10-11 | Back arrow on Finished and Wall | Goes back to the stringing screen; on stringing it goes to the games site | Shauna. |
 | 2026-10-12 | Finished and Wall redesign | Built from the approved boards: controls off the canvas, labeled Share, bottom sheets, desktop panels, larger bracelets on one cone | Shauna approved the boards and said build them. |
+| 2026-10-12 | Display piece | Peg rails with hanging loops replace the velvet cones (session 6) | The cones made the display the hero and the bracelets small, half of every phrase around the back. Hooks put every bracelet front-facing and readable and use the whole canvas. Shauna picked the hook wall over a shadow box and acrylic tiers, built straight to live. The cones are in git history. |
+| 2026-10-12 | Tags | Name and date on a kraft tag inside the loop; "Mine" default, the trade note for trades, editable from the options sheet | Shauna wanted name and date, "intentional and cool". Inside the loop so no tag crosses a neighbor or the canvas edge (beside the peg, they did). |
+| 2026-10-12 | Wall gestures | Tap opens the options (with a lift and jingle); hold then drag moves a bracelet; plain drag scrolls | Press and hold was undiscoverable as the only way in. Tap is the obvious one; hold-and-drag follows the home screen convention. |
+| 2026-10-12 | Visit my wall | Built: a link carrying the whole wall, read-only, with Take a copy | Shauna's pick from the session 6 ideas. No backend, the link is the wall. |
+| 2026-10-12 | Installable | Manifest, icons, service worker | Stadium signal. Shauna approved. |
+| 2026-10-12 | Wrist shot (camera try-on) | Not built | Shauna: everything but that one. |
+| 2026-10-12 | Share on the wall | A labeled Share sheet (Save photo, Send link) replaces the bare camera icon | Two actions need labels; matches the Finished screen's Share. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
@@ -218,6 +232,9 @@ Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and l
 - Session 4: the device link cannot push (no GitHub login on the Mac) and the first `add_repo` request was refused by the permission check; on the second try it went through. Shauna pushed the confetti commit herself in between. Fetch before assuming what is on `main`.
 - Session 5: the first commit carried an assistant co-author line from the session's default attribution. Shauna's rule (no AI credit) overrides it; the commit was amended within a minute. Check every commit message before pushing.
 - Session 5: I told Shauna the design board might be out of date without checking it. It was not. Compare the board with the live game before claiming drift.
+- Session 6: a tag hung beside the peg (mirrored on the last column so it stayed on stage) crossed the neighboring loop. Inside the loop, where the bracelet is bare, it reads cleanly and needs no mirroring.
+- Session 6: "Take a copy" from a visited wall did nothing until the mode was switched to `line` first, because the trade stringing only adds beads while stringing. Call `setMode('line')` before `receiveTrade` from anywhere but boot.
+- Session 6: Playwright's `mouse.wheel` and drag both scroll the wall fine; `$eval(click)` on `#popKeep` leaves a keyboard focus ring on the bracelet button (expected, as with the More menu).
 - Session 5: Shauna asked to approve redesigns on the board first, then asked to see the stringing redesign live; the Finished and Wall redesign went board first, then build on her "go ahead". Ask which she wants for each large change.
 - In Playwright tests, "See it finished" on an empty string does nothing (correctly), so tests that hang bracelets must string another before tying again. A page opened from a trade link stalls the software renderer's screenshot; check its state with `$eval` instead.
 - Session 4: git on the Mac needed delete permission for the folder (lock files). Granted once per session via the delete permission prompt.

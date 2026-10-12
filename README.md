@@ -23,19 +23,20 @@ npm run dev
 
 | File | What it holds |
 |---|---|
-| `index.html` | Page structure: header (with the back arrow), the stage (canvas, plus `#hud` for the invisible keyboard buttons over hung bracelets and the bracelet options sheet), and one panel per screen under the canvas: `#lineBar` and `#buildPanel` (the bead case) while stringing, `#tiedPanel` (Share sheet) on Finished, `#wallPanel` (Decorate sheet, hung list) on the wall. On screens 900px and wider the case and panels move to a right-hand column. |
-| `src/main.js` | The 3D scene, string physics, pointer, tilt, and shake input, the tie-off animation and confetti, the wall (velvet cones, neon sign, lighting moods), the More menu, the share card, trade links, and photo export. |
+| `index.html` | Page structure: header (with the back arrow), the stage (canvas, plus `#hud` for the invisible keyboard buttons over hung bracelets and the bracelet options sheet), and one panel per screen under the canvas: `#lineBar` and `#buildPanel` (the bead case) while stringing, `#tiedPanel` (Share sheet) on Finished, `#wallPanel` (Decorate and Share sheets, count line, hung list) on the wall. On screens 900px and wider the case and panels move to a right-hand column. |
+| `src/main.js` | The 3D scene, string physics, pointer, tilt, and shake input, the tie-off animation and confetti, the wall (peg rails, hanging loops, paper tags, neon sign, lighting moods, scrolling), wall links and visiting, the More menu, the share card, trade links, and photo export. |
 | `src/beads.js` | The bead and charm catalog, the code that builds each one in 3D, and the trade link bead code (`encodeBracelet`, `decodeBracelet`). |
 | `src/theme.js` | Light or dark: follows the device until the player uses the header toggle, then remembers their pick. Other code reads `isDark()` and listens with `onTheme()`. |
 | `src/audio.js` | Musical sounds: every sound is a note in one key, voiced by an acoustic guitar model by default. |
 | `src/style.css` | Layout and colors, light and dark. |
 | `src/assets/` | Tabletop textures, both CC0 photo scans: felt (ambientCG Fabric 034, color and normal map) and wood (Poly Haven Dark Wood). |
+| `public/` | The web app manifest, app icons, and the service worker (`sw.js`) that keeps the game available offline once it has loaded. Copied to the site root as is. |
 
 The app has three modes, set by `setMode` in `main.js`: `line` (stringing), `tied` (the finished loop), and `stack` (the wall).
 
 ## Two strands
 
-A bead's def can carry `c` (1 bottom cord, 2 both cords). `layoutCords` and `cordGap` in `src/beads.js` place beads and shape the two cords; `main.js` draws both cords as offsets from the single rope simulation, and `buildRing` does the same around a wall cone.
+A bead's def can carry `c` (1 bottom cord, 2 both cords). `layoutCords` and `cordGap` in `src/beads.js` place beads and shape the two cords; `main.js` draws both cords as offsets from the single rope simulation, and `buildRing` does the same around a hanging loop on the wall.
 
 ## Add a bead or charm
 
@@ -48,7 +49,7 @@ A bead's def can carry `c` (1 bottom cord, 2 both cords). `layoutCords` and `cor
 ## Design rules
 
 - `vite.config.js` sets `base: './'` so the game works both at a domain root and under `/13-beads`. Keep asset paths relative.
-- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets), `13beads.wall` (wall color, neon sign word, and sign color), `13beads.theme` (light or dark, set in the More menu), `13beads.color` (the color picked on the bead case's color strip), and `13beads.table` (felt or wood tabletop).
+- Saved data keys: `13beads.strand` (the bracelet in progress), `13beads.stack` (finished bracelets, one `{ b, n, d, t }` entry each: beads, tag name, date hung, `t: 'trade'` when traded), `13beads.wall` (wall color, neon sign word, and sign color), `13beads.theme` (light or dark, set in the More menu), `13beads.color` (the color picked on the bead case's color strip), and `13beads.table` (felt or wood tabletop).
 
 ## Project docs
 
