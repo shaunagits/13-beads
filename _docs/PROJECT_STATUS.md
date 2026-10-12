@@ -75,6 +75,7 @@ Last updated: 2026-10-12 (session 7). Everything below is on `main` and live, in
 
 ## Not verified
 
+- Session 7 on a real phone: the Wall pill in the header on a 375px iPhone with Tilt showing (checked only in the cloud renderer), the reload into a newer version when a home screen app is reopened (tested only in desktop Chrome with a faked newer page), and the new colors and resized beads (dice, clay disc, daisy, smiley) at phone size on felt and wood.
 - Session 6 on a real phone: the name field and prop switches in Decorate, the hook wall (tap, hold and drag between pegs, scroll by drag, swing on tilt), the tag field above the keyboard, Share your wall through the share sheet, opening a wall link and taking a copy, adding to the home screen and opening with no signal (the service worker was only checked by a build; it is not exercised by the cloud renderer), and wall performance with 24 bracelets on an older phone (24 loops of beads is a lot more geometry than 12 rings were).
 - Everything from the session 5 redesigns on a real phone: swiping the bead case header, the fold animation, the command bar, the footer below the fold, the Share, Decorate, and bracelet options sheets (especially that they sit above the keyboard in iPhone Safari, via `visualViewport`), and the live card preview's speed on an older phone. Only the cloud software renderer was used.
 - Desktop at sizes between 900 and 1280px wide, and very short desktop windows (the right-hand panels scroll, untested at small heights).
@@ -91,7 +92,7 @@ Last updated: 2026-10-12 (session 7). Everything below is on `main` and live, in
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
 - True-size beads: on hold.
-- Nothing from session 6 is waiting on an answer. Everything she was asked was decided (see the 2026-10-12 decision rows).
+- Nothing from sessions 6 or 7 is waiting on an answer. Everything she was asked was decided (see the 2026-10-12 decision rows).
 
 ## Decisions
 
@@ -207,6 +208,11 @@ Last updated: 2026-10-12 (session 7). Everything below is on `main` and live, in
 | 2026-10-12 | Name feature | Built: "Your name" in Decorate drives tags, the sign, the ticket, the sender on copies, and the Start over bracelet | Shauna asked which default to use; the name was recommended and she said add it now, then "go with your rec" on the starter spelling it. Ticket wording kept. |
 | 2026-10-12 | Wall props | Fairy lights and a ticket stub, each switchable; no polaroid | Shauna said add them. A polaroid needs a real picture; a stock one would be fake. |
 | 2026-10-12 | Empty wall | Stays as one bare rail, no ghost loop | Shauna. |
+| 2026-10-12 | Way to the wall without tying | The header's wall icon became a labeled "Wall" pill with the bracelet count inside, on every screen | The icon was there all along but read as decoration. Shauna asked for a way in that fits the existing controls; a label in the header needed no new screen element. |
+| 2026-10-12 | Bead sizes | Follow real kit beads with a pony at 9mm: dice 8mm, clay disc 6mm, daisy spacer about 5mm, smiley 10mm; letters stay larger than real | Shauna asked for bigger dice and an audit. Letters were left big on purpose: they must read on a phone. |
+| 2026-10-12 | More colors | Seven added: burgundy, forest green, mint, coral, lilac, gray, tan, each with a two-strand partner | Shauna: add them all. Common concert bracelet shades the strip lacked. Added at the end of `COLORS` so old trade links keep their colors. |
+| 2026-10-12 | Staying current | The game checks for a newer version each time the player returns, and reloads only on the string screen with nothing open | Shauna said yes. Home screen apps can stay open for days; reloading anywhere else could lose a typed note, a share sheet, or a visit. |
+| 2026-10-12 | Surprise designs | Eleven more: ten song titles in their album's colors, plus Besties | Shauna approved song titles ("All good"). Titles only, never lyrics or the artist's name, same as the album ones. |
 | 2026-10-12 | Share on the wall | A labeled Share sheet (Save photo, Send link) replaces the bare camera icon | Two actions need labels; matches the Finished screen's Share. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
@@ -217,6 +223,12 @@ Last updated: 2026-10-12 (session 7). Everything below is on `main` and live, in
 
 ## Wrong turns worth knowing
 
+- Session 7: "the wall doesn't load" could not be reproduced (live build matched `main`, no errors with many kinds of saved walls) and it fixed itself before a cause was found. Most likely a brief mismatch while a deploy or the offline copy updated. The staying-current check was added after. See `_docs/findings/2026-10-12-wall-load-bead-sizes.md`.
+- Session 7: "Surprise me is not working" was a race. The starter bracelet strung itself on with timers nothing could cancel, so a Surprise tapped in the first two seconds was buried under starter beads until the wrist was full. `stopStringing` now clears `starterTimers` too.
+- Session 7: `pkill -f "vite ..."` killed the shell a third time. Do not pkill at all; start servers with `setsid` on a fresh port and let the container reclaim them.
+- Session 7: a Playwright installed fresh in the scratch folder wanted a newer Chromium than the one pre-installed. Launch with `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
+- Session 7: a background Chrome tab reports `visibilityState` "hidden", so the staying-current check (which runs on becoming visible) does nothing in a tab driven by Claude in Chrome. Override `document.visibilityState` to test it.
+- Session 7: the cloud clone could not push until the repository was attached to the session with push access (`add_repo`).
 - `gh repo create` fails in a cloud session. Repositories must be created by Shauna, then attached.
 - The games site returned "not found" at `/13-beads/` until a rewrite for the bare folder path was added. A wildcard rewrite does not match it. See the `games` README.
 - Git in the local Mac folder leaves `.lock` files unless delete permission has been granted for that folder in the session. Pulls then fail with "another git process seems to be running". Grant delete permission, remove the stale lock files, and pull again.
