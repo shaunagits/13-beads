@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Width each bead takes up along the string, as a fraction of bead size.
-export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 0.84, starb: 1.0, dice: 0.7, facet: 0.42, marble: 0.84, moon2: 0.72, gunspacer: 0.24, pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
+export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 0.84, starb: 1.0, dice: 0.9, facet: 0.42, marble: 0.84, moon2: 0.72, gunspacer: 0.24, pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
   lucky13: 1.04, snake: 2.05, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
@@ -1547,13 +1547,13 @@ export function makeBead(d) {
       }))));
       break;
     case 'dice': {
-      // A see-through colored die with white pips. The cord runs through two opposite faces, so four faces show.
-      group.add(mesh((geo.dice ||= new RoundedBoxGeometry(0.62, 0.62, 0.62, 3, 0.1)), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
+      // A see-through colored die with white pips, 8mm like the real ones (the size of a cube bead). The cord runs through two opposite faces, so four faces show.
+      group.add(mesh((geo.dice ||= new RoundedBoxGeometry(0.86, 0.86, 0.86, 3, 0.14)), mat(defKey(d), () => new THREE.MeshPhysicalMaterial({
         color: deep(d.h, d.s, clamp(d.l, 30, 78)), emissive: hsl(d.h, d.s, d.l * 0.3), transparent: true, opacity: 0.88, roughness: 0.12, clearcoat: 1,
       }))));
       const pipMat = (n) => mat('pip' + n, () => new THREE.MeshBasicMaterial({ map: pipTex(n), transparent: true, depthWrite: false, toneMapped: false }));
-      for (const [n, rx, ry, pos] of [[5, 0, 0, [0, 0, 0.312]], [2, 0, Math.PI, [0, 0, -0.312]], [3, -Math.PI / 2, 0, [0, 0.312, 0]], [4, Math.PI / 2, 0, [0, -0.312, 0]]]) {
-        const f = new THREE.Mesh((geo.pipFace ||= new THREE.PlaneGeometry(0.5, 0.5)), pipMat(n));
+      for (const [n, rx, ry, pos] of [[5, 0, 0, [0, 0, 0.432]], [2, 0, Math.PI, [0, 0, -0.432]], [3, -Math.PI / 2, 0, [0, 0.432, 0]], [4, Math.PI / 2, 0, [0, -0.432, 0]]]) {
+        const f = new THREE.Mesh((geo.pipFace ||= new THREE.PlaneGeometry(0.69, 0.69)), pipMat(n));
         f.rotation.set(rx, ry, 0);
         f.position.set(...pos);
         group.add(f);
