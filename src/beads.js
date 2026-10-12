@@ -138,6 +138,18 @@ export const PRESETS = [
   era('Evermore', 'EVERMORE', 'white', [B('clay', 'Orange'), B('round', 'Cream'), B('matte', 'Orange'), { k: 'ball' }, B('round', 'Teal')], { k: 'leaf' }),
   era('The Tortured Poets Department', 'TTPD', 'white', [B('matte', 'Black'), B('pony', 'White'), { k: 'pearl' }, B('matte', 'White'), B('pony', 'Black'), { k: 'spacer' }], { k: 'wheart' }),
   era('The Life of a Showgirl', 'SHOWGIRL', 'gold', [B('glitter', 'Orange'), B('pony', 'Teal'), { k: 'pearl' }, B('glitter', 'Teal'), { k: 'ball' }], { k: 'feather' }),
+  // Added 2026-10-12: song titles, each in its album's colors, and one for trading with friends.
+  era('Karma', 'KARMA', 'white', [B('pony', 'Navy'), B('jelly', 'Lilac'), B('starb', 'Blue'), { k: 'moon2' }, B('jelly', 'Lilac'), B('pony', 'Navy')], { k: 'cat' }),
+  era('Bejeweled', 'BEJEWELED', 'frost', [B('facet', 'Navy'), { k: 'rondelle' }, B('crystal', 'Lilac'), B('glitter', 'Navy'), { k: 'rondelle' }], { k: 'jewel' }),
+  era('Love Story', 'LOVE STORY', 'gold', [{ k: 'pearl' }, B('pony', 'Cream'), B('glitter', 'Yellow'), { k: 'ball' }, B('pony', 'Cream')], { k: 'heart' }),
+  era('Enchanted', 'ENCHANTED', 'frost', [B('crystal', 'Purple'), B('seedg', 'Lilac'), { k: 'pearl' }, B('glitter', 'Lavender'), { k: 'daisy' }], { k: 'sparkle' }),
+  era('All Too Well', 'ALL TOO WELL', 'white', [B('pony', 'Burgundy'), B('clay', 'Tan'), B('round', 'Red'), B('clay', 'Cream'), B('pony', 'Burgundy')], { k: 'leaf' }),
+  era('Style', 'STYLE', 'white', [B('pony', 'Baby blue'), B('pony', 'Gray'), { k: 'spacer' }, B('round', 'White'), B('metal', 'Red')], { k: 'lips' }),
+  era('Delicate', 'DELICATE', 'black', [B('matte', 'Gray'), { k: 'seedx', m: 'gunmetal' }, { k: 'pearl' }, B('crystal', 'Black'), { k: 'gunspacer' }, B('matte', 'Gray')], { k: 'mirror' }),
+  era('Cruel Summer', 'CRUEL SUMMER', 'pink', [B('jelly', 'Coral'), B('pony', 'Blush'), { k: 'ball' }, B('jelly', 'Hot pink')], { k: 'shades' }),
+  era('Cardigan', 'CARDIGAN', 'white', [B('clay', 'Gray'), B('matte', 'Cream'), { k: 'marble' }, B('round', 'Gray'), B('clay', 'Tan')], { k: 'cardigan' }),
+  era('Willow', 'WILLOW', 'white', [B('pony', 'Forest green'), B('clay', 'Tan'), B('matte', 'Mint'), { k: 'ball' }, B('round', 'Forest green'), B('clay', 'Cream')], { k: 'tree' }),
+  era('Besties', 'BESTIES', 'pink', [B('pony', 'Mint'), B('smiley', 'Lilac'), B('pony', 'Coral'), { k: 'pearl' }, B('glitter', 'Hot pink'), B('pony', 'Baby blue')], { k: 'pheart' }),
 ];
 
 /* ---------- Two strands ---------- */

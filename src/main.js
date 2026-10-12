@@ -64,11 +64,11 @@ let letterStyle = 'white', letterShape = 'round';
 // Two strands: a second cord hangs below the first. New beads go on the active cord: 0 top, 1 bottom, 2 both.
 let twoCords = false, activeCord = 0, cordPx = 0;
 // Stops any bead-by-bead stringing in progress (a phrase, a pattern, the starter, or a Surprise me bracelet).
-function stopStringing() { clearInterval(phraseTimer); }
+function stopStringing() { clearInterval(phraseTimer); starterTimers.forEach(clearTimeout); starterTimers = []; }
 let mode = 'line', kLin = 0, tiedFired = false, side = 'R';
 let W = 300, H = 300, sizeCur = 34, lineLen = 600;
 let T = 0, last = 0;
-let phraseTimer = null, lastTubeKey = '';
+let phraseTimer = null, starterTimers = [], lastTubeKey = '';
 let parX = 0, parY = 0, parTX = 0, parTY = 0;
 let pluck = null, spin = null, spinY = 0, spinX = 0, spinVY = 0, spinVX = 0, hop = 9;
 let tilt = 0, tiltS = 0, hasTilt = false;
@@ -2553,7 +2553,8 @@ function stringStarter(delay = 0) {
   stopStringing();
   const st = nameStarter() || STARTER;
   if (reduce) { st.forEach((d) => addBead(d, true, 'R')); sync(); return; }
-  st.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R', i); }, delay + i * 130));
+  // Kept so anything that replaces the string (Surprise me, Clear, a phrase) can stop the starter mid-way.
+  starterTimers = st.map((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R', i); }, delay + i * 130));
 }
 $('restart').addEventListener('click', () => {
   arm();
