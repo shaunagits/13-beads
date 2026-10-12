@@ -78,7 +78,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: transparent; border: 1px solid transparent; color: var(--ink);
 }
 .hbtn:hover { border-color: var(--line); }
-.hbtn[aria-pressed="true"]#stackBtn { background: var(--surface); border-color: var(--line); }
 #sound .slash { display: none; }
 #themeBtn .sun { display: none; }
 [data-theme="dark"] #themeBtn .sun { display: inline; }
@@ -338,6 +337,22 @@ header { gap: 8px; min-height: 44px; }
 .back-arrow:hover { color: var(--ink); }
 .hbtn { width: 44px; height: 44px; }
 .badge { top: 3px; right: 2px; }
+/* The way to the wall: a labeled pill, open from any screen, with the count of bracelets hung inside it.
+   The tap target is the full 44px; the pill drawn inside it is 36px tall. */
+#stackBtn { width: auto; display: flex; align-items: center; gap: 6px; padding: 0 13px 0 11px; border: 0; isolation: isolate; font: 600 14.5px var(--body); }
+#stackBtn::before { content: ""; position: absolute; inset: 4px 0; z-index: -1; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+#stackBtn:hover::before { border-color: var(--muted); }
+#stackBtn[aria-pressed="true"]::before { background: var(--tint-bg); border-color: transparent; }
+#stackBtn[aria-pressed="true"] { color: var(--tint-ink); }
+#stackBtn .badge { position: static; }
+@media (max-width: 430px) {
+  #stackBtn { padding: 0 11px; }
+  #stackBtn svg { display: none; }
+  /* With the iPhone Tilt button showing too, the wordmark steps down a size so the header stays on one line. */
+  header:has(#tilt:not([hidden])) .mark span { width: 19px; height: 21px; font-size: 13px; }
+  header:has(#tilt:not([hidden])) .mark span.dot { width: 8px; }
+}
+@media (max-width: 380px) { header:has(#tilt:not([hidden])) { gap: 4px; } header:has(#tilt:not([hidden])) .mark span { width: 17px; } header:has(#tilt:not([hidden])) #stackBtn { padding: 0 8px; } }
 /* While stringing, the canvas corner is empty: undo and the rest live in the bar below. */
 .hud[data-mode="line"] .corner { display: none; }
 .line-bar { flex: none; display: flex; flex-direction: column; gap: 8px; }
