@@ -85,8 +85,16 @@
             <h2 class="sheet-title" id="popTitle">This bracelet</h2>
             <button class="sheet-close" id="popClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
           </div>
+          <label class="sign-field tag-field" for="tagName">Tag
+            <input id="tagName" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="Mine, or who it came from">
+          </label>
+          <div class="cord-pick tag-src" id="tagSrc" role="radiogroup" aria-label="Where it came from">
+            <button class="seg" type="button" role="radio" data-src="made" aria-checked="true">Made it</button>
+            <button class="seg" type="button" role="radio" data-src="trade" aria-checked="false">Traded</button>
+          </div>
+          <p class="sign-help tag-date" id="tagDate"></p>
           <button class="finish wide" id="editRing" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20l4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg> Edit it</button>
-          <button class="ghost-btn" id="popKeep" type="button">Leave it</button>
+          <button class="ghost-btn" id="popKeep" type="button">Done</button>
           <button class="quiet-danger" id="takeOff" type="button">Take it off</button>
         </div>
       </div>
@@ -151,7 +159,7 @@
       </div>
     </div>
 
-    <!-- The wall: decorate, save a photo, or go back to stringing. On wide screens, also a list of what hangs there. -->
+    <!-- The wall: decorate, save a photo, or go back to stringing. A count line under the canvas; on wide screens, a list of what hangs there. -->
     <div class="side-panel" id="wallPanel" hidden>
       <div class="sheet" id="custom" role="dialog" aria-modal="true" aria-labelledby="customTitle" hidden>
         <div class="sheet-head">
@@ -182,7 +190,7 @@
         <h2 class="panel-title" id="hungTitle">On your wall</h2>
         <ul class="hung-list" id="hungList"></ul>
       </section>
-      <p class="wall-empty" id="wallEmpty" hidden>Nothing on display yet</p>
+      <p class="wall-empty" id="wallLine">Nothing on display yet</p>
       <div class="cmd-bar wall-bar">
         <button class="ghost-btn" id="customBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="custom"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="4" y="3.5" width="14" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M18 6.5h1.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H12v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="10" y="15" width="4" height="6" rx="1.2" fill="currentColor"/></svg> Decorate</button>
         <button class="bar-btn" id="photoBtn" type="button" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.4" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>

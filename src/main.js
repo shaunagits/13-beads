@@ -44,10 +44,9 @@ try {
   if (d && typeof d.sign === 'string' && cleanSign(d.sign).trim()) decor.sign = cleanSign(d.sign).trim();
 } catch (e) { /* optional */ }
 const STACK_HINT = matchMedia('(pointer: coarse)').matches
-  ? 'Tap a bracelet to jingle it. Hold it to edit it or take it off.'
-  : 'Click a bracelet to jingle it. Hold or right-click it to edit it or take it off.';
+  ? 'Tap a bracelet for its options and its tag. Hold it, then drag it to another peg.'
+  : 'Click a bracelet for its options and its tag. Hold it, then drag it to another peg.';
 const EMPTY_WALL = 'Nothing on display yet. Finish a bracelet and hang it here.';
-const STACK_MAX = 12;
 
 /* ---------- State ---------- */
 let beads = [], fallers = [], undoStack = [], redoStack = [];
@@ -378,8 +377,7 @@ function setMode(m) {
   if (reduce) kLin = m === 'tied' ? 1 : 0;
 }
 
-/* ---------- The wall: a painted wall with a shelf, where finished things go on display ---------- */
-// Stage one holds one display piece: a gold T-bar stand with bracelets hanging from its bars.
+/* ---------- The wall: a painted wall with peg rails, where finished things go on display ---------- */
 const board = new THREE.Group();
 board.visible = false;
 scene.add(board);
@@ -483,11 +481,11 @@ function applyMood() {
   const onWall = mode === 'stack', night = onWall && isDark();
   placeSun();
   sun.color.set(!onWall ? 0xffffff : night ? 0x8fa2ff : 0xfff0dc);
-  sun.intensity = !onWall ? 1.7 : night ? 0.4 : 2.1;
-  scene.environmentIntensity = !onWall ? 0.55 : night ? 0.2 : 0.5;
+  sun.intensity = !onWall ? 1.7 : night ? 0.6 : 2.1;
+  scene.environmentIntensity = !onWall ? 0.55 : night ? 0.32 : 0.5;
   stageA.intensity = stageB.intensity = onWall ? 0.12 : reduce ? 0.5 : 1.0;
   wall.material.color.set(night ? (WALL_COLORS[decor.color] || WALL_COLORS.white).night : 0xffffff);
-  riserMat.color.set(RISER_COLORS[decor.color] || RISER_COLORS.white);
+  railMat.color.set(RAIL_COLORS[decor.color] || RAIL_COLORS.white);
   // The craft table: evenly lit by day; in dark mode the room dims and a warm desk lamp pools light in the middle.
   const deskNight = !onWall && isDark();
   if (table.material.map) {
@@ -497,9 +495,10 @@ function applyMood() {
   }
   deskLamp.intensity = deskNight ? 7 : 0;
   if (deskNight) { sun.intensity = 0.55; sun.color.set(0xffe2c4); scene.environmentIntensity = 0.35; stageA.intensity = stageB.intensity = 0.35; }
-  lamp.intensity = night ? 2.4 : 0;
-  neonGlow.intensity = night ? 1.8 : 0;
-  neonGlow.color.set(decor.neon === 'blue' ? 0x7fc8ff : decor.neon === 'white' ? 0xfff0dc : 0xff9ccc);
+  lamp.intensity = night ? 1.6 : 0;
+  // At night the sign is the room's main light: its color washes down the wall and catches the pegs and beads.
+  neonGlow.intensity = night ? 3.4 : 0;
+  neonGlow.color.set(decor.neon === 'blue' ? 0x7fc8ff : decor.neon === 'white' ? 0xfff0dc : decor.neon === 'pink' ? 0xff8cc4 : 0xffb0d8);
   if (!neonMaps.on) { neonMaps.on = neonTexture(true); neonMaps.off = neonTexture(false); }
   neon.material.map = night ? neonMaps.on : neonMaps.off;
   neon.material.blending = THREE.NormalBlending;
@@ -507,126 +506,89 @@ function applyMood() {
 }
 onTheme(applyMood);
 
-// Depth of field on the wall: bracelets stay sharp, the wall behind falls slightly soft, like a phone photo.
-// The display piece: a gold T-bar jewelry stand on a wood shelf. Bracelets hang from its bars on
-// small hooks, facing forward so every phrase can be read, and swing when touched.
-const stand = new THREE.Group();
-board.add(stand);
-const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xf6c655, metalness: 0.9, roughness: 0.22, clearcoat: 0.6 });
-function woodTexture() {
-  const c = document.createElement('canvas');
-  c.width = 512; c.height = 128;
-  const x = c.getContext('2d');
-  x.fillStyle = '#5b3a27';
-  x.fillRect(0, 0, 512, 128);
-  for (let i = 0; i < 90; i++) {
-    x.strokeStyle = `rgba(${Math.random() < 0.5 ? '25,12,6' : '150,100,70'},${0.08 + Math.random() * 0.2})`;
-    x.lineWidth = 0.6 + Math.random() * 2.4;
-    const y = Math.random() * 128;
-    x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(170, y + 8, 340, y - 8, 512, y + 3); x.stroke();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.75 });
-// The display: white velvet bracelet cones on a slim shelf. Bracelets stack around a cone the way they do on a
-// real one, each resting on the one below. Drag a cone to spin it and read the phrases; hold a bracelet to edit it.
-// Velvet: a fine fibrous pile (a grain texture used as a bump map) under a strong soft sheen, so the cone glows
-// at its edges and reads as fabric rather than plaster.
-function pileTexture() {
-  const S = 256, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const x = c.getContext('2d');
-  x.fillStyle = '#808080';
-  x.fillRect(0, 0, S, S);
-  for (let i = 0; i < 9000; i++) {
-    const v = 90 + Math.random() * 90, px = Math.random() * S, py = Math.random() * S;
-    x.strokeStyle = `rgba(${v},${v},${v},.55)`;
-    x.lineWidth = 0.7 + Math.random() * 0.8;
-    x.beginPath(); x.moveTo(px, py); x.lineTo(px + (Math.random() - 0.5) * 2, py + 2 + Math.random() * 3); x.stroke();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(5, 6);
-  return t;
-}
-const pile = pileTexture();
-const velvet = new THREE.MeshPhysicalMaterial({
-  color: 0xf1ece6, roughness: 0.95, bumpMap: pile, bumpScale: 1.4, roughnessMap: pile,
-  sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color(0xffffff),
-});
-const RISER_COLORS = { white: 0xe9d6cc, pink: 0xe2b6c9, sage: 0xeee6d6 };
-const riserMat = new THREE.MeshPhysicalMaterial({ color: RISER_COLORS.white, roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 });
-const CONE_TILT = 0.24;
-// Where the cones go on this stage, in stage pixels (y measured down from the top).
+// The display: lacquered peg rails across the wall, one bracelet per peg. Each bracelet hangs from its peg as a
+// loop facing the viewer, the phrase along the bottom where it reads, with a paper tag on the peg beside it (a name
+// and the day it was hung). Newest hangs top left and the rest shift along. Tap one for its options; hold it, then
+// drag it to another peg. Tilting the phone, hanging a new one, or dropping one sets the loops swinging.
+// Everything on the wall (the sign and the rails) scrolls as one room when there are more rows than fit.
+const room = new THREE.Group();
+board.add(room);
+room.add(neon);
+const display = new THREE.Group();
+room.add(display);
+const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xe9c070, metalness: 0.9, roughness: 0.26, clearcoat: 0.6 });
+const RAIL_COLORS = { white: 0xe9d6cc, pink: 0xe2b6c9, sage: 0xeee6d6 };
+const railMat = new THREE.MeshPhysicalMaterial({ color: RAIL_COLORS.white, roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 });
+const pegGeo = new THREE.CylinderGeometry(4.2, 4.8, 26, 18).rotateX(Math.PI / 2).translate(0, 0, 13);
+const pegCapGeo = new THREE.SphereGeometry(5.2, 18, 12);
+// What hangs on the wall. Each entry: the beads (b), a tag name (n), the day it was hung (d, YYYY-MM-DD), and
+// t: 'trade' for a bracelet that arrived by trade link. Older saves were bare bead lists; they become entries here.
+const entryOf = (e) => (Array.isArray(e) ? { b: e, n: 'Mine' } : e && Array.isArray(e.b) ? e : null);
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const fmtDate = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return m ? new Date(+m[1], m[2] - 1, +m[3]).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+};
+const TAG_MAX = 24;
+const cleanTag = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, TAG_MAX);
+// Where the pegs go on this stage, in stage pixels (y measured down from the top).
 function wallGrid() {
-  const maxCones = W < 520 ? 2 : 3, per = Math.ceil(STACK_MAX / maxCones);
-  const n = Math.min(stack.length, STACK_MAX), cones = clamp(Math.ceil(n / per), 1, maxCones);
-  const SIGN_ROOM = 118, BTN_ROOM = 36;
-  // With a single cone in use, the bracelets are drawn larger (the camera comes in) so their phrases read.
-  const one = cones === 1 && n <= per;
-  const spacing = Math.min((W * 0.92) / Math.max(cones, one ? 1.7 : maxCones === 2 ? 2 : 2.4), one ? 300 : 250);
-  const R = clamp(spacing * 0.36, 34, one ? 90 : 74);
-  // The riser's front edge comes forward and down with the tilt, so leave room for it above the button.
-  const shelf = H - BTN_ROOM - 34 - R * 0.42;
-  // Bracelet bead size: the same rule the loop uses everywhere else, so phrases stay readable.
-  const S = clamp(R * 0.3, 13, 24), gap = S * 1.18;
-  const avail = shelf - SIGN_ROOM - 12;
-  const coneH = clamp(Math.min(avail * 0.92, R * 5.2), R * 2.4, 560);
-  return { cones, per, spacing, R, S, gap, coneH, shelf, top: shelf - coneH, cap: Math.min(STACK_MAX, cones * per) };
+  const n = stack.length;
+  const cols = W < 520 ? 2 : W < 760 ? 3 : 4;
+  const colW = Math.min((W * 0.94) / cols, 300);
+  const R = clamp(colW * 0.34, 34, 92);
+  // Bead size: a full bracelet fills its loop; a short one shows more cord, as a real one would.
+  const S = clamp(R * 0.36, 13, 28);
+  const rowH = R * 2.75 + 48;
+  const rows = Math.max(1, Math.ceil(n / cols));
+  const SIGN_ROOM = 118, top = SIGN_ROOM + 30;
+  return { cols, colW, R, S, rowH, rows, top, total: top + (rows - 1) * rowH + R * 2.75 + 36, railW: cols * colW + 24 };
+}
+// A peg's place, in room coordinates (y up, origin at the stage center before scrolling).
+function slotPos(i, grid) {
+  const col = i % grid.cols, row = Math.floor(i / grid.cols);
+  return { x: (col - (grid.cols - 1) / 2) * grid.colW, y: H / 2 - grid.top - row * grid.rowH };
 }
 let standKey = '';
-const coneGroups = [];
+const railMeshes = [];
 function buildStand(grid) {
-  for (const m of [...stand.children]) { stand.remove(m); m.traverse((o) => { if (o.userData.own) o.geometry.dispose(); }); }
-  coneGroups.length = 0;
-  const solid = (geo, mat, parent, x, y, z = 0) => {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x, y, z);
-    m.receiveShadow = true;
-    m.userData.own = true;
-    parent.add(m);
-    return m;
-  };
-  const shelfY = H / 2 - grid.shelf, R = grid.R, Hc = grid.coneH;
-  // A display riser instead of a shelf: a low lacquered block in a tone that suits the wall, tilted with the cones
-  // so its top shows, like a jewelry counter.
-  const riser = new THREE.Group();
-  riser.position.set(0, shelfY, 0);
-  riser.rotation.x = CONE_TILT;
-  stand.add(riser);
-  const rw = Math.min(W * 0.96, grid.cones * grid.spacing + 90), rd = R * 2.9;
-  const top = solid(new RoundedBoxGeometry(rw, 30, rd, 4, 9), riserMat, riser, 0, -15, 0);
-  top.receiveShadow = true;
-  // A cone: a soft velvet taper with a rounded top, standing on a low round foot.
-  // Slim, like a jewelry display cone: just wider than a bracelet at the foot, narrowing to a rounded tip.
-  const Rb = R * 1.08, Rt = R * 0.2;
-  const prof = [[0, 0], [Rb * 1.06, 0], [Rb * 1.07, 3], [Rb * 1.03, 6], [Rb, 7]];
-  for (let i = 1; i <= 16; i++) { const t = i / 16; prof.push([Rb + (Rt - Rb) * t, 7 + (Hc - 7 - Rt) * t]); }
-  for (let i = 1; i <= 8; i++) { const a = (i / 8) * (Math.PI / 2); prof.push([Rt * Math.cos(a), Hc - Rt + Rt * Math.sin(a)]); }
-  const coneGeo = new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x, y)), 56);
-  for (let c = 0; c < grid.cones; c++) {
-    const g = new THREE.Group(), spinner = new THREE.Group();
-    g.position.set((c - (grid.cones - 1) / 2) * grid.spacing, shelfY, 0);
-    g.rotation.x = CONE_TILT;
-    const m = solid(coneGeo, velvet, spinner, 0, 0, 0);
-    m.userData.own = c === 0;
-    g.add(spinner);
-    stand.add(g);
-    coneGroups.push({ g, spinner, spin: 0, spinV: 0, Rb, Rt, Hc });
+  for (const m of railMeshes) { display.remove(m); m.traverse((o) => { if (o.userData.own) o.geometry.dispose(); }); }
+  railMeshes.length = 0;
+  const railGeo = new RoundedBoxGeometry(grid.railW, 14, 10, 3, 4);
+  for (let row = 0; row < grid.rows; row++) {
+    const y = slotPos(row * grid.cols, grid).y;
+    const rail = new THREE.Mesh(railGeo, railMat);
+    rail.position.set(0, y, -5);
+    rail.userData.own = row === 0;
+    display.add(rail);
+    railMeshes.push(rail);
+    for (let col = 0; col < grid.cols; col++) {
+      const p = slotPos(row * grid.cols + col, grid), peg = new THREE.Group();
+      peg.position.set(p.x, y, 0);
+      // Pegs point out and a little up, the way a real peg rail is cut, so a loop cannot slide off.
+      peg.rotation.x = -0.18;
+      const stem = new THREE.Mesh(pegGeo, goldMat), cap = new THREE.Mesh(pegCapGeo, goldMat);
+      cap.position.z = 26;
+      stem.castShadow = cap.castShadow = true;
+      peg.add(stem, cap);
+      display.add(peg);
+      railMeshes.push(peg);
+    }
   }
 }
 let stack = [];
 let rings = [], grabRing = null;
-try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.filter(Array.isArray); } catch (e) { /* optional */ }
+try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.map(entryOf).filter(Boolean); } catch (e) { /* optional */ }
 function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
+const tradedCount = () => stack.filter((e) => e.t === 'trade').length;
 function syncStack() {
-  $('wallCount').textContent = stack.length;
-  $('wallCount').hidden = !stack.length || mode === 'stack';
-  $('wallEmpty').hidden = !!stack.length;
-  $('stackBtn').setAttribute('aria-label', stack.length ? 'Your wall, ' + stack.length + ' on display' : 'Your wall');
-  $('photoBtn').disabled = !stack.length;
+  const n = stack.length, t = tradedCount();
+  $('wallCount').textContent = n;
+  $('wallCount').hidden = !n || mode === 'stack';
+  $('wallLine').textContent = n ? n + (n === 1 ? ' bracelet' : ' bracelets') + ' on your wall' + (t ? ' · ' + t + ' traded' : '') : 'Nothing on display yet';
+  $('hungTitle').textContent = n ? 'On your wall · ' + n + (t ? ' · ' + t + ' traded' : '') : 'On your wall';
+  $('stackBtn').setAttribute('aria-label', n ? 'Your wall, ' + n + ' on display' : 'Your wall');
+  $('photoBtn').disabled = !n;
 }
 // The wall's main button says where it goes: back to a string in progress, or a fresh one.
 function stringInProgress() {
@@ -640,15 +602,19 @@ function syncAnother() {
 }
 // A bracelet's phrase: letters in a row form a word; any other bead between them becomes a space.
 const phraseOf = (list) => list.map((d) => (d && d.k === 'letter' ? (d.ch === HEART ? '♥' : d.ch) : ' ')).join('').replace(/\s+/g, ' ').trim();
+const entryName = (e) => phraseOf(e.b) || 'Bracelet with ' + e.b.length + ' beads';
 // Wide screens list the bracelets on the wall beside it, each with Edit and Take off, so nobody has to press and hold.
 function buildHungList() {
   const ul = $('hungList');
   ul.textContent = '';
   rings.forEach((r, i) => {
-    const list = stack[stack.length - 1 - i] || [], name = phraseOf(list) || 'Bracelet with ' + list.length + ' beads';
-    const li = document.createElement('li'), label = document.createElement('span'), edit = document.createElement('button'), off = document.createElement('button');
+    const e = r.entry, name = entryName(e);
+    const li = document.createElement('li'), label = document.createElement('span'), tag = document.createElement('span'), edit = document.createElement('button'), off = document.createElement('button');
     label.className = 'hung-name';
     label.textContent = name;
+    tag.className = 'hung-tag';
+    tag.textContent = [e.n, fmtDate(e.d)].filter(Boolean).join(' · ');
+    label.appendChild(tag);
     edit.type = 'button'; edit.className = 'tint-btn'; edit.textContent = 'Edit';
     edit.setAttribute('aria-label', 'Edit ' + name);
     off.type = 'button'; off.className = 'quiet-danger small'; off.textContent = 'Take off';
@@ -659,61 +625,153 @@ function buildHungList() {
     ul.appendChild(li);
   });
 }
-// A bracelet lying around a cone: the beads stand in a level ring, letters facing out, the front of the
-// phrase toward the viewer. Its height on the cone is set each frame.
-function buildRing(list, grid) {
-  const lay = layoutCords(list), U = lay.U;
-  const R = grid.R, S = Math.min(grid.S, (TAU * R - 10) / Math.max(U, 1));
+// The shape of a bracelet hanging from a peg: narrow at the top where the cord sits on the peg, round at the
+// bottom. Traced from the peg down the left side, along the bottom left to right, and back up, so beads along
+// the bottom read in order.
+function loopPath(R, M = 120) {
+  const k = 0.38, c = R * 1.15, pts = [];
+  let mx = 0;
+  for (let i = 0; i <= M; i++) {
+    const t = (i / M) * TAU, x = -Math.sin(t) * (1 - k * Math.cos(t));
+    mx = Math.max(mx, Math.abs(x));
+    pts.push({ x, y: -c * (1 - Math.cos(t)) });
+  }
+  for (const p of pts) p.x *= R / mx;
+  return pts;
+}
+// The paper tag: kraft card with an eyelet, the name in the display face and the date under it. A traded bracelet
+// gets a blush card with a "Traded" ink stamp.
+function tagTexture(entry) {
+  const Wt = 320, Ht = 196, c = document.createElement('canvas');
+  c.width = Wt; c.height = Ht;
+  const x = c.getContext('2d');
+  const trade = entry.t === 'trade';
+  x.fillStyle = trade ? '#f9dde8' : '#e8d8bb';
+  x.beginPath(); x.roundRect(8, 8, Wt - 16, Ht - 16, 22); x.fill();
+  for (let i = 0; i < 700; i++) {
+    x.fillStyle = Math.random() < 0.5 ? 'rgba(80,50,20,.05)' : 'rgba(255,255,255,.08)';
+    x.fillRect(8 + Math.random() * (Wt - 16), 8 + Math.random() * (Ht - 16), 2, 2);
+  }
+  // The eyelet: a punched hole with a thin brass ring at the top, where the thread goes through.
+  x.save();
+  x.globalCompositeOperation = 'destination-out';
+  x.beginPath(); x.arc(Wt / 2, 30, 10, 0, TAU); x.fill();
+  x.restore();
+  x.strokeStyle = '#d2b06a'; x.lineWidth = 5;
+  x.beginPath(); x.arc(Wt / 2, 30, 12.5, 0, TAU); x.stroke();
+  if (trade) {
+    // An ink stamp across the top right corner.
+    x.save();
+    x.translate(Wt - 86, 58); x.rotate(-0.2); x.globalAlpha = 0.62;
+    x.strokeStyle = '#d6336c'; x.lineWidth = 5;
+    x.beginPath(); x.roundRect(-68, -23, 136, 46, 8); x.stroke();
+    x.fillStyle = '#d6336c'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '800 31px Fredoka, "Arial Rounded MT Bold", sans-serif';
+    x.fillText('TRADED', 0, 1);
+    x.restore();
+  }
+  const name = entry.n || '', date = fmtDate(entry.d);
+  x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+  let size = 52;
+  const room = Wt - 48;
+  for (; size > 30; size -= 2) { x.font = `700 ${size}px Fredoka, "Arial Rounded MT Bold", sans-serif`; if (x.measureText(name).width <= room) break; }
+  let shown = name;
+  while (shown.length > 1 && x.measureText(shown + '…').width > room) shown = shown.slice(0, -1);
+  if (shown !== name) shown += '…';
+  x.textAlign = 'center';
+  x.fillStyle = '#2a2235';
+  x.fillText(shown, Wt / 2, date ? 122 : 134);
+  if (date) {
+    x.font = '500 30px Fredoka, "Arial Rounded MT Bold", sans-serif';
+    x.fillStyle = 'rgba(42,34,53,.62)';
+    x.fillText(date, Wt / 2, 164);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+// The tag hangs from the peg on its own thread, inside the loop where the bracelet is bare, the way a shop tag sits.
+function makeTag(entry, R) {
+  const w = clamp(R * 1.18, 58, 104), h = w * (196 / 320);
+  const g = new THREE.Group();
+  const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tagTexture(entry), transparent: true, roughness: 1, alphaTest: 0.2 }));
+  card.castShadow = false;
+  const tilt = -0.05;
+  g.position.set(R * 0.02, -R * 0.66 - h / 2, 14);
+  g.rotation.z = tilt;
+  g.add(card);
+  // The thread runs from the peg to the eyelet at the top of the card.
+  const hole = new THREE.Vector3(0, h / 2 - h * (30 / 196), 0).applyAxisAngle(new THREE.Vector3(0, 0, 1), tilt).add(g.position);
+  const thread = new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(0, 2, 10), hole), 1, 0.7, 5), stringMat);
+  const redraw = () => { const old = card.material.map; card.material.map = tagTexture(entry); card.material.needsUpdate = true; if (old) old.dispose(); };
+  return { g, thread, redraw };
+}
+// A bracelet on its peg. The group's origin is the point of the cord resting on the peg, so a swing turns it there.
+function buildRing(entry, grid) {
+  const list = entry.b.filter((d) => d && UNIT[d.k]);
+  const lay = layoutCords(list), U = lay.U, R = grid.R;
+  const path = loopPath(R), cum = cumOf(path), Lp = cum[cum.length - 1];
+  const S = Math.min(grid.S, (Lp * 0.9) / Math.max(U, 1));
   const g = new THREE.Group(), loop = new THREE.Group(), hangs = [];
-  // Two strands sit one above the other around the cone, meeting at shared beads and at the knot at the back.
-  const half = (TAU * R) / S / 2, gapAt = (u) => (lay.two ? S * 0.56 * cordGap(u, lay.joins, -half, half, 1.05) : 0);
+  // Distance along the cord: the middle of the bead run sits at the bottom of the loop.
+  const sAt = (u) => Lp / 2 + u * S;
+  // Two strands sit side by side around the loop, meeting at shared beads and at the peg.
+  const half = Lp / S / 2, gapAt = (u) => (lay.two ? S * 0.56 * cordGap(u, lay.joins, -half, half, 1.05) : 0);
+  const at = (u, sd) => {
+    const p = pointAt(path, cum, sAt(u)), gp = sd * gapAt(u);
+    return { x: p.x - Math.sin(p.a) * gp, y: p.y + Math.cos(p.a) * gp, a: p.a };
+  };
   list.forEach((d, i) => {
-    const o = makeBead(d), u = lay.off[i], phi = (u * S) / R;
+    const o = makeBead(d), u = lay.off[i], p = at(u, lay.side[i]);
     if (o.userData.cup) o.userData.cup.rotation.y = capFacing(list, i) > 0 ? 0 : Math.PI;
     o.scale.setScalar(S);
-    o.position.set(R * Math.sin(phi), -lay.side[i] * gapAt(u), R * Math.cos(phi));
-    o.rotation.y = phi;
-    if (o.userData.hang) hangs.push({ hang: o.userData.hang, phi });
+    o.position.set(p.x, p.y, 0);
+    o.rotation.set(0, 0, p.a);
+    // Hanging charms hang straight down whatever the cord's angle there.
+    if (o.userData.hang) { o.userData.hang.rotation.set(0, 0, -p.a); hangs.push(o); }
     loop.add(o);
   });
-  if (!lay.two) loop.add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.8, 6, 72).rotateX(Math.PI / 2), stringMat));
+  const tubeOf = (pts) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 160, 0.9, 6, true), stringMat);
+  if (!lay.two) loop.add(tubeOf(path.slice(0, -1).map((p) => new THREE.Vector3(p.x, p.y, 0))));
   else {
     for (const sd of [-1, 1]) {
-      const path = [];
-      for (let i = 0; i <= 96; i++) {
-        const phi = -Math.PI + (i / 96) * TAU;
-        path.push(new THREE.Vector3(R * Math.sin(phi), -sd * gapAt((phi * R) / S), R * Math.cos(phi)));
-      }
-      loop.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path, true), 120, 0.8, 6, true), stringMat));
+      const pts = [];
+      for (let i = 0; i < path.length - 1; i++) { const p = at((cum[i] - Lp / 2) / S, sd); pts.push(new THREE.Vector3(p.x, p.y, 0)); }
+      loop.add(tubeOf(pts));
     }
   }
-  g.add(loop);
-  return { g, loop, R, S, hangs, two: lay.two, drop: 0, dropv: 0, landed: true, ph: Math.random() * 6, sx: 0, sy: 0, rx: R, ry: R * 0.4, cone: null, wob: 0, wobv: 0 };
+  // The knot sits on the peg, its tails hanging down the front.
+  const kn = knot.clone();
+  kn.visible = true;
+  kn.scale.setScalar(S / 30);
+  kn.rotation.z = Math.PI;
+  kn.position.set(0, 1, 3);
+  loop.add(kn);
+  const tag = makeTag(entry, R);
+  g.add(loop, tag.g, tag.thread);
+  // Shadows from the loop land on the rail and the wall below it.
+  loop.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return { g, loop, tag, R, S, hangs, entry, a: 0, av: 0, fly: 0, lift: 0, x: 0, y: 0, tx: 0, ty: 0, slot: 0, sx: 0, sy: 0, rx: R, ry: R, drag: null };
 }
-// Oldest bracelets sit lowest on the first cone; newer ones stack on top, then fill the next cone.
+// Newest bracelet on the first peg, the rest along the rails in order. Bracelets already hanging keep their
+// place on screen and glide to a new peg when one is added, taken off, or moved.
 function rebuildStack() {
   const grid = wallGrid();
-  standKey = [grid.cones, Math.round(grid.R), Math.round(grid.coneH / 4), Math.round(W / 30), Math.round(H / 30)].join('|');
+  standKey = [grid.cols, Math.round(grid.R), grid.rows, Math.round(W / 30), Math.round(H / 30)].join('|');
+  const was = new Map(rings.map((r) => [r.entry, { x: r.x, y: r.y, a: r.a, av: r.av }]));
   rings.forEach((r) => r.g.parent && r.g.parent.remove(r.g));
   buildStand(grid);
-  rings = stack.slice(-grid.cap).reverse().map((list) => buildRing(list.filter((d) => d && UNIT[d.k]), grid));
-  const n = rings.length, lift = [];
-  // Oldest first, so each bracelet knows how tall the ones below it are.
-  for (let i = n - 1; i >= 0; i--) {
-    const r = rings[i], j = n - 1 - i, c = Math.min(coneGroups.length - 1, Math.floor(j / grid.per)), level = j % grid.per;
-    const cg = coneGroups[c];
-    // Rest where the cone is just narrower than the bracelet, then one bead height higher per bracelet below.
-    // A two-strand bracelet is about one more bead height tall.
-    const y0 = ((cg.Rb - grid.R * 0.94) / (cg.Rb - cg.Rt)) * (cg.Hc - cg.Rt) + 7 + grid.S * 0.6;
-    const extra = r.two ? grid.S * 0.56 : 0;
-    const below = lift[c] || 0;
-    r.cone = cg;
-    r.level = level;
-    r.y0 = y0 + level * grid.gap + below + extra / 2;
-    lift[c] = below + extra;
-    r.g.position.y = r.y0;
-    cg.spinner.add(r.g);
-  }
+  rings = stack.slice().reverse().map((e) => buildRing(e, grid));
+  rings.forEach((r, i) => {
+    const p = slotPos(i, grid), old = was.get(r.entry);
+    r.slot = i;
+    r.tx = p.x; r.ty = p.y;
+    r.x = old ? old.x : p.x; r.y = old ? old.y : p.y;
+    if (old) { r.a = old.a; r.av = old.av; }
+    r.g.position.set(r.x, r.y, 10);
+    display.add(r.g);
+  });
   buildRingButtons();
   buildHungList();
 }
@@ -726,9 +784,9 @@ function toScreen(obj, x, y) {
 }
 // Keyboard and screen reader access: one focusable button per hanging bracelet, kept over it each frame.
 let kbRing = null;
-function braceletName(list) {
-  const word = list.filter((d) => d && d.k === 'letter').map((d) => d.ch).join('');
-  return word ? 'Bracelet that says ' + word : 'Bracelet with ' + list.length + ' beads';
+function braceletName(e) {
+  const word = e.b.filter((d) => d && d.k === 'letter').map((d) => d.ch).join('');
+  return (word ? 'Bracelet that says ' + word : 'Bracelet with ' + e.b.length + ' beads') + (e.n ? ', tagged ' + e.n : '');
 }
 function buildRingButtons() {
   const box = $('ringBtns');
@@ -739,8 +797,8 @@ function buildRingButtons() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'ring-btn';
-    b.setAttribute('aria-label', braceletName(stack[stack.length - 1 - i]) + ', ' + (i + 1) + ' of ' + rings.length + '. Press Enter to edit it or take it off.');
-    b.addEventListener('focus', () => { kbRing = r; });
+    b.setAttribute('aria-label', braceletName(r.entry) + ', ' + (i + 1) + ' of ' + rings.length + '. Press Enter for its options.');
+    b.addEventListener('focus', () => { kbRing = r; scrollToRing(r); });
     b.addEventListener('blur', () => { if (kbRing === r) kbRing = null; });
     b.addEventListener('click', () => { if (rings.includes(r)) openPop(r, b); });
     b.addEventListener('keydown', (e) => {
@@ -757,94 +815,131 @@ function buildRingButtons() {
     if (n) n.focus(); else $('another').focus();
   }
 }
+// Hanging a finished bracelet: it goes on the first peg and everything else shifts along a peg.
 function wear() {
   if (!beads.length) return;
   const back = trade ? trade.saved : [];
-  if (trade) { trade = null; tradeUI(); }
-  stack.push(defs());
+  const entry = { b: defs(), n: trade ? cleanTag(trade.note) || 'A trade' : 'Mine', d: today() };
+  if (trade) { entry.t = 'trade'; trade = null; tradeUI(); }
+  stack.push(entry);
   if (stack.length > 24) stack.shift();
   saveStack();
+  scrollY = 0; scrollV = 0;
   rebuildStack();
-  if (rings[0] && !reduce) { rings[0].drop = H * 0.8; rings[0].landed = false; whoosh(); }
+  const r = rings[0];
+  if (r && !reduce) {
+    // It flies up from where the string was, lands on its peg, and swings.
+    r.fly = 1;
+    r.fromX = 0; r.fromY = -H / 2 - r.R * 2.4;
+    r.x = r.fromX; r.y = r.fromY;
+    whoosh();
+  }
   pushUndo();
   setBeads(back);
   sync();
   kLin = 0;
   setMode('stack');
 }
+// Scrolling the room: a tall wall moves up and down under a finger, a mouse wheel, or keyboard focus.
+let scrollY = 0, scrollV = 0, scrollTo = null;
+const scrollMax = () => Math.max(0, wallGrid().total - H);
+function scrollToRing(r) {
+  const top = H / 2 - r.ty, bottom = top + r.R * 2.75 + 10;
+  const lo = bottom - H + 20, hi = top - 20;
+  scrollTo = clamp(scrollY, lo, hi);
+}
 function updateStack(dt) {
   wall.scale.set(W * 1.4, H * 1.4, 1);
   const grid = wallGrid();
-  if ([grid.cones, Math.round(grid.R), Math.round(grid.coneH / 4), Math.round(W / 30), Math.round(H / 30)].join('|') !== standKey) rebuildStack();
+  if ([grid.cols, Math.round(grid.R), grid.rows, Math.round(W / 30), Math.round(H / 30)].join('|') !== standKey) rebuildStack();
+  if (scrollTo != null) { scrollY += (scrollTo - scrollY) * Math.min(1, dt * 10); if (Math.abs(scrollTo - scrollY) < 0.5) scrollTo = null; }
+  else if (!(spin && spin.scrolling)) { scrollY += scrollV * dt; scrollV *= Math.pow(0.08, dt); }
+  scrollY = clamp(scrollY, 0, scrollMax());
+  room.position.y = scrollY;
   {
-    // The sign sits in the band between the top of the cones and the buttons at the top of the screen.
+    // The sign sits in the band between the top of the first rail and the top of the screen.
     const topY = H / 2 - grid.top, lo = topY + 24, hi = H / 2 - 50;
     const signH = clamp((hi - lo) * 1.25, 60, 110), signW = Math.min(signH * (NEON_W / NEON_H), W * 0.92);
     neon.scale.set(signW, signW * (NEON_H / NEON_W), 1);
-    // Sit the sign a little above the cones rather than up against the top of the screen.
-    neon.position.set(0, clamp(lo + signH * 0.45 + 20, lo + 10, Math.max(lo + 10, (lo + hi) / 2)), -60);
-    neonGlow.position.set(0, neon.position.y, 60);
+    neon.position.set(0, clamp(lo + signH * 0.45 + 14, lo + 10, Math.max(lo + 10, (lo + hi) / 2)), -60);
+    neonGlow.position.set(0, neon.position.y + scrollY, 60);
     lamp.position.set(W * 0.42, -H * 0.3, 220);
   }
-  for (const cg of coneGroups) {
-    // A spun cone coasts to a stop. Tilting the phone turns the cones a little.
-    if (cg !== grabCone) { cg.spin += cg.spinV * dt; cg.spinV *= Math.pow(0.12, dt); }
-    const lean = reduce ? 0 : Math.sin(T * 0.35) * 0.06 + tiltS * 0.3;
-    cg.spinner.rotation.y = cg.spin + lean;
-  }
+  const rest = tiltS * 0.35;
   rings.forEach((r) => {
-    // Dropping onto the cone from above, with a little settle.
-    r.dropv += (-r.drop * 150 - r.dropv * 13) * dt;
-    r.drop += r.dropv * dt;
-    if (!r.landed && r.drop < 6) { r.landed = true; thud(); chime(); buzz(25); r.wobv += 3; }
-    r.wobv += (-r.wob * 60 - r.wobv * 5) * dt;
-    r.wob += r.wobv * dt;
-    r.g.position.y = r.y0 + r.drop;
-    r.g.rotation.set(r.wob * 0.05, 0, r.wob * 0.04);
-    r.pick = lerp(r.pick || 0, popRing === r || kbRing === r ? 1 : 0, reduce ? 1 : Math.min(1, dt * 14));
-    r.loop.scale.setScalar(1 + r.pick * 0.07);
-    // Where the bracelet is on screen: its center and the half-widths of the ellipse it makes.
+    // Flying up to the peg after "Add to my wall": an arc from below, then a swing on landing.
+    if (r.fly > 0) {
+      r.fly = Math.max(0, r.fly - dt / 0.75);
+      const t = ease(1 - r.fly);
+      r.x = lerp(r.fromX, r.tx, t);
+      r.y = lerp(r.fromY, r.ty, t) + Math.sin(t * Math.PI) * 50;
+      if (r.fly === 0) { thud(); chime(); buzz(25); r.av += 3.2; }
+    } else if (r.drag) {
+      r.x += (r.drag.x - r.x) * Math.min(1, dt * 22);
+      r.y += (r.drag.y - r.y) * Math.min(1, dt * 22);
+      r.av -= (r.x - (r.px ?? r.x)) * 0.25;
+    } else {
+      const k = reduce ? 1 : Math.min(1, dt * 9);
+      r.x += (r.tx - r.x) * k;
+      r.y += (r.ty - r.y) * k;
+    }
+    r.px = r.x;
+    // A pendulum: each loop swings about its peg and settles; tilting the phone leans them all.
+    r.av += ((rest - r.a) * 40 - r.av * 1.7) * dt;
+    r.a = clamp(r.a + r.av * dt, -0.9, 0.9);
+    if (reduce) { r.a = 0; r.av = 0; }
+    const want = popRing === r || kbRing === r || r.drag || (spin && spin.lift && spin.ring === r) ? 1 : 0;
+    r.lift = lerp(r.lift, want, reduce ? 1 : Math.min(1, dt * 14));
+    r.g.position.set(r.x, r.y, 10 + r.lift * 36);
+    r.g.rotation.z = r.a;
+    r.g.scale.setScalar(1 + r.lift * 0.06);
+    // Where the bracelet is on screen: its center and half-widths, for pointer hits and the keyboard button.
     r.g.updateWorldMatrix(true, false);
-    const c = toScreen(r.g, 0, 0), e = toScreen(r.g, r.R, 0);
-    tmpV.set(0, 0, r.R); r.g.localToWorld(tmpV); tmpV.project(camera);
-    const fy = ((1 - tmpV.y) / 2) * H;
-    r.sx = c.x; r.sy = c.y; r.rx = Math.abs(e.x - c.x); r.ry = Math.max(8, Math.abs(fy - c.y));
+    const c = toScreen(r.g, 0, -r.R * 1.15), e = toScreen(r.g, r.R + r.S, 0), f = toScreen(r.g, 0, -r.R * 2.3 - r.S);
+    r.sx = c.x; r.sy = c.y; r.rx = Math.max(10, Math.abs(e.x - c.x)); r.ry = Math.max(10, Math.abs(f.y - c.y));
     if (r.btn) {
-      r.btn.style.width = r.rx * 2 + 10 + 'px';
-      r.btn.style.height = r.ry * 2 + r.S * 2 + 'px';
-      r.btn.style.transform = `translate(${r.sx - r.rx - 5}px, ${r.sy - r.ry - r.S}px)`;
+      r.btn.style.width = r.rx * 2 + 'px';
+      r.btn.style.height = r.ry * 2 + 'px';
+      r.btn.style.transform = `translate(${r.sx - r.rx}px, ${r.sy - r.ry}px)`;
     }
   });
 }
-// Which cone is under the pointer, and which bracelet on it (stage pixels, y down)?
-let grabCone = null;
-function coneAt(p) {
+// Which bracelet is under the pointer (stage pixels, y down): the nearest one whose loop the point falls in.
+function ringAt(p) {
   let best = null, bd = 1e9;
-  coneGroups.forEach((cg) => {
-    const base = toScreen(cg.g, 0, 0), tip = toScreen(cg.g, 0, cg.Hc);
-    const half = (cg.Rb * 1.2 * (W / W));
-    if (p.y < tip.y - 20 || p.y > base.y + 30) return;
-    const d = Math.abs(p.x - base.x);
-    if (d < half + 30 && d < bd) { bd = d; best = cg; }
-  });
+  for (const r of rings) {
+    const dx = (p.x - r.sx) / (r.rx + 6), dy = (p.y - r.sy) / (r.ry + 6);
+    const d = dx * dx + dy * dy;
+    if (d < 1 && d < bd) { bd = d; best = r; }
+  }
   return best;
 }
-// Which bracelet is under the pointer: the nearest ring whose band (its screen ellipse) the point falls in.
+// Which peg is nearest the pointer, for dropping a dragged bracelet.
+function slotAt(p) {
+  const grid = wallGrid();
+  const x = p.x - W / 2, y = H / 2 - p.y - scrollY;
+  let best = 0, bd = 1e9;
+  for (let i = 0; i < rings.length; i++) {
+    const s = slotPos(i, grid), d = Math.hypot(x - s.x, y - (s.y - grid.R * 1.1));
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+// While a bracelet is being dragged, the others step aside so its new peg is free.
+function previewOrder(r, slot) {
+  if (rings[slot] === r) return;
+  rings.splice(rings.indexOf(r), 1);
+  rings.splice(slot, 0, r);
+  const grid = wallGrid();
+  rings.forEach((o, i) => { const s = slotPos(i, grid); o.slot = i; o.tx = s.x; o.ty = s.y; if (o !== r) o.av += (Math.random() - 0.5) * 1.2; });
+  tick(1.1 + slot * 0.03, 0.05);
+}
 // Is the pointer on the neon sign's word? (Stage pixels, y down.) A tap there opens the sign editor.
 function signAt(p) {
   if (mode !== 'stack' || !neon.visible) return false;
   const c = toScreen(neon, 0, 0), e = toScreen(neon, 0.5, 0.5);
   const hw = Math.max(60, Math.abs(e.x - c.x) * signFrac + 16), hh = Math.max(28, Math.abs(e.y - c.y) * 0.7);
   return Math.abs(p.x - c.x) < hw && Math.abs(p.y - c.y) < hh;
-}
-function ringAt(p) {
-  let best = null, bd = 1e9;
-  for (const r of rings) {
-    const dx = (p.x - r.sx) / (r.rx + 12), dy = (p.y - r.sy) / (r.ry + r.S + 6);
-    const d = dx * dx + dy * dy;
-    if (d < 1 && Math.abs(p.y - r.sy) < bd) { bd = Math.abs(p.y - r.sy); best = r; }
-  }
-  return best;
 }
 
 // The confirm popover sits just below the picked bracelet, or above it if there is no room.
@@ -855,13 +950,16 @@ function openPop(r, opener) {
   popOpener = opener || r.btn || null;
   buzz(30);
   tick(0.9, 0.1);
-  const pop = $('pop'), i = rings.indexOf(r), list = stack[stack.length - 1 - i] || [];
-  $('popTitle').textContent = phraseOf(list) || 'This bracelet';
+  const pop = $('pop'), e = r.entry;
+  $('popTitle').textContent = phraseOf(e.b) || 'This bracelet';
+  $('tagName').value = e.n || '';
+  syncTagSrc(e);
+  $('tagDate').textContent = e.d ? 'Hung ' + fmtDate(e.d) : 'Hung a while ago';
   pop.hidden = false;
   pop.style.left = pop.style.top = '';
   if (!wideCase.matches) { $('editRing').focus({ preventScroll: true }); return; }
   const pw = pop.offsetWidth, ph = pop.offsetHeight;
-  const cx = r.sx, top = r.sy - r.ry - r.S, bottom = r.sy + r.ry + r.S;
+  const cx = r.sx, top = r.sy - r.ry, bottom = r.sy + r.ry;
   let y = bottom + 8;
   if (y + ph > H - 74) y = top - ph - 8;
   pop.style.left = clamp(cx - pw / 2, 10, W - pw - 10) + 'px';
@@ -886,6 +984,33 @@ function trapTab(e, box) {
 }
 $('pop').addEventListener('keydown', (e) => trapTab(e, $('pop')));
 $('popClose').addEventListener('click', () => closePop());
+// The tag: its name, and whether the bracelet was made here or traded for. Changes redraw the tag on the wall.
+function syncTagSrc(e) {
+  document.querySelectorAll('#tagSrc .seg').forEach((b) => b.setAttribute('aria-checked', (b.dataset.src === 'trade') === (e.t === 'trade') ? 'true' : 'false'));
+}
+let tagTimer = 0;
+$('tagName').addEventListener('input', (e) => {
+  const v = cleanTag(e.target.value);
+  clearTimeout(tagTimer);
+  tagTimer = setTimeout(() => {
+    if (!popRing) return;
+    popRing.entry.n = v;
+    saveStack();
+    popRing.tag.redraw();
+    buildHungList();
+  }, 180);
+});
+document.querySelectorAll('#tagSrc .seg').forEach((b) => b.addEventListener('click', () => {
+  if (!popRing) return;
+  const e = popRing.entry;
+  if (b.dataset.src === 'trade') e.t = 'trade'; else delete e.t;
+  syncTagSrc(e);
+  saveStack();
+  popRing.tag.redraw();
+  syncStack();
+  buildHungList();
+  tick(b.dataset.src === 'trade' ? 1.3 : 1.0, 0.08);
+}));
 
 // Decorate popover: wall color and the neon sign word, saved on this device.
 function saveDecor() { try { localStorage.setItem('13beads.wall', JSON.stringify(decor)); } catch (e) { /* optional */ } }
@@ -1538,20 +1663,26 @@ cv.addEventListener('pointerdown', (e) => {
   const p = pos(e);
   try { cv.setPointerCapture(e.pointerId); } catch (_) { /* optional */ }
   if (mode !== 'line') {
-    spin = { x: p.x, y: p.y, moved: false };
+    spin = { x: p.x, y: p.y, x0: p.x, y0: p.y, moved: false, scroll0: scrollY, vy: 0, at: performance.now() };
     spinVY = 0; spinVX = 0;
     grabRing = mode === 'stack' ? ringAt(p) : null;
-    grabCone = mode === 'stack' ? (grabRing ? grabRing.cone : coneAt(p)) : null;
-    if (grabCone) grabCone.spinV = 0;
-    spin.sign = mode === 'stack' && !grabCone && signAt(p);
+    spin.ring = grabRing;
+    spin.sign = mode === 'stack' && !grabRing && signAt(p);
     if (!$('custom').hidden) { closeCustom(false); spin.dismiss = true; }
     else if (!$('shareCard').hidden) { closeShare(false); spin.dismiss = true; }
     else if (popRing) { closePop(false); spin.dismiss = true; }
     else if (grabRing) {
-      // Press and hold a bracelet to get the option to take it off.
+      // Hold a bracelet and it lifts off its peg; a drag then carries it to another peg.
       const r = grabRing;
-      holdTimer = setTimeout(() => { if (spin && !spin.moved && grabRing === r) { spin.held = true; openPop(r); } }, 480);
-    }
+      scrollV = 0;
+      holdTimer = setTimeout(() => {
+        if (!spin || spin.moved || grabRing !== r) return;
+        spin.lift = true;
+        r.g.updateWorldMatrix(true, false);
+        spin.offX = r.x - (p.x - W / 2); spin.offY = r.y - (H / 2 - p.y - scrollY);
+        buzz(20); tick(1.4, 0.07);
+      }, 300);
+    } else if (mode === 'stack') scrollV = 0;
     return;
   }
   // A loose bead on the table: tap it to string it.
@@ -1596,7 +1727,9 @@ function strum(p) {
     if (loud) { note(i); buzz(5); }
   });
 }
-let lastX = 0;
+let lastX = 0, lastMoveAt = 0;
+// Seconds since the previous pointer move, for the scroll's fling speed.
+function dtMove() { const now = performance.now(), d = (now - lastMoveAt) / 1000; lastMoveAt = now; return d; }
 cv.addEventListener('pointermove', (e) => {
   const p = pos(e);
   p.vx = p.x - lastX;
@@ -1607,12 +1740,16 @@ cv.addEventListener('pointermove', (e) => {
     if (Math.abs(dx) + Math.abs(dy) > 6) { spin.moved = true; clearTimeout(holdTimer); }
     if (spin.held || spin.dismiss) return;
     if (mode === 'stack') {
-      // Drag sideways to spin the cone, like turning a display on a counter.
-      if (grabCone && spin.moved) {
-        const d = (p.x - spin.x) * 0.014;
-        grabCone.spin += d;
-        grabCone.spinV = d / 0.016;
-        if (Math.abs(p.x - (spin.lastNote || spin.x)) > 28) { spin.lastNote = p.x; note(coneGroups.indexOf(grabCone) * 2 + Math.floor(Math.random() * 3)); }
+      if (spin.lift && grabRing) {
+        // Carrying a bracelet: it follows the finger, and the others step aside for its new peg.
+        grabRing.drag = { x: p.x - W / 2 + spin.offX, y: H / 2 - p.y - scrollY + spin.offY };
+        const slot = slotAt({ x: grabRing.drag.x + W / 2, y: H / 2 - grabRing.drag.y - scrollY });
+        if (slot !== grabRing.slot) previewOrder(grabRing, slot);
+      } else if (spin.moved) {
+        // Dragging the wall scrolls it when there are more rows than fit.
+        spin.scrolling = true;
+        scrollY = clamp(spin.scroll0 + (spin.y0 - p.y), 0, scrollMax());
+        spin.vy = (spin.y - p.y) / Math.max(0.004, dtMove());
       }
       spin.x = p.x; spin.y = p.y;
       return;
@@ -1655,16 +1792,29 @@ function release() {
     clearTimeout(holdTimer);
     // A tap on the neon sign opens the editor with the sign's word ready to retype.
     if (!spin.moved && !spin.dismiss && spin.sign) { openCustom(true); chime(); }
-    else if (!spin.moved && !spin.held && !spin.dismiss && mode === 'stack' && (grabRing || grabCone)) {
-      // A tap jingles: the bracelet bounces on its cone, or the cone gives a little turn.
-      if (grabRing) grabRing.wobv += 6;
-      else grabCone.spinV += (Math.random() < 0.5 ? -1 : 1) * 2.2;
-      const base = grabRing ? rings.indexOf(grabRing) : coneGroups.indexOf(grabCone) * 3;
+    else if (mode === 'stack' && spin.lift && grabRing) {
+      // Dropped onto a peg: the new order is kept, and the loop swings as it settles.
+      const r = grabRing;
+      r.drag = null;
+      r.av += 2.4;
+      stack = rings.slice().reverse().map((o) => o.entry);
+      saveStack();
+      buildRingButtons();
+      buildHungList();
+      thud(); buzz(15);
+      if (spin.moved) say(entryName(r.entry) + ' moved to peg ' + (r.slot + 1) + '.');
+      else openPop(r);
+    } else if (!spin.moved && !spin.dismiss && mode === 'stack' && grabRing) {
+      // A tap: the bracelet lifts and jingles, and its options open.
+      grabRing.av += 2.6;
+      const base = rings.indexOf(grabRing);
       [0, 2, 4].forEach((n, i) => setTimeout(() => note(base + n), i * 60));
       buzz(15);
+      openPop(grabRing);
+    } else if (mode === 'stack' && spin.scrolling) {
+      scrollV = clamp(spin.vy, -2400, 2400);
     }
     grabRing = null;
-    grabCone = null;
     spin = null;
     return;
   }
@@ -1689,6 +1839,13 @@ function release() {
   grab = null;
 }
 cv.addEventListener('pointerup', release);
+// A mouse wheel or trackpad scrolls a tall wall.
+cv.addEventListener('wheel', (e) => {
+  if (mode !== 'stack' || scrollMax() <= 0) return;
+  e.preventDefault();
+  scrollTo = null;
+  scrollY = clamp(scrollY + e.deltaY, 0, scrollMax());
+}, { passive: false });
 // A pointer cursor over the sign on the wall hints that it can be tapped.
 cv.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse' || e.buttons) return;
@@ -2299,6 +2456,7 @@ $('takeOff').addEventListener('click', () => {
   if (i < 0) return;
   // Rings show the newest bracelet first, so ring i is counted back from the end of the stack.
   stack.splice(stack.length - 1 - i, 1);
+  popRing = null;
   saveStack();
   rebuildStack();
   syncStack();
@@ -2308,16 +2466,17 @@ $('takeOff').addEventListener('click', () => {
   if (fromKeys) { const n = $('ringBtns').children[Math.min(i, rings.length - 1)]; (n || $('another')).focus({ preventScroll: true }); }
 });
 $('popKeep').addEventListener('click', closePop);
-// Edit a bracelet from the wall: it comes off the stand and back onto the string. A string already in progress is
-// not lost: it hangs on the stand in the edited bracelet's place (unless it is just the untouched starter).
+// Edit a bracelet from the wall: it comes off its peg and back onto the string. A string already in progress is
+// not lost: it hangs on the peg in the edited bracelet's place (unless it is just the untouched starter).
 $('editRing').addEventListener('click', () => {
   const i = rings.indexOf(popRing);
   closePop(false);
   if (i < 0) return;
-  const at = stack.length - 1 - i, list = stack[at];
+  const at = stack.length - 1 - i, list = stack[at].b;
   const current = defs(), isStarter = [STARTER, LEGACY_STARTER].some((s) => JSON.stringify(current) === JSON.stringify(s));
-  if (current.length && !isStarter) stack[at] = current;
+  if (current.length && !isStarter) stack[at] = { b: current, n: 'Mine', d: today() };
   else stack.splice(at, 1);
+  popRing = null;
   saveStack();
   rebuildStack();
   syncStack();
