@@ -268,6 +268,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .swatch input:checked + span { outline: 3px solid var(--accent); outline-offset: 2px; }
 .swatch input:focus-visible + span { outline: 3px solid var(--ink); outline-offset: 2px; }
 .sign-field { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.props { border: 0; margin: 0; padding: 0; display: flex; gap: 8px; }
+.props legend { font: 600 13px var(--body); color: var(--muted); padding: 0; margin-bottom: 6px; }
+.prop { flex: 1; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font: 600 13.5px var(--body); color: var(--ink); cursor: pointer; }
+.prop input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 .sign-field input {
   background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
   padding: 10px 12px; font: 400 18px Pacifico, 'Brush Script MT', cursive; width: 100%;

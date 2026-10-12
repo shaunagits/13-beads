@@ -27,8 +27,11 @@ const WALL_COLORS = {
   pink: { base: '#f7d3e4', shade: '#e9b3cc', night: 0x9a7fb4 },
   sage: { base: '#cfdecb', shade: '#b4c8b1', night: 0x7d9a94 },
 };
-const SIGN_DEFAULT = '13 beads', SIGN_MAX = 12;
-const cleanSign = (t) => String(t || '').replace(/[^A-Za-z0-9 !?&]/g, '').replace(/\s+/g, ' ').slice(0, SIGN_MAX);
+const SIGN_DEFAULT = '13 beads', SIGN_MAX = 16, NAME_MAX = 16;
+const cleanSign = (t) => String(t || '').replace(/[^A-Za-z0-9 !?&']/g, '').replace(/\s+/g, ' ').slice(0, SIGN_MAX);
+const cleanName = (t) => String(t || '').replace(/[^A-Za-z0-9 '.-]/g, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX);
+// The sign a player gets when they tell the game their name: "Jess's beads", or just the name when that is too long.
+const nameSign = (name) => { const full = name + "'s beads"; return cleanSign(full.length <= SIGN_MAX ? full : name).trim(); };
 // Neon sign colors. Rainbow gives each letter its own tube color.
 const NEON_COLORS = {
   rainbow: ['#ff4fa3', '#ff9a3c', '#ffd93d', '#4fe08a', '#45b8ff', '#a66bff'],
@@ -36,13 +39,20 @@ const NEON_COLORS = {
   pink: ['#ff4fa3'],
   blue: ['#45b8ff'],
 };
-let decor = { color: 'white', sign: SIGN_DEFAULT, neon: 'rainbow' };
+// name: the player's name, used on new tags, the sign, and as the sender on copies friends take. lights and
+// ticket: the wall props. All saved in 13beads.wall.
+let decor = { color: 'white', sign: SIGN_DEFAULT, neon: 'rainbow', name: '', lights: true, ticket: true };
 try {
   const d = JSON.parse(localStorage.getItem('13beads.wall') || 'null');
   if (d && WALL_COLORS[d.color]) decor.color = d.color;
   if (d && NEON_COLORS[d.neon]) decor.neon = d.neon;
   if (d && typeof d.sign === 'string' && cleanSign(d.sign).trim()) decor.sign = cleanSign(d.sign).trim();
+  if (d && typeof d.name === 'string') decor.name = cleanName(d.name);
+  if (d && d.lights === false) decor.lights = false;
+  if (d && d.ticket === false) decor.ticket = false;
 } catch (e) { /* optional */ }
+// What a new tag says: the player's name once they have given one.
+const tagDefault = () => decor.name || 'Mine';
 const STACK_HINT = matchMedia('(pointer: coarse)').matches
   ? 'Tap a bracelet for its options and its tag. Hold it, then drag it to another peg.'
   : 'Click a bracelet for its options and its tag. Hold it, then drag it to another peg.';
@@ -500,6 +510,8 @@ function applyMood() {
   lamp.intensity = night ? 1.6 : 0;
   // At night the sign is the room's main light: its color washes down the wall and catches the pegs and beads.
   neonGlow.intensity = night ? 3.4 : 0;
+  bulbMat.emissiveIntensity = night ? 2.2 : 0.15;
+  for (const l of props.lamps) l.intensity = night ? 1.4 : 0;
   neonGlow.color.set(decor.neon === 'blue' ? 0x7fc8ff : decor.neon === 'white' ? 0xfff0dc : decor.neon === 'pink' ? 0xff8cc4 : 0xffb0d8);
   if (!neonMaps.on) { neonMaps.on = neonTexture(true); neonMaps.off = neonTexture(false); }
   neon.material.map = night ? neonMaps.on : neonMaps.off;
@@ -525,7 +537,7 @@ const pegGeo = new THREE.CylinderGeometry(4.2, 4.8, 26, 18).rotateX(Math.PI / 2)
 const pegCapGeo = new THREE.SphereGeometry(5.2, 18, 12);
 // What hangs on the wall. Each entry: the beads (b), a tag name (n), the day it was hung (d, YYYY-MM-DD), and
 // t: 'trade' for a bracelet that arrived by trade link. Older saves were bare bead lists; they become entries here.
-const entryOf = (e) => (Array.isArray(e) ? { b: e, n: 'Mine' } : e && Array.isArray(e.b) ? e : null);
+const entryOf = (e) => (Array.isArray(e) ? { b: e, n: tagDefault() } : e && Array.isArray(e.b) ? e : null);
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const fmtDate = (iso) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
@@ -544,7 +556,8 @@ function wallGrid() {
   const rowH = R * 2.75 + 48;
   const rows = Math.max(1, Math.ceil(n / cols));
   const SIGN_ROOM = 118, top = SIGN_ROOM + 30;
-  return { cols, colW, R, S, rowH, rows, top, total: top + (rows - 1) * rowH + R * 2.75 + 36, railW: cols * colW + 24 };
+  const bottom = top + (rows - 1) * rowH + R * 2.75 + 36;
+  return { cols, colW, R, S, rowH, rows, top, bottom, total: bottom + (decor.ticket ? 96 : 0), railW: cols * colW + 24 };
 }
 // A peg's place, in room coordinates (y up, origin at the stage center before scrolling).
 function slotPos(i, grid) {
@@ -576,6 +589,107 @@ function buildStand(grid) {
       display.add(peg);
       railMeshes.push(peg);
     }
+  }
+}
+// Wall props: a string of warm fairy lights pinned along the top of the wall in two swags (they glow at night),
+// and a ticket stub pinned below the last rail, with the player's name on it once they have given one.
+const props = { group: null, bulbs: null, lamps: [], ticket: null };
+const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff3d6, emissive: 0xffd58a, emissiveIntensity: 0.15, roughness: 0.3 });
+const wireMat = new THREE.MeshStandardMaterial({ color: 0x3b3246, roughness: 0.8 });
+const pinMat = new THREE.MeshPhysicalMaterial({ color: 0xff4fa3, roughness: 0.25, clearcoat: 0.8 });
+function ticketTexture() {
+  const Wt = 360, Ht = 150, c = document.createElement('canvas');
+  c.width = Wt; c.height = Ht;
+  const x = c.getContext('2d');
+  // Pale ticket paper with a perforated stub on the right.
+  x.fillStyle = '#fbe9a8';
+  x.beginPath(); x.roundRect(6, 6, Wt - 12, Ht - 12, 10); x.fill();
+  for (let i = 0; i < 500; i++) { x.fillStyle = Math.random() < 0.5 ? 'rgba(120,80,0,.05)' : 'rgba(255,255,255,.1)'; x.fillRect(6 + Math.random() * (Wt - 12), 6 + Math.random() * (Ht - 12), 2, 2); }
+  const tear = Wt * 0.7;
+  x.save();
+  x.globalCompositeOperation = 'destination-out';
+  x.beginPath(); x.arc(tear, 6, 9, 0, TAU); x.arc(tear, Ht - 6, 9, 0, TAU); x.fill();
+  x.restore();
+  x.setLineDash([5, 6]); x.strokeStyle = 'rgba(90,60,0,.45)'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(tear, 20); x.lineTo(tear, Ht - 20); x.stroke();
+  x.setLineDash([]);
+  x.strokeStyle = 'rgba(90,60,0,.5)'; x.lineWidth = 3;
+  x.beginPath(); x.roundRect(16, 16, Wt - 32, Ht - 32, 6); x.stroke();
+  x.fillStyle = '#3a2d1a'; x.textBaseline = 'middle';
+  x.textAlign = 'left';
+  x.font = '800 44px Fredoka, "Arial Rounded MT Bold", sans-serif';
+  x.fillText('ADMIT ONE', 32, 58);
+  x.font = '600 21px Fredoka, "Arial Rounded MT Bold", sans-serif';
+  x.fillStyle = 'rgba(58,45,26,.75)';
+  x.fillText((decor.name ? decor.name.toUpperCase() + '  ·  ' : '') + '13 BEADS', 32, 100);
+  x.save();
+  x.translate(tear + (Wt - tear) / 2, Ht / 2); x.rotate(-Math.PI / 2);
+  x.textAlign = 'center';
+  x.font = '700 22px Fredoka, "Arial Rounded MT Bold", sans-serif';
+  x.fillStyle = '#3a2d1a';
+  x.fillText('ROW 13', 0, 0);
+  x.restore();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function buildProps() {
+  const grid = wallGrid();
+  if (props.group) { display.remove(props.group); props.group.traverse((o) => { if (o.isMesh && o.userData.own) o.geometry.dispose(); }); }
+  for (const l of props.lamps) display.remove(l);
+  props.lamps = [];
+  props.bulbs = null;
+  props.ticket = null;
+  const g = new THREE.Group();
+  props.group = g;
+  display.add(g);
+  if (decor.lights) {
+    // The wire: pinned at both top corners and the middle, sagging a little between.
+    const top = H / 2 - 9, sag = Math.min(20, W * 0.05), pts = [];
+    const anchors = [-W / 2 + 10, 0, W / 2 - 10];
+    for (let k = 0; k < 2; k++) {
+      const a = anchors[k], b = anchors[k + 1];
+      for (let i = k ? 1 : 0; i <= 24; i++) { const t = i / 24; pts.push(new THREE.Vector3(lerp(a, b, t), top - Math.sin(t * Math.PI) * sag, 18)); }
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const wire = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.6, 5), wireMat);
+    wire.userData.own = true;
+    g.add(wire);
+    const n = Math.max(8, Math.round(W / 30)), bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(3.4, 12, 10), bulbMat, n);
+    const m = new THREE.Matrix4(), capGeo = new THREE.CylinderGeometry(1.4, 1.6, 3.4, 8), caps = new THREE.InstancedMesh(capGeo, wireMat, n);
+    for (let i = 0; i < n; i++) {
+      const p = curve.getPointAt((i + 0.5) / n);
+      m.makeTranslation(p.x, p.y - 6, p.z);
+      bulbs.setMatrixAt(i, m);
+      m.makeTranslation(p.x, p.y - 2, p.z);
+      caps.setMatrixAt(i, m);
+    }
+    bulbs.userData.own = caps.userData.own = true;
+    g.add(bulbs, caps);
+    props.bulbs = bulbs;
+    for (const px of [-W / 4, W / 4]) {
+      const l = new THREE.PointLight(0xffc987, 0, Math.max(W, H) * 0.8, 1.6);
+      l.position.set(px, top - sag - 10, 60);
+      display.add(l);
+      props.lamps.push(l);
+    }
+  }
+  if (decor.ticket) {
+    const w = clamp(W * 0.32, 112, 160), h = w * (150 / 360);
+    const tk = new THREE.Group();
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: ticketTexture(), transparent: true, roughness: 1, alphaTest: 0.2 }));
+    card.userData.own = true;
+    tk.add(card);
+    // A pushpin through the top left corner.
+    const head = new THREE.Mesh(new THREE.SphereGeometry(4.2, 14, 10), pinMat), pin = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 9, 6).rotateX(Math.PI / 2), wireMat);
+    head.position.set(-w / 2 + 12, h / 2 - 10, 7);
+    pin.position.set(-w / 2 + 12, h / 2 - 10, 2);
+    head.userData.own = pin.userData.own = true;
+    tk.add(head, pin);
+    tk.position.set(-W * 0.2, H / 2 - grid.bottom - 44, 4);
+    tk.rotation.z = -0.1;
+    g.add(tk);
+    props.ticket = card;
   }
 }
 let stack = [];
@@ -765,6 +879,7 @@ function rebuildStack() {
   const was = new Map(rings.map((r) => [r.entry, { x: r.x, y: r.y, a: r.a, av: r.av }]));
   rings.forEach((r) => r.g.parent && r.g.parent.remove(r.g));
   buildStand(grid);
+  buildProps();
   rings = stack.slice().reverse().map((e) => buildRing(e, grid));
   rings.forEach((r, i) => {
     const p = slotPos(i, grid), old = was.get(r.entry);
@@ -822,7 +937,7 @@ function buildRingButtons() {
 function wear() {
   if (!beads.length) return;
   const back = trade ? trade.saved : [];
-  const entry = { b: defs(), n: trade ? cleanTag(trade.note) || 'A trade' : 'Mine', d: today() };
+  const entry = { b: defs(), n: trade ? cleanTag(trade.note) || 'A trade' : tagDefault(), d: today() };
   if (trade) { entry.t = 'trade'; trade = null; tradeUI(); }
   stack.push(entry);
   if (stack.length > 24) stack.shift();
@@ -864,7 +979,7 @@ function updateStack(dt) {
     const topY = H / 2 - grid.top, lo = topY + 24, hi = H / 2 - 50;
     const signH = clamp((hi - lo) * 1.25, 60, 110), signW = Math.min(signH * (NEON_W / NEON_H), W * 0.92);
     neon.scale.set(signW, signW * (NEON_H / NEON_W), 1);
-    neon.position.set(0, clamp(lo + signH * 0.45 + 14, lo + 10, Math.max(lo + 10, (lo + hi) / 2)), -60);
+    neon.position.set(0, clamp(lo + signH * 0.45 + 6, lo + 10, Math.max(lo + 10, (lo + hi) / 2)), -60);
     neonGlow.position.set(0, neon.position.y + scrollY, 60);
     lamp.position.set(W * 0.42, -H * 0.3, 220);
   }
@@ -1031,6 +1146,9 @@ function fillCustom() {
   box.querySelector(`input[name="wallColor"][value="${decor.color}"]`).checked = true;
   box.querySelector(`input[name="signColor"][value="${decor.neon}"]`).checked = true;
   $('signText').value = decor.sign;
+  $('playerName').value = decor.name;
+  $('propLights').checked = decor.lights;
+  $('propTicket').checked = decor.ticket;
 }
 function openCustom(focusSign = false) {
   closePop(false);
@@ -1055,11 +1173,32 @@ $('customClose').addEventListener('click', () => closeCustom());
 $('custom').addEventListener('keydown', (e) => trapTab(e, $('custom')));
 $('custom').addEventListener('change', (e) => {
   if (e.target.name === 'signColor') { decor.neon = e.target.value; saveDecor(); applyDecor(); tick(1.2, 0.08); return; }
+  if (e.target.name === 'lights' || e.target.name === 'ticket') { decor[e.target.name] = e.target.checked; saveDecor(); buildProps(); applyMood(); tick(e.target.checked ? 1.3 : 0.9, 0.08); return; }
   if (e.target.name !== 'wallColor') return;
   decor.color = e.target.value;
   saveDecor();
   applyDecor();
   tick(1.1, 0.08);
+});
+// The player's name: new tags carry it, placeholder "Mine" tags take it, and the sign reads "<name>'s beads" unless
+// the player has already written their own sign.
+let nameTimer = 0;
+$('playerName').addEventListener('input', (e) => {
+  clearTimeout(nameTimer);
+  nameTimer = setTimeout(() => {
+    const was = decor.name, name = cleanName(e.target.value);
+    if (name === was) return;
+    const autoSign = !decor.sign || decor.sign === SIGN_DEFAULT || (was && decor.sign === nameSign(was));
+    decor.name = name;
+    if (autoSign) { decor.sign = name ? nameSign(name) : SIGN_DEFAULT; $('signText').value = decor.sign; }
+    let retag = false;
+    for (const en of stack) if (en.n === 'Mine' || (was && en.n === was)) { en.n = name || 'Mine'; retag = true; }
+    saveDecor();
+    saveStack();
+    applyDecor();
+    if (retag) { rings.forEach((r) => r.tag.redraw()); buildHungList(); }
+    buildProps();
+  }, 220);
 });
 let signTimer = 0;
 $('signText').addEventListener('input', (e) => {
@@ -2456,7 +2595,7 @@ $('wallLinkBtn').addEventListener('click', async () => {
   if (!stack.length) { say('Hang a bracelet first, then share your wall.'); return; }
   const url = wallLink();
   if (matchMedia('(pointer: coarse)').matches && navigator.share) {
-    try { await navigator.share({ title: '13 Beads', text: 'Come see my bracelet wall.', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({ title: '13 Beads', text: decor.name ? 'Come see ' + decor.name + "'s bracelet wall." : 'Come see my bracelet wall.', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
   try { await navigator.clipboard.writeText(url); label.textContent = 'Link copied'; } catch (e) { label.textContent = 'Copy failed'; }
   say(label.textContent + '.');
@@ -2504,7 +2643,7 @@ $('editRing').addEventListener('click', () => {
   if (i < 0) return;
   const at = stack.length - 1 - i, list = stack[at].b;
   const current = defs(), isStarter = [STARTER, LEGACY_STARTER].some((s) => JSON.stringify(current) === JSON.stringify(s));
-  if (current.length && !isStarter) stack[at] = { b: current, n: 'Mine', d: today() };
+  if (current.length && !isStarter) stack[at] = { b: current, n: tagDefault(), d: today() };
   else stack.splice(at, 1);
   popRing = null;
   saveStack();
@@ -2654,7 +2793,7 @@ document.querySelectorAll('.surf').forEach((b) => {
 let visit = null;
 function wallLink() {
   const parts = stack.map((e) => [encodeBracelet(e.b), encodeURIComponent(e.n || ''), (e.d || '').replace(/-/g, ''), e.t === 'trade' ? 't' : ''].join(',').replace(/,+$/, ''));
-  return location.origin + location.pathname + '#w=' + parts.join(';') + '&c=' + decor.color + '&k=' + decor.neon + '&s=' + encodeURIComponent(decor.sign);
+  return location.origin + location.pathname + '#w=' + parts.join(';') + '&c=' + decor.color + '&k=' + decor.neon + '&s=' + encodeURIComponent(decor.sign) + (decor.name ? '&u=' + encodeURIComponent(decor.name) : '') + (decor.lights ? '' : '&l=0') + (decor.ticket ? '' : '&x=0');
 }
 function readVisit() {
   const m = /[#&]w=([^&]*)/.exec(location.hash);
@@ -2671,7 +2810,7 @@ function readVisit() {
     if (t === 't') e.t = 'trade';
     return e;
   }).filter(Boolean);
-  const theirs = { color: WALL_COLORS[get('c')] ? get('c') : 'white', neon: NEON_COLORS[get('k')] ? get('k') : 'rainbow', sign: cleanSign(get('s')).trim() || SIGN_DEFAULT };
+  const theirs = { color: WALL_COLORS[get('c')] ? get('c') : 'white', neon: NEON_COLORS[get('k')] ? get('k') : 'rainbow', sign: cleanSign(get('s')).trim() || SIGN_DEFAULT, name: cleanName(get('u')), lights: get('l') !== '0', ticket: get('x') !== '0' };
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* optional */ }
   return entries.length ? { entries, decor: theirs } : null;
 }
@@ -2709,8 +2848,8 @@ $('copyRing').addEventListener('click', () => {
   const r = popRing;
   closePop(false);
   if (!r || !visit) return;
-  const sign = decor.sign !== SIGN_DEFAULT ? decor.sign : '';
-  const note = sign ? 'From ' + sign : 'From a friend';
+  const who = decor.name || (decor.sign !== SIGN_DEFAULT ? decor.sign : '');
+  const note = who ? 'From ' + who : 'From a friend';
   const list = r.entry.b.map((d) => ({ ...d }));
   endVisit();
   setMode('line');

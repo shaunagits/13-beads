@@ -173,6 +173,9 @@
           <h2 class="sheet-title" id="customTitle">Decorate your wall</h2>
           <button class="sheet-close" id="customClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         </div>
+        <label class="sign-field" for="playerName">Your name
+          <input id="playerName" type="text" maxlength="16" autocomplete="given-name" spellcheck="false" placeholder="For your tags and your sign">
+        </label>
         <fieldset class="swatches">
           <legend>Wall color</legend>
           <label class="swatch"><input type="radio" name="wallColor" value="white"><span style="--sw:#f3eee6"></span>White</label>
@@ -187,9 +190,14 @@
           <label class="swatch"><input type="radio" name="signColor" value="blue"><span style="--sw:#45b8ff"></span>Blue</label>
         </fieldset>
         <label class="sign-field" for="signText">Neon sign
-          <input id="signText" type="text" maxlength="12" autocomplete="off" spellcheck="false" aria-describedby="signHelp">
+          <input id="signText" type="text" maxlength="16" autocomplete="off" spellcheck="false" aria-describedby="signHelp">
         </label>
-        <p class="sign-help" id="signHelp">Up to 12 letters, numbers, spaces, or ! ? &amp;</p>
+        <p class="sign-help" id="signHelp">Up to 16 letters, numbers, spaces, or ! ? &amp; '</p>
+        <fieldset class="props">
+          <legend>On the wall</legend>
+          <label class="prop"><input type="checkbox" name="lights" id="propLights"><span>Fairy lights</span></label>
+          <label class="prop"><input type="checkbox" name="ticket" id="propTicket"><span>Ticket stub</span></label>
+        </fieldset>
         <button class="finish wide sheet-done" id="customDone" type="button">Done</button>
       </div>
       <section class="hung" aria-labelledby="hungTitle">
