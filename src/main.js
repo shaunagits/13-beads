@@ -710,7 +710,7 @@ function syncStack() {
 // The wall's main button says where it goes: back to a string in progress, or a fresh one.
 function stringInProgress() {
   const current = defs();
-  return current.length > 0 && ![STARTER, LEGACY_STARTER].some((s) => JSON.stringify(current) === JSON.stringify(s));
+  return current.length > 0 && !isStarterList(current);
 }
 function syncAnother() {
   const back = stringInProgress();
@@ -2538,11 +2538,22 @@ const starterWith = (L) => {
 };
 const STARTER = starterWith((ch) => letterDef(ch, 'white', 'round'));
 const LEGACY_STARTER = starterWith((ch) => ({ k: 'letter', ch }));
+// Once the player has given their name, Start over spells it instead (letters and digits only, up to 12), with a
+// pink bead between the words of a two-word name. The 13 BEADS starter stays for anyone who has not.
+function nameStarter() {
+  const word = (decor.name || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim().slice(0, 12).trim();
+  if (!word) return null;
+  const pink = { k: 'pony', h: 330, s: 90, l: 58 }, gold = { k: 'glitter', h: 48, s: 98, l: 56 };
+  const mid = [...word].map((ch) => (ch === ' ' ? pink : letterDef(ch, 'white', 'round')));
+  return [{ k: 'pearl' }, gold, { k: 'sparkle' }, ...mid, { k: 'sparkle' }, gold, { k: 'pearl' }];
+}
+const isStarterList = (list) => [STARTER, LEGACY_STARTER, nameStarter()].filter(Boolean).some((st) => JSON.stringify(list) === JSON.stringify(st));
 // Beads slide on one by one, each playing the next note of the tune.
 function stringStarter(delay = 0) {
   stopStringing();
-  if (reduce) { STARTER.forEach((d) => addBead(d, true, 'R')); sync(); return; }
-  STARTER.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R', i); }, delay + i * 130));
+  const st = nameStarter() || STARTER;
+  if (reduce) { st.forEach((d) => addBead(d, true, 'R')); sync(); return; }
+  st.forEach((d, i) => setTimeout(() => { if (mode === 'line') addBead(d, true, 'R', i); }, delay + i * 130));
 }
 $('restart').addEventListener('click', () => {
   arm();
@@ -2642,7 +2653,7 @@ $('editRing').addEventListener('click', () => {
   closePop(false);
   if (i < 0) return;
   const at = stack.length - 1 - i, list = stack[at].b;
-  const current = defs(), isStarter = [STARTER, LEGACY_STARTER].some((s) => JSON.stringify(current) === JSON.stringify(s));
+  const current = defs(), isStarter = isStarterList(current);
   if (current.length && !isStarter) stack[at] = { b: current, n: tagDefault(), d: today() };
   else stack.splice(at, 1);
   popRing = null;

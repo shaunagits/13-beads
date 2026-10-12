@@ -17,7 +17,6 @@ Top item is the next thing to do.
 - True-size beads with wrist sizes: on hold.
 - Wall: dim the other bracelets while one's options sheet is open (the held one already lifts).
 - Wall: an empty wall could show one ghost loop on the first peg as a hint (Shauna: stay as is for now, 2026-10-12).
-- Starter spelling the player's name once a name is set (the original name-feature idea); not built.
 - More props, only if they can be done well: a polaroid once there is a real picture to show (the share card of a bracelet, say).
 - Wrist shot: the finished loop over the phone camera, saved as a picture (not built, 2026-10-12).
 - Twist and Daisy two-strand patterns (dropped for now, 2026-10-11).
