@@ -505,7 +505,11 @@ header { gap: 8px; min-height: 44px; }
 .sheet-head .grabber { top: -7px; }
 .sheet-title { flex: 1; margin: 0 0 0 34px; text-align: center; font: 600 17px var(--display); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-close { flex: none; width: 44px; height: 44px; margin-right: -10px; border-radius: 50%; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--muted); }
-#tiedPanel:has(#shareCard:not([hidden])) .bar-rows, #wallPanel:has(#custom:not([hidden])) .wall-bar, .app:has(#pop:not([hidden])) .wall-bar { visibility: hidden; }
+#tiedPanel:has(#shareCard:not([hidden])) .bar-rows, #wallPanel:has(#custom:not([hidden])) .wall-bar, #wallPanel:has(#wallShare:not([hidden])) .wall-bar, .app:has(#pop:not([hidden])) .wall-bar { visibility: hidden; }
+.wall-share-help { margin: 0; line-height: 1.35; }
+/* Visiting someone else's wall: no decorating, no editing, just looking and taking copies. */
+.visiting #customBtn, .visiting #wallShareBtn, .visiting .hung-list button, .visiting .tag-field, .visiting .tag-src, .visiting #tagDate, .visiting #editRing, .visiting #takeOff, .visiting #custom, .visiting #wallShare { display: none !important; }
+.visiting #copyRing[hidden] { display: flex; }
 /* Share sheet: a live preview of the story card beside the gift tag. */
 .share-body { display: flex; gap: 12px; align-items: center; }
 .card-thumb { flex: none; width: 96px; height: 170px; border-radius: 10px; object-fit: cover; background: var(--stage-b); box-shadow: 0 2px 8px var(--shadow); }
@@ -561,7 +565,16 @@ header { gap: 8px; min-height: 44px; }
   #tiedPanel .bar-row { flex-direction: column; }
   #tiedPanel .bar-row > * { flex: none; }
   .app:has(#pop:not([hidden])) .wall-bar { visibility: visible; }
-  #tiedPanel:has(#shareCard:not([hidden])) .bar-rows, #wallPanel:has(#custom:not([hidden])) .wall-bar { visibility: visible; }
+  #tiedPanel:has(#shareCard:not([hidden])) .bar-rows, #wallPanel:has(#custom:not([hidden])) .wall-bar, #wallPanel:has(#wallShare:not([hidden])) .wall-bar { visibility: visible; }
+  /* The wall's share options sit in the panel, always open, under the list. */
+  #wallShare, #wallShare[hidden] {
+    display: flex !important; position: static; max-height: none; overflow: visible; padding: 12px 0 0; border: 0; border-top: 1px solid var(--track); border-radius: 0;
+    background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; animation: none;
+  }
+  #wallShareBtn, #wallShareClose { display: none; }
+  #wallShareTitle::before { content: "Share your wall"; }
+  #wallShareTitle { font-size: 0; }
+  #wallShareTitle::before { font-size: 12px; }
   .hung { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--track); }
   .hung-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
   .hung-list li { display: flex; align-items: center; gap: 4px; min-height: 44px; }

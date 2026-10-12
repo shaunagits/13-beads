@@ -365,6 +365,8 @@ function setMode(m) {
   closePop(false);
   closeCustom(false);
   closeShare(false);
+  closeWallShare(false);
+  if (visit && m !== 'stack') endVisit();
   strand.visible = m !== 'stack';
   board.visible = m === 'stack';
   backdrop.visible = false;
@@ -579,14 +581,15 @@ function buildStand(grid) {
 let stack = [];
 let rings = [], grabRing = null;
 try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (Array.isArray(st)) stack = st.map(entryOf).filter(Boolean); } catch (e) { /* optional */ }
-function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
+function saveStack() { if (visit) return; try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
 const tradedCount = () => stack.filter((e) => e.t === 'trade').length;
 function syncStack() {
   const n = stack.length, t = tradedCount();
   $('wallCount').textContent = n;
   $('wallCount').hidden = !n || mode === 'stack';
-  $('wallLine').textContent = n ? n + (n === 1 ? ' bracelet' : ' bracelets') + ' on your wall' + (t ? ' · ' + t + ' traded' : '') : 'Nothing on display yet';
-  $('hungTitle').textContent = n ? 'On your wall · ' + n + (t ? ' · ' + t + ' traded' : '') : 'On your wall';
+  const line = n + (n === 1 ? ' bracelet' : ' bracelets');
+  $('wallLine').textContent = visit ? 'Visiting a wall · ' + line + '. Tap one to take a copy.' : n ? line + ' on your wall' + (t ? ' · ' + t + ' traded' : '') : 'Nothing on display yet';
+  $('hungTitle').textContent = visit ? 'Their wall · ' + n : n ? 'On your wall · ' + n + (t ? ' · ' + t + ' traded' : '') : 'On your wall';
   $('stackBtn').setAttribute('aria-label', n ? 'Your wall, ' + n + ' on display' : 'Your wall');
   $('photoBtn').disabled = !n;
 }
@@ -597,8 +600,8 @@ function stringInProgress() {
 }
 function syncAnother() {
   const back = stringInProgress();
-  $('anotherLabel').textContent = back ? 'Back to my string' : 'Make another';
-  $('another').querySelector('.another-plus').hidden = back;
+  $('anotherLabel').textContent = visit ? 'Back to my wall' : back ? 'Back to my string' : 'Make another';
+  $('another').querySelector('.another-plus').hidden = back || !!visit;
 }
 // A bracelet's phrase: letters in a row form a word; any other bead between them becomes a space.
 const phraseOf = (list) => list.map((d) => (d && d.k === 'letter' ? (d.ch === HEART ? '♥' : d.ch) : ' ')).join('').replace(/\s+/g, ' ').trim();
@@ -1671,7 +1674,8 @@ cv.addEventListener('pointerdown', (e) => {
     if (!$('custom').hidden) { closeCustom(false); spin.dismiss = true; }
     else if (!$('shareCard').hidden) { closeShare(false); spin.dismiss = true; }
     else if (popRing) { closePop(false); spin.dismiss = true; }
-    else if (grabRing) {
+    else if (!$('wallShare').hidden) { closeWallShare(false); spin.dismiss = true; }
+    else if (grabRing && !visit) {
       // Hold a bracelet and it lifts off its peg; a drag then carries it to another peg.
       const r = grabRing;
       scrollV = 0;
@@ -2430,8 +2434,34 @@ $('tie').addEventListener('click', () => {
 });
 $('untie').addEventListener('click', () => setMode('line'));
 $('wear').addEventListener('click', () => { arm(); wear(); });
-// The camera saves a photo of the wall; Share (on the finished screen) makes the card, the link, or the QR code.
-$('photoBtn').addEventListener('click', () => savePhoto());
+// The wall's Share sheet: save a photo of it, or send a link that lets a friend visit it.
+$('photoBtn').addEventListener('click', () => { closeWallShare(false); savePhoto(); });
+function openWallShare() {
+  closePop(false); closeCustom(false);
+  $('wallShare').hidden = false;
+  $('wallShareBtn').setAttribute('aria-expanded', 'true');
+  $('wallLinkBtn').focus({ preventScroll: true });
+}
+function closeWallShare(restore = true) {
+  if ($('wallShare').hidden) return;
+  $('wallShare').hidden = true;
+  $('wallShareBtn').setAttribute('aria-expanded', 'false');
+  if (restore && !wideCase.matches) $('wallShareBtn').focus({ preventScroll: true });
+}
+$('wallShareBtn').addEventListener('click', () => { if ($('wallShare').hidden) openWallShare(); else closeWallShare(); });
+$('wallShareClose').addEventListener('click', () => closeWallShare());
+$('wallShare').addEventListener('keydown', (e) => trapTab(e, $('wallShare')));
+$('wallLinkBtn').addEventListener('click', async () => {
+  const btn = $('wallLinkBtn'), label = btn.querySelector('span');
+  if (!stack.length) { say('Hang a bracelet first, then share your wall.'); return; }
+  const url = wallLink();
+  if (matchMedia('(pointer: coarse)').matches && navigator.share) {
+    try { await navigator.share({ title: '13 Beads', text: 'Come see my bracelet wall.', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); label.textContent = 'Link copied'; } catch (e) { label.textContent = 'Copy failed'; }
+  say(label.textContent + '.');
+  setTimeout(() => { label.textContent = 'Send link'; }, 2200);
+});
 $('shareBtn').addEventListener('click', () => { if ($('shareCard').hidden) openShare(); else closeShare(); });
 $('shareCard').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -2441,7 +2471,7 @@ $('shareCard').addEventListener('submit', (e) => {
 });
 $('cardCancel').addEventListener('click', () => closeShare());
 $('shareCard').addEventListener('keydown', (e) => trapTab(e, $('shareCard')));
-$('another').addEventListener('click', () => setMode('line'));
+$('another').addEventListener('click', () => { if (visit) { endVisit(); say('Back on your own wall.'); } else setMode('line'); });
 // The header's back arrow: on the stringing screen it goes to the games site; on Finished and the wall it goes back
 // to the string (Shauna, 2026-10-11).
 $('backArrow').addEventListener('click', (e) => {
@@ -2496,6 +2526,7 @@ document.addEventListener('keydown', (e) => {
   if (popRing) closePop();
   else if (!$('custom').hidden) closeCustom();
   else if (!$('shareCard').hidden) closeShare();
+  else if (!$('wallShare').hidden) closeWallShare();
 });
 cv.addEventListener('contextmenu', (e) => {
   e.preventDefault();
@@ -2617,6 +2648,76 @@ document.querySelectorAll('.surf').forEach((b) => {
   b.addEventListener('click', () => setSurface(b.dataset.surf));
 });
 
+/* ---------- Visiting a wall: a link that carries every bracelet on it, with its tags and the decor ---------- */
+// The link: one entry per bracelet (its bead code, tag, day, and a t for traded), then the wall color, sign color,
+// and sign word. Nothing is stored anywhere; the link is the wall.
+let visit = null;
+function wallLink() {
+  const parts = stack.map((e) => [encodeBracelet(e.b), encodeURIComponent(e.n || ''), (e.d || '').replace(/-/g, ''), e.t === 'trade' ? 't' : ''].join(',').replace(/,+$/, ''));
+  return location.origin + location.pathname + '#w=' + parts.join(';') + '&c=' + decor.color + '&k=' + decor.neon + '&s=' + encodeURIComponent(decor.sign);
+}
+function readVisit() {
+  const m = /[#&]w=([^&]*)/.exec(location.hash);
+  if (!m) return null;
+  const get = (k) => { const r = new RegExp('[#&]' + k + '=([^&]*)').exec(location.hash); try { return r ? decodeURIComponent(r[1]) : ''; } catch (e) { return ''; } };
+  const entries = m[1].split(';').slice(0, 24).map((part) => {
+    const [code, n, d, t] = part.split(',');
+    const b = decodeBracelet(code);
+    if (!b.length) return null;
+    let name = '';
+    try { name = cleanTag(decodeURIComponent(n || '')); } catch (e) { /* bad name */ }
+    const e = { b, n: name };
+    if (/^\d{8}$/.test(d || '')) e.d = d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6);
+    if (t === 't') e.t = 'trade';
+    return e;
+  }).filter(Boolean);
+  const theirs = { color: WALL_COLORS[get('c')] ? get('c') : 'white', neon: NEON_COLORS[get('k')] ? get('k') : 'rainbow', sign: cleanSign(get('s')).trim() || SIGN_DEFAULT };
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* optional */ }
+  return entries.length ? { entries, decor: theirs } : null;
+}
+function visitUI() {
+  document.body.classList.toggle('visiting', !!visit);
+  $('copyRing').hidden = !visit;
+  syncAnother();
+  syncStack();
+}
+// The player's own wall is set aside, never saved over, while the visited one hangs in its place.
+function startVisit(v) {
+  visit = { saved: stack, decor: { ...decor } };
+  stack = v.entries;
+  Object.assign(decor, v.decor);
+  applyDecor();
+  scrollY = 0; scrollV = 0;
+  rebuildStack();
+  visitUI();
+  setMode('stack');
+  say('Visiting a wall with ' + stack.length + ' bracelets. Tap one to take a copy onto your own string.');
+}
+function endVisit() {
+  if (!visit) return;
+  const v = visit;
+  visit = null;
+  stack = v.saved;
+  Object.assign(decor, v.decor);
+  applyDecor();
+  scrollY = 0; scrollV = 0;
+  rebuildStack();
+  visitUI();
+}
+// Taking a copy: the bracelet arrives the way a trade does, strung in front of the player and tied off, ready to hang.
+$('copyRing').addEventListener('click', () => {
+  const r = popRing;
+  closePop(false);
+  if (!r || !visit) return;
+  const sign = decor.sign !== SIGN_DEFAULT ? decor.sign : '';
+  const note = sign ? 'From ' + sign : 'From a friend';
+  const list = r.entry.b.map((d) => ({ ...d }));
+  endVisit();
+  setMode('line');
+  receiveTrade(list, note, defs());
+  tick(1.3, 0.1);
+});
+
 /* ---------- Boot ---------- */
 async function start() {
   // Letter beads are drawn with the display font, so wait briefly for it.
@@ -2632,17 +2733,23 @@ async function start() {
 
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('13beads.strand') || 'null'); } catch (e) { /* optional */ }
-  const got = readTrade();
+  const got = readTrade(), visiting = readVisit();
   if (Array.isArray(saved) && saved.length) setBeads(saved);
-  else if (!got) stringStarter(350);
+  else if (!got && !visiting) stringStarter(350);
   sync();
   rebuildStack();
   syncStack();
   if (got) receiveTrade(got.list, got.note, Array.isArray(saved) ? saved : []);
+  else if (visiting) startVisit(visiting);
   say(HINT);
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start();
+
+// The game installs to a home screen and opens offline: a service worker keeps the page and its files.
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
 
 // Bottom sheets sit above the on-screen keyboard: the keyboard's height is kept in a CSS variable.
 if (window.visualViewport) {

@@ -8,6 +8,11 @@
   <meta property="og:title" content="13 Beads">
   <meta property="og:description" content="String a friendship bracelet in your browser.">
   <meta name="theme-color" content="#130e21">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="13 Beads">
   <script>try{var t=localStorage.getItem("13beads.theme");document.documentElement.dataset.theme=t==="dark"||t==="light"?t:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}catch(e){}</script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='10.5' fill='none' stroke='%237f7398' stroke-width='1.8'/%3E%3Crect x='22.27' y='9.21' width='7.2' height='6.4' rx='2.4' fill='%23ff5fae' stroke='%233a2d55' stroke-width='.9' transform='rotate(70.0 25.87 12.41)'/%3E%3Crect x='22.46' y='15.81' width='7.2' height='6.4' rx='2.4' fill='%233fd3c6' stroke='%233a2d55' stroke-width='.9' transform='rotate(106.7 26.06 19.01)'/%3E%3Crect x='18.67' y='21.22' width='7.2' height='6.4' rx='2.4' fill='%23ffd23f' stroke='%233a2d55' stroke-width='.9' transform='rotate(143.3 22.27 24.42)'/%3E%3Crect x='12.40' y='23.30' width='7.2' height='6.4' rx='2.4' fill='%23a77bff' stroke='%233a2d55' stroke-width='.9' transform='rotate(180.0 16.00 26.50)'/%3E%3Crect x='6.13' y='21.22' width='7.2' height='6.4' rx='2.4' fill='%23ffffff' stroke='%233a2d55' stroke-width='.9' transform='rotate(216.7 9.73 24.42)'/%3E%3Crect x='2.34' y='15.81' width='7.2' height='6.4' rx='2.4' fill='%235aa9ff' stroke='%233a2d55' stroke-width='.9' transform='rotate(253.3 5.94 19.01)'/%3E%3Crect x='2.53' y='9.21' width='7.2' height='6.4' rx='2.4' fill='%23ff8a3d' stroke='%233a2d55' stroke-width='.9' transform='rotate(290.0 6.13 12.41)'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -94,6 +99,7 @@
           </div>
           <p class="sign-help tag-date" id="tagDate"></p>
           <button class="finish wide" id="editRing" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20l4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg> Edit it</button>
+          <button class="finish wide" id="copyRing" type="button" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Take a copy</button>
           <button class="ghost-btn" id="popKeep" type="button">Done</button>
           <button class="quiet-danger" id="takeOff" type="button">Take it off</button>
         </div>
@@ -190,10 +196,22 @@
         <h2 class="panel-title" id="hungTitle">On your wall</h2>
         <ul class="hung-list" id="hungList"></ul>
       </section>
+      <div class="sheet" id="wallShare" role="dialog" aria-modal="true" aria-labelledby="wallShareTitle" hidden>
+        <div class="sheet-head">
+          <span class="grabber" aria-hidden="true"></span>
+          <h2 class="sheet-title" id="wallShareTitle">Share your wall</h2>
+          <button class="sheet-close" id="wallShareClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="share-actions">
+          <button class="ghost-btn" id="photoBtn" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.4" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> <span>Save photo</span></button>
+          <button class="ghost-btn" id="wallLinkBtn" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> <span>Send link</span></button>
+        </div>
+        <p class="sign-help wall-share-help">Anyone with the link can look around your wall and take a copy of any bracelet onto their own string.</p>
+      </div>
       <p class="wall-empty" id="wallLine">Nothing on display yet</p>
       <div class="cmd-bar wall-bar">
         <button class="ghost-btn" id="customBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="custom"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="4" y="3.5" width="14" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M18 6.5h1.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H12v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="10" y="15" width="4" height="6" rx="1.2" fill="currentColor"/></svg> Decorate</button>
-        <button class="bar-btn" id="photoBtn" type="button" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.4" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+        <button class="ghost-btn" id="wallShareBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="wallShare"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4v11M8.5 7.5 12 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 11v7a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Share</button>
         <button class="finish" id="another" type="button"><span class="another-plus"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span id="anotherLabel">Make another</span></button>
       </div>
     </div>
