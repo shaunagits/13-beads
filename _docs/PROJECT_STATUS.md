@@ -1,10 +1,10 @@
 # Project status
 
-Last updated: 2026-10-12 (session 6). Everything below is on `main` and live, including these docs.
+Last updated: 2026-10-12 (end of session 6). Everything below is on `main` and live, including these docs.
 
 ## What exists
 
-**Design board**: a private Claude design canvas, "13 Beads screens" (https://claude.ai/artifact/Qk83C6ApFhPk5JgtKghznm), made 2026-10-10. Editable light-mode mockups of Stringing, Finished, Wall, the More menu, Share, and Decorate, built from the real styles in `src/style.css` with pictures of the 3D views, beside dark and desktop screenshots of the live game. Session 5 added two rows at the top: "Stringing redesign (live now)" and "Finished and Wall redesign" (both now built), each with phone and desktop screens in light and dark that can be clicked through. The rows below them show the game as it was on 2026-10-10. Changes made on the board do not reach the game until they are built into the code. How the proposal screens were made: `_docs/findings/2026-10-11-design-board.md`.
+**Design board**: a private Claude design canvas, "13 Beads screens" (https://claude.ai/artifact/Qk83C6ApFhPk5JgtKghznm), made 2026-10-10. Editable light-mode mockups of Stringing, Finished, Wall, the More menu, Share, and Decorate, built from the real styles in `src/style.css` with pictures of the 3D views, beside dark and desktop screenshots of the live game. Session 5 added two rows at the top: "Stringing redesign (live now)" and "Finished and Wall redesign" (both now built), each with phone and desktop screens in light and dark that can be clicked through. The rows below them show the game as it was on 2026-10-10. The board's Wall screens still show the velvet cones: the hook wall (session 6) was built straight to live without a board, so the board is behind on the wall. Changes made on the board do not reach the game until they are built into the code. How the proposal screens were made: `_docs/findings/2026-10-11-design-board.md`.
 
 **Stringing (mode `line`)**
 - A 3D cord simulated as a weighted rope (Verlet chain with gravity): beads weigh it down, a pluck bends it at the finger, phone tilt tips gravity. Drawn zoomed out a little (`ZOOM = 0.82` in `frame` in `src/main.js`): beads are about 18 percent smaller than the cord has room for.
@@ -23,7 +23,7 @@ Last updated: 2026-10-12 (session 6). Everything below is on `main` and live, in
 - On two strands the Beads tab starts with one-tap patterns in the picked color: Cross (a seed bead on both cords, one on each cord, one on both), Diamond (a small faceted crystal on both cords, three seed beads on each cord, another crystal on both), and Bubble (a pearl on both cords, five seed beads on each cord, another pearl). A pattern skips its first shared bead when the string already ends on one. The beads where the cords meet in Cross and Diamond take a partner color, one hand-picked per strip color (`PARTNER` in `src/beads.js`), for example white with hot pink, cream with navy, yellow with blue; Bubble keeps its pearls. Compartment pictures and labels show the pair.
 - Drag a bead above or below the middle of the string to move it to the top or bottom cord; let go right between them to thread it on both.
 - Saved as `c` on each bead: no `c` is the top cord, `c: 1` the bottom, `c: 2` both, so single-strand bracelets are unchanged. `layoutCords` in `src/beads.js` places beads: between two shared beads each cord carries its own run, centered, and the stretch is as long as the longer run. The length budget counts the longer cord. `cordGap` sets how far apart the cords are (they meet at shared beads and toward the ends).
-- The cords are drawn as offsets from the one simulated rope, so plucking, tilt, and the tied loop work as before. In the tied loop the top cord is the inner ring. On the wall the cords sit one above the other around the cone, and a two-strand bracelet takes extra height in the stack.
+- The cords are drawn as offsets from the one simulated rope, so plucking, tilt, and the tied loop work as before. In the tied loop the top cord is the inner ring. On the wall the two cords run side by side around the hanging loop, meeting at shared beads and at the peg.
 - Opening a two-strand bracelet (saved string, Edit from the wall, trade link, undo) turns two strands on. Turning two strands off puts every bead back on one cord (undoable).
 - Trade links: a bead token ending in `~1` or `~2` is on the bottom cord or both.
 
@@ -90,8 +90,8 @@ Last updated: 2026-10-12 (session 6). Everything below is on `main` and live, in
 
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
-- Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
 - True-size beads: on hold.
+- Nothing from session 6 is waiting on an answer. Everything she was asked was decided (see the 2026-10-12 decision rows).
 
 ## Decisions
 
@@ -239,6 +239,8 @@ Last updated: 2026-10-12 (session 6). Everything below is on `main` and live, in
 - Session 4: the device link cannot push (no GitHub login on the Mac) and the first `add_repo` request was refused by the permission check; on the second try it went through. Shauna pushed the confetti commit herself in between. Fetch before assuming what is on `main`.
 - Session 5: the first commit carried an assistant co-author line from the session's default attribution. Shauna's rule (no AI credit) overrides it; the commit was amended within a minute. Check every commit message before pushing.
 - Session 5: I told Shauna the design board might be out of date without checking it. It was not. Compare the board with the live game before claiming drift.
+- Session 6: the `vite preview` server died between tool calls once (curl returned 000); start a fresh one on a new port with `setsid`, as in session 4.
+- Session 6: a `wheel` on the wall only scrolls the room when it is taller than the canvas; otherwise the event passes through and the page scrolls to the footer. Expected, but a test that wheels on a short wall gets a page scroll, not a wall scroll.
 - Session 6: a tag hung beside the peg (mirrored on the last column so it stayed on stage) crossed the neighboring loop. Inside the loop, where the bracelet is bare, it reads cleanly and needs no mirroring.
 - Session 6: "Take a copy" from a visited wall did nothing until the mode was switched to `line` first, because the trade stringing only adds beads while stringing. Call `setMode('line')` before `receiveTrade` from anywhere but boot.
 - Session 6: Playwright's `mouse.wheel` and drag both scroll the wall fine; `$eval(click)` on `#popKeep` leaves a keyboard focus ring on the bracelet button (expected, as with the More menu).
