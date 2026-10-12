@@ -39,17 +39,22 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 
 **Tie-off (mode `tied`)**
 - The cord morphs into a knotted loop; drag to spin, tap for more confetti. Confetti: about 85 shiny pastel foil stars and 30 small maple leaves that tumble and flutter down (off with reduced motion).
-- Bottom: "Keep editing" (back to the string) and "Add to my wall".
-- Camera button opens "Share this bracelet": optional gift tag note (40 characters), then Save card (1080 x 1920 story picture: wordmark, the loop, the phrase, the date, the tag, the site address), Send link (share sheet on phones, clipboard on computers), or QR code (`qrcode-generator`, MIT).
+- Nothing on the canvas (redesign of 2026-10-12). Under it (`#tiedPanel`): "Keep editing" and a labeled "Share" side by side, then "Add to my wall" full width as the one dark button.
+- Share opens a sheet from the bottom (`#shareCard`): a live preview of the story card (redrawn as the note changes and once the loop closes) beside the gift tag note (40 characters, placeholder "For Maya, love Jess"), then Save card (1080 x 1920 story picture: wordmark, the loop, the phrase, the date, the tag, the site address; `cardCanvas` in `src/main.js`), Send link (share sheet on phones, clipboard on computers), and QR code (`qrcode-generator`, MIT), which shows in place of the preview. While a sheet is open the buttons under it step aside.
+- Wide screens: the share options sit in the right-hand panel, always open (Save card in the pink tint), with Keep editing and Add to my wall at the bottom.
 
 **Trade links**
 - Link: game address plus `#t=<code>&n=<note>`. `encodeBracelet` / `decodeBracelet` in `src/beads.js` write one token per bead by kind (letters as themselves, colored beads as type letter plus strip color, everything else as `-name`), so new beads never break old links. Off-strip colors from older bracelets map to the nearest strip color.
-- Opening a link: the code is cleared from the address bar, the player's own string is set aside (`trade.saved`, never saved over), the bracelet strings itself bead by bead and ties off, and a pill reads "A bracelet for you: <note>". "Hang it on my wall" or "Back to mine" (leaving any other way also restores the player's string).
+- Opening a link: the code is cleared from the address bar, the player's own string is set aside (`trade.saved`, never saved over), the bracelet strings itself bead by bead and ties off, and a paper tag above the buttons reads "A bracelet for you: <note>". "Back to mine" and "Hang it on my wall"; Share is hidden (leaving any other way also restores the player's string).
 
 **The wall (mode `stack`)**
 - Plain painted wall (white, pink, or sage) with a soft top-to-bottom fade and faint grain; no shadows on it.
 - Display: white velvet bracelet cones (pile texture plus sheen) on a lacquered riser whose color follows the wall; cones and riser tilt slightly toward the viewer. Bracelets stack as level rings around a cone, oldest lowest, letters facing out. Up to 12 shown (2 cones of 6 on phones, 3 cones of 4 wider), up to 24 remembered.
-- Drag sideways on a cone to spin it; tap to jingle; hold or right-click a bracelet for Edit it, Take it off, or Leave it. Edit puts it on the string; a string in progress hangs in its place unless it is the untouched starter.
+- Nothing on the canvas (redesign of 2026-10-12). Under it (`#wallPanel`): a labeled "Decorate", Save photo (camera icon, only ever saves a photo), and the dark button, "Make another" or "Back to my string" when a string is in progress. An empty wall says "Nothing on display yet" above the bar. The wall badge hides while on the wall.
+- With one cone in use, the bracelets are drawn larger so phrases read (`one` in `wallGrid`).
+- Drag sideways on a cone to spin it; tap to jingle; hold or right-click a bracelet for a sheet titled with its phrase: Edit it (dark), Leave it, and a quiet red Take it off. Edit puts it on the string; a string in progress hangs in its place unless it is the untouched starter. The held bracelet is not lifted or the others dimmed (reviewer idea, not built).
+- Decorate opens as a sheet from the bottom, so the sign stays in view while it changes: 52px swatches (the picked one has a dark ring and a check; keyboard focus a pink outline), the sign word, Done. Tapping the sign opens it with the word selected.
+- Wide screens: the right-hand panel holds Decorate (always open) and "On your wall", a list of the hung bracelets by phrase with Edit and Take off, then Save photo and Make another.
 - Neon sign: always lit, letters spaced like separate tubes, centered between the cones and the top buttons. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`. Tapping the sign's word on the wall opens Decorate just below the sign with the word selected, so typing replaces it and the sign updates in view (`signAt` in `src/main.js`); a mouse shows a pointer over the sign and bracelets.
 - Keyboard: Tab reaches each bracelet, Enter or Delete opens its options, popovers trap Tab and close on Escape.
 
@@ -72,7 +77,6 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 
 - Shake strength, after a real phone test.
 - Length budget: kept for now, to revisit.
-- Finished and Wall redesign: reviewed (`_docs/findings/2026-10-11-finished-wall-ux-review.md`); next step is boards for Shauna to approve. 
 - Name feature (ask the player's name, starter spells it, sign says "<name>'s beads"): not yet.
 - True-size beads: on hold.
 
@@ -180,6 +184,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-11 | Stringing redesign | Built and live: controls off the canvas, command bar, fixed-height case, desktop right panel, footer below the fold | Shauna asked to see it on the live site after the boards. |
 | 2026-10-11 | Back to the games site | Back arrow before the wordmark (her option B) | Shauna's pick of three ideas. |
 | 2026-10-11 | Back arrow on Finished and Wall | Goes back to the stringing screen; on stringing it goes to the games site | Shauna. |
+| 2026-10-12 | Finished and Wall redesign | Built from the approved boards: controls off the canvas, labeled Share, bottom sheets, desktop panels, larger bracelets on one cone | Shauna approved the boards and said build them. |
 | 2026-10-09 | Shake to spill | Built: tap a loose bead to string it; they roll back after 12 seconds | Shauna approved. |
 | 2026-10-09 | Name feature | Not yet | Shauna. |
 | 2026-10-09 | Era presets | Approved in principle; placement and naming open | Shauna liked the idea. Trademark caution: no artist name, logos, cover art, or lyrics in the app. |
@@ -209,6 +214,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - The share card's QR canvas sat under a global `.stage canvas` rule (absolute, full size). Scope canvas rules to the game canvas.
 - Session 4: `pkill -f "vite preview"` killed the shell again. Start each preview on a new port with `setsid` instead; the preview also stopped by itself between some tool calls, so check it answers before screenshotting.
 - Session 4: the device link cannot push (no GitHub login on the Mac) and the first `add_repo` request was refused by the permission check; on the second try it went through. Shauna pushed the confetti commit herself in between. Fetch before assuming what is on `main`.
+- In Playwright tests, "See it finished" on an empty string does nothing (correctly), so tests that hang bracelets must string another before tying again. A page opened from a trade link stalls the software renderer's screenshot; check its state with `$eval` instead.
 - Session 4: git on the Mac needed delete permission for the folder (lock files). Granted once per session via the delete permission prompt.
 - Era bracelet names went through three versions in one evening: a 3.5 second label in the count pill (missed), the label kept while customizing (she did not want a label at all), then the name spelled in letter beads on the bracelet. Ask where text should live before building a label.
 - Frosted gold letters read too faintly on the felt at bracelet size; gold on black or white letters read well.

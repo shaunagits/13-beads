@@ -454,3 +454,119 @@ header { gap: 8px; min-height: 44px; }
 }
 /* The phrase arrow takes the soft tint, so the finish button stays the only dark button. */
 .phrase-go { background: var(--tint-bg); color: var(--tint-ink); }
+
+/* ---------- Finished and Wall redesign (2026-10-12): controls under the canvas, sheets from the bottom ---------- */
+:root { --sheet-bg: linear-gradient(170deg, rgba(255, 255, 255, .97), rgba(236, 240, 250, .95)); --sheet-edge: rgba(255, 255, 255, .95); --sheet-shadow: 0 -6px 32px rgba(45, 20, 80, .22); --danger: #c4304a; --kb: 0px; }
+:root[data-theme="dark"] { --sheet-bg: linear-gradient(170deg, rgba(42, 33, 66, .98), rgba(30, 23, 48, .98)); --sheet-edge: rgba(255, 255, 255, .12); --sheet-shadow: 0 -6px 32px rgba(0, 0, 0, .6); --danger: #ff7a90; }
+.side-panel { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.side-panel[hidden] { display: none; }
+.ghost-btn {
+  height: 44px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 14.5px var(--body); white-space: nowrap;
+}
+.ghost-btn:active, .tint-btn:active { transform: scale(.97); }
+.ghost-btn[hidden] { display: none; }
+.tint-btn { height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--tint-bg); color: var(--tint-ink); font: 700 13px var(--body); }
+.quiet-danger { height: 44px; border: 0; background: transparent; color: var(--danger); font: 600 14.5px var(--body); }
+.quiet-danger.small { height: 36px; padding: 0 8px; font-size: 13px; }
+.finish.wide { width: 100%; height: 48px; justify-content: center; font-size: 16px; }
+.bar-rows { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; gap: 8px; }
+.bar-row > * { flex: 1; min-width: 0; }
+/* A received bracelet: who it is for, as a paper tag above the buttons. */
+.gift-note {
+  position: static; translate: none; align-self: center; max-width: 100%; height: 32px; margin: 0; padding: 0 16px; display: flex; align-items: center;
+  border-radius: 6px 16px 16px 6px; background: #fffaf2; color: #1c1830; font: 600 13.5px var(--body); box-shadow: 0 2px 8px var(--shadow);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gift-note[hidden] { display: none; }
+.wall-bar { gap: 6px; }
+.wall-bar .finish { margin-left: auto; }
+.another-plus { display: contents; }
+.another-plus[hidden] { display: none; }
+.wall-empty { margin: 0; text-align: center; font: 500 13px var(--body); color: var(--muted); }
+.wall-empty[hidden] { display: none; }
+.hung { display: none; }
+.panel-title { margin: 0; font: 700 12px var(--body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+
+/* Sheets: Share, Decorate, and the bracelet options slide up from the bottom, above the keyboard,
+   and the buttons beneath them step aside so only one dark button shows. */
+.sheet, .hud .sheet-pop {
+  position: fixed; z-index: 30; left: max(16px, calc(50% - 364px)); right: max(16px, calc(50% - 364px)); top: auto;
+  bottom: calc(8px + var(--kb) + env(safe-area-inset-bottom, 0px)); width: auto; max-height: calc(100dvh - 96px); overflow-y: auto;
+  box-sizing: border-box; padding: 10px 14px 14px; border-radius: 22px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--sheet-bg); border: 1px solid var(--sheet-edge); box-shadow: var(--sheet-shadow);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: sheet-in .22s cubic-bezier(.2, .8, .2, 1);
+}
+.sheet[hidden], .hud .sheet-pop[hidden] { display: none; }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(18px); } }
+@media (prefers-reduced-motion: reduce) { .sheet, .hud .sheet-pop { animation: none; } }
+.sheet-head { position: relative; display: flex; align-items: center; height: 44px; margin-top: 2px; }
+.sheet-head .grabber { top: -7px; }
+.sheet-title { flex: 1; margin: 0 0 0 34px; text-align: center; font: 600 17px var(--display); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheet-close { flex: none; width: 44px; height: 44px; margin-right: -10px; border-radius: 50%; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--muted); }
+#tiedPanel:has(#shareCard:not([hidden])) .bar-rows, #wallPanel:has(#custom:not([hidden])) .wall-bar, .app:has(#pop:not([hidden])) .wall-bar { visibility: hidden; }
+/* Share sheet: a live preview of the story card beside the gift tag. */
+.share-body { display: flex; gap: 12px; align-items: center; }
+.card-thumb { flex: none; width: 96px; height: 170px; border-radius: 10px; object-fit: cover; background: var(--stage-b); box-shadow: 0 2px 8px var(--shadow); }
+.share-body:has(.qr-box:not([hidden])) .card-thumb { display: none; }
+.qr-box canvas { width: 150px; height: 150px; }
+.share-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.share-side .sign-help { margin: 0; line-height: 1.35; }
+#cardNote { height: 44px; padding-block: 0; }
+.share-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* Decorate: bigger swatches; the picked one has a dark ring and a check, keyboard focus a pink outline. */
+.swatch span { width: 52px; height: 52px; border-radius: 14px; position: relative; display: grid; place-items: center; }
+.swatch input:checked + span { outline: none; box-shadow: 0 0 0 2px var(--ring-gap), 0 0 0 4px var(--ink); }
+.swatch input:checked + span::after {
+  content: ""; width: 20px; height: 20px; border-radius: 50%; background: var(--ink) center / 14px no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .swatch input:checked + span::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23130e21' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.swatch input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 5px; }
+.sign-field input { height: 44px; padding-block: 0; }
+/* Bracelet options sheet. */
+.sheet-pop { gap: 8px; }
+.sheet-pop .finish.wide { margin-top: 2px; }
+
+@media (min-width: 900px) {
+  /* Finished and the wall keep the same right-hand panel as stringing, so the canvas never changes width. */
+  .app:has(#lineBar[hidden]) .stage { grid-column: 1; grid-row: 2 / span 2; }
+  .app:has(#buildPanel[hidden]) .stage { grid-column: 1; }
+  #tiedPanel, #wallPanel {
+    grid-column: 2; grid-row: 2 / span 2; min-height: 0; overflow-y: auto; gap: 12px; padding: 16px; border-radius: 22px;
+    background: linear-gradient(170deg, rgba(255, 255, 255, .84), rgba(226, 232, 246, .6)); border: 1px solid rgba(255, 255, 255, .95);
+    box-shadow: inset 0 1px 0 #fff, 0 10px 28px rgba(45, 20, 80, .16);
+  }
+  [data-theme="dark"] #tiedPanel, [data-theme="dark"] #wallPanel { background: linear-gradient(170deg, rgba(255, 255, 255, .09), rgba(160, 170, 220, .04)); border-color: rgba(255, 255, 255, .14); box-shadow: 0 10px 28px rgba(0, 0, 0, .5); }
+  /* The share options and the decorate controls sit in the panel, always open. */
+  #shareCard, #shareCard[hidden], #custom, #custom[hidden] {
+    display: flex !important; position: static; max-height: none; overflow: visible; padding: 0; border: 0; border-radius: 0;
+    background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; animation: none;
+  }
+  .sheet-head .grabber, .sheet-head .sheet-close, #shareBtn, #customBtn, #customDone { display: none; }
+  .sheet-head { height: auto; margin: 0; }
+  .sheet-title { margin: 0; text-align: left; font: 700 12px var(--body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  #shareTitle::before { content: "Share it"; }
+  #customTitle::before { content: "Decorate"; }
+  #shareTitle, #customTitle { font-size: 0; }
+  #shareTitle::before, #customTitle::before { font-size: 12px; }
+  .card-thumb { width: 108px; height: 192px; }
+  .save-card { background: var(--tint-bg); color: var(--tint-ink); box-shadow: none; height: 44px; font-size: 14.5px; }
+  #tiedPanel .bar-rows { margin-top: auto; }
+  #tiedPanel .bar-row { flex-direction: column; }
+  #tiedPanel .bar-row > * { flex: none; }
+  .app:has(#pop:not([hidden])) .wall-bar { visibility: visible; }
+  #tiedPanel:has(#shareCard:not([hidden])) .bar-rows, #wallPanel:has(#custom:not([hidden])) .wall-bar { visibility: visible; }
+  .hung { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--track); }
+  .hung-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .hung-list li { display: flex; align-items: center; gap: 4px; min-height: 44px; }
+  .hung-name { flex: 1; min-width: 0; font: 600 14.5px var(--body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wall-bar { margin-top: auto; height: auto; }
+  .wall-bar .finish { flex: 1; justify-content: center; }
+  /* On wide screens the bracelet options open next to the bracelet. */
+  .hud .sheet-pop { position: absolute; left: auto; right: auto; bottom: auto; width: 260px; max-height: none; }
+}
+/* Until the loop closes, the card preview is a plain tile rather than broken-image text. */
+.card-thumb { color: transparent; font-size: 0; }
+.card-thumb:not([src]) { visibility: visible; }

@@ -279,6 +279,8 @@ function say(m) {
 }
 // While a received bracelet is showing, the player's own string is set aside and not overwritten.
 let trade = null;
+// Wide screens (900px and up) put the bead case, the share options, and the wall controls in a panel on the right.
+const wideCase = matchMedia('(min-width: 900px)');
 function save() { if (trade) return; try { localStorage.setItem('13beads.strand', JSON.stringify(defs())); } catch (e) { /* optional */ } }
 // On two cords, the length that counts is the longer cord, so the bracelet still fits one wrist.
 const usedLen = () => layoutCords(defs()).U;
@@ -351,6 +353,8 @@ function setMode(m) {
   mode = m;
   $('buildPanel').hidden = m !== 'line';
   $('lineBar').hidden = m !== 'line';
+  $('tiedPanel').hidden = m !== 'tied';
+  $('wallPanel').hidden = m !== 'stack';
   $('hud').hidden = false;
   $('hud').dataset.mode = m;
   $('menu').dataset.mode = m;
@@ -368,8 +372,8 @@ function setMode(m) {
   table.visible = m !== 'stack';
   applyMood();
   sparks.visible = false;
-  if (m === 'tied') { tiedFired = false; $('photoBtn').disabled = false; say(TIED_HINT); }
-  else if (m === 'stack') { syncStack(); say(stack.length ? STACK_HINT : EMPTY_WALL); }
+  if (m === 'tied') { tiedFired = false; say(TIED_HINT); }
+  else if (m === 'stack') { syncStack(); syncAnother(); fillCustom(); say(stack.length ? STACK_HINT : EMPTY_WALL); }
   else say(HINT);
   if (reduce) kLin = m === 'tied' ? 1 : 0;
 }
@@ -559,9 +563,11 @@ const CONE_TILT = 0.24;
 function wallGrid() {
   const maxCones = W < 520 ? 2 : 3, per = Math.ceil(STACK_MAX / maxCones);
   const n = Math.min(stack.length, STACK_MAX), cones = clamp(Math.ceil(n / per), 1, maxCones);
-  const SIGN_ROOM = 118, BTN_ROOM = 92;
-  const spacing = Math.min((W * 0.92) / Math.max(cones, maxCones === 2 ? 2 : 2.4), 250);
-  const R = clamp(spacing * 0.36, 34, 74);
+  const SIGN_ROOM = 118, BTN_ROOM = 36;
+  // With a single cone in use, the bracelets are drawn larger (the camera comes in) so their phrases read.
+  const one = cones === 1 && n <= per;
+  const spacing = Math.min((W * 0.92) / Math.max(cones, one ? 1.7 : maxCones === 2 ? 2 : 2.4), one ? 300 : 250);
+  const R = clamp(spacing * 0.36, 34, one ? 90 : 74);
   // The riser's front edge comes forward and down with the tilt, so leave room for it above the button.
   const shelf = H - BTN_ROOM - 34 - R * 0.42;
   // Bracelet bead size: the same rule the loop uses everywhere else, so phrases stay readable.
@@ -617,9 +623,41 @@ try { const st = JSON.parse(localStorage.getItem('13beads.stack') || '[]'); if (
 function saveStack() { try { localStorage.setItem('13beads.stack', JSON.stringify(stack)); } catch (e) { /* optional */ } }
 function syncStack() {
   $('wallCount').textContent = stack.length;
-  $('wallCount').hidden = !stack.length;
+  $('wallCount').hidden = !stack.length || mode === 'stack';
+  $('wallEmpty').hidden = !!stack.length;
   $('stackBtn').setAttribute('aria-label', stack.length ? 'Your wall, ' + stack.length + ' on display' : 'Your wall');
-  if (mode === 'stack') $('photoBtn').disabled = !stack.length;
+  $('photoBtn').disabled = !stack.length;
+}
+// The wall's main button says where it goes: back to a string in progress, or a fresh one.
+function stringInProgress() {
+  const current = defs();
+  return current.length > 0 && ![STARTER, LEGACY_STARTER].some((s) => JSON.stringify(current) === JSON.stringify(s));
+}
+function syncAnother() {
+  const back = stringInProgress();
+  $('anotherLabel').textContent = back ? 'Back to my string' : 'Make another';
+  $('another').querySelector('.another-plus').hidden = back;
+}
+// A bracelet's phrase: letters in a row form a word; any other bead between them becomes a space.
+const phraseOf = (list) => list.map((d) => (d && d.k === 'letter' ? (d.ch === HEART ? '♥' : d.ch) : ' ')).join('').replace(/\s+/g, ' ').trim();
+// Wide screens list the bracelets on the wall beside it, each with Edit and Take off, so nobody has to press and hold.
+function buildHungList() {
+  const ul = $('hungList');
+  ul.textContent = '';
+  rings.forEach((r, i) => {
+    const list = stack[stack.length - 1 - i] || [], name = phraseOf(list) || 'Bracelet with ' + list.length + ' beads';
+    const li = document.createElement('li'), label = document.createElement('span'), edit = document.createElement('button'), off = document.createElement('button');
+    label.className = 'hung-name';
+    label.textContent = name;
+    edit.type = 'button'; edit.className = 'tint-btn'; edit.textContent = 'Edit';
+    edit.setAttribute('aria-label', 'Edit ' + name);
+    off.type = 'button'; off.className = 'quiet-danger small'; off.textContent = 'Take off';
+    off.setAttribute('aria-label', 'Take ' + name + ' off the wall');
+    edit.addEventListener('click', () => { popRing = rings[i]; popOpener = null; $('editRing').click(); });
+    off.addEventListener('click', () => { popRing = rings[i]; popOpener = $('another'); $('takeOff').click(); });
+    li.append(label, edit, off);
+    ul.appendChild(li);
+  });
 }
 // A bracelet lying around a cone: the beads stand in a level ring, letters facing out, the front of the
 // phrase toward the viewer. Its height on the cone is set each frame.
@@ -677,6 +715,7 @@ function rebuildStack() {
     cg.spinner.add(r.g);
   }
   buildRingButtons();
+  buildHungList();
 }
 const tmpV = new THREE.Vector3();
 function toScreen(obj, x, y) {
@@ -816,8 +855,11 @@ function openPop(r, opener) {
   popOpener = opener || r.btn || null;
   buzz(30);
   tick(0.9, 0.1);
-  const pop = $('pop');
+  const pop = $('pop'), i = rings.indexOf(r), list = stack[stack.length - 1 - i] || [];
+  $('popTitle').textContent = phraseOf(list) || 'This bracelet';
   pop.hidden = false;
+  pop.style.left = pop.style.top = '';
+  if (!wideCase.matches) { $('editRing').focus({ preventScroll: true }); return; }
   const pw = pop.offsetWidth, ph = pop.offsetHeight;
   const cx = r.sx, top = r.sy - r.ry - r.S, bottom = r.sy + r.ry + r.S;
   let y = bottom + 8;
@@ -843,6 +885,7 @@ function trapTab(e, box) {
   else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); first.focus(); }
 }
 $('pop').addEventListener('keydown', (e) => trapTab(e, $('pop')));
+$('popClose').addEventListener('click', () => closePop());
 
 // Decorate popover: wall color and the neon sign word, saved on this device.
 function saveDecor() { try { localStorage.setItem('13beads.wall', JSON.stringify(decor)); } catch (e) { /* optional */ } }
@@ -854,21 +897,19 @@ function applyDecor() {
   if (neonMaps.on) { neonMaps.on.dispose(); neonMaps.off.dispose(); neonMaps.on = null; }
   applyMood();
 }
+// Show the saved wall color, sign color, and sign word in the Decorate controls.
+function fillCustom() {
+  const box = $('custom');
+  box.querySelector(`input[name="wallColor"][value="${decor.color}"]`).checked = true;
+  box.querySelector(`input[name="signColor"][value="${decor.neon}"]`).checked = true;
+  $('signText').value = decor.sign;
+}
 function openCustom(focusSign = false) {
   closePop(false);
   const box = $('custom');
   box.hidden = false;
   $('customBtn').setAttribute('aria-expanded', 'true');
-  box.querySelector(`input[name="wallColor"][value="${decor.color}"]`).checked = true;
-  box.querySelector(`input[name="signColor"][value="${decor.neon}"]`).checked = true;
-  $('signText').value = decor.sign;
-  // Opened from the sign itself: drop the editor just below the sign so the word stays in view while it changes.
-  box.style.top = '';
-  if (focusSign) {
-    const c = toScreen(neon, 0, 0), e = toScreen(neon, 0.5, 0.5);
-    const below = c.y + Math.abs(e.y - c.y) * 0.75 + 6;
-    box.style.top = Math.round(Math.max(62, Math.min(below, H - box.offsetHeight - 8))) + 'px';
-  }
+  fillCustom();
   if (focusSign) { const f = $('signText'); f.focus({ preventScroll: true }); f.select(); }
   else box.querySelector('input:checked').focus({ preventScroll: true });
 }
@@ -882,6 +923,7 @@ function closeCustom(restore = true) {
 }
 $('customBtn').addEventListener('click', () => { if ($('custom').hidden) openCustom(); else closeCustom(); });
 $('customDone').addEventListener('click', () => closeCustom());
+$('customClose').addEventListener('click', () => closeCustom());
 $('custom').addEventListener('keydown', (e) => trapTab(e, $('custom')));
 $('custom').addEventListener('change', (e) => {
   if (e.target.name === 'signColor') { decor.neon = e.target.value; saveDecor(); applyDecor(); tick(1.2, 0.08); return; }
@@ -960,8 +1002,19 @@ function openShare() {
   closePop(false);
   closeCustom(false);
   $('shareCard').hidden = false;
-  $('photoBtn').setAttribute('aria-expanded', 'true');
+  $('shareBtn').setAttribute('aria-expanded', 'true');
+  cardPreview();
   $('cardNote').focus({ preventScroll: true });
+}
+// A small live preview of the story card, redrawn as the gift tag note changes.
+let previewTimer = 0;
+function cardPreview() {
+  if (mode !== 'tied') return;
+  const note = $('cardNote').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+  const c = cardCanvas(note), t = document.createElement('canvas');
+  t.width = 216; t.height = 384;
+  t.getContext('2d').drawImage(c, 0, 0, t.width, t.height);
+  $('cardThumb').src = t.toDataURL('image/jpeg', 0.85);
 }
 function tradeLink() {
   const note = $('cardNote').value.replace(/\s+/g, ' ').trim().slice(0, 40);
@@ -973,9 +1026,10 @@ $('sendLink').addEventListener('click', async () => {
   if (matchMedia('(pointer: coarse)').matches && navigator.share) {
     try { await navigator.share({ title: '13 Beads', text: 'I made you a bracelet.', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
-  try { await navigator.clipboard.writeText(url); btn.textContent = 'Link copied'; } catch (e) { btn.textContent = 'Copy failed'; }
-  say(btn.textContent + '.');
-  setTimeout(() => { btn.textContent = 'Send link'; }, 2200);
+  const label = btn.querySelector('span');
+  try { await navigator.clipboard.writeText(url); label.textContent = 'Link copied'; } catch (e) { label.textContent = 'Copy failed'; }
+  say(label.textContent + '.');
+  setTimeout(() => { label.textContent = 'Send link'; }, 2200);
 });
 $('showQr').addEventListener('click', () => {
   const box = $('qrBox'), open = box.hidden;
@@ -991,14 +1045,18 @@ $('showQr').addEventListener('click', () => {
   x.fillStyle = '#1c1830';
   for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) if (qr.isDark(r, col)) x.fillRect(off + col * cell, off + r * cell, cell, cell);
 });
-$('cardNote').addEventListener('input', () => { if (!$('qrBox').hidden) { $('qrBox').hidden = true; $('showQr').click(); } });
+$('cardNote').addEventListener('input', () => {
+  if (!$('qrBox').hidden) { $('qrBox').hidden = true; $('showQr').click(); }
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(cardPreview, 400);
+});
 function closeShare(restore = true) {
   if ($('shareCard').hidden) return;
   $('shareCard').hidden = true;
   $('qrBox').hidden = true;
   $('showQr').setAttribute('aria-expanded', 'false');
-  $('photoBtn').setAttribute('aria-expanded', 'false');
-  if (restore) $('photoBtn').focus({ preventScroll: true });
+  $('shareBtn').setAttribute('aria-expanded', 'false');
+  if (restore && !wideCase.matches) $('shareBtn').focus({ preventScroll: true });
 }
 function deliverPng(c, name, done) {
   c.toBlob(async (blob) => {
@@ -1040,6 +1098,9 @@ function drawMark(x, cx, cy, t, stringColor) {
   }
 }
 function shareCard(note) {
+  deliverPng(cardCanvas(note), '13-beads-card.png', 'Card saved as 13-beads-card.png.');
+}
+function cardCanvas(note) {
   const css = getComputedStyle(document.documentElement), v = (n, f) => css.getPropertyValue(n).trim() || f;
   const ink = v('--ink', '#1c1830'), muted = v('--muted', '#6b6280');
   // Render the stage sharp, then cut a square around the tied loop.
@@ -1116,7 +1177,7 @@ function shareCard(note) {
   x.font = `500 32px Figtree, system-ui, sans-serif`;
   x.fillStyle = muted;
   x.fillText('games.shauna.digital/13-beads', CW / 2, CH - 70);
-  deliverPng(c, '13-beads-card.png', 'Card saved as 13-beads-card.png.');
+  return c;
 }
 
 /* ---------- Geometry helpers (2D layout in stage pixels, then lifted into 3D) ---------- */
@@ -1250,7 +1311,11 @@ function frame(now) {
   const dir = mode === 'tied' ? 1 : -1;
   kLin = clamp(kLin + (dir * dt) / 0.95, 0, 1);
   const k = ease(kLin);
-  if (mode === 'tied' && kLin >= 1 && !tiedFired) { tiedFired = true; burst(); chime(); buzz(30); }
+  if (mode === 'tied' && kLin >= 1 && !tiedFired) {
+    tiedFired = true; burst(); chime(); buzz(30);
+    // The card preview (always shown on wide screens) is drawn once the loop has closed.
+    if (wideCase.matches || !$('shareCard').hidden) setTimeout(cardPreview, 60);
+  }
 
   tiltS += (tilt - tiltS) * 0.1;
   const n = beads.length;
@@ -2000,7 +2065,6 @@ function stripEdge() {
 }
 $('colorStrip').addEventListener('scroll', stripEdge, { passive: true });
 // Wide screens show the case as a tall panel that scrolls down instead of across.
-const wideCase = matchMedia('(min-width: 900px)');
 const trayDown = () => wideCase.matches;
 wideCase.addEventListener('change', () => { buildTray(); stripEdge(); });
 // On phones the case scrolls across in two rows that fill top then bottom, so letters are reordered to read
@@ -2209,15 +2273,13 @@ $('tie').addEventListener('click', () => {
 });
 $('untie').addEventListener('click', () => setMode('line'));
 $('wear').addEventListener('click', () => { arm(); wear(); });
-// On the tie-off screen the camera makes a share card; on the wall it saves a photo of the wall.
-$('photoBtn').addEventListener('click', () => {
-  if (mode !== 'tied') { savePhoto(); return; }
-  if ($('shareCard').hidden) openShare(); else closeShare();
-});
+// The camera saves a photo of the wall; Share (on the finished screen) makes the card, the link, or the QR code.
+$('photoBtn').addEventListener('click', () => savePhoto());
+$('shareBtn').addEventListener('click', () => { if ($('shareCard').hidden) openShare(); else closeShare(); });
 $('shareCard').addEventListener('submit', (e) => {
   e.preventDefault();
   const note = $('cardNote').value.replace(/\s+/g, ' ').trim().slice(0, 40);
-  closeShare();
+  closeShare(!wideCase.matches);
   shareCard(note);
 });
 $('cardCancel').addEventListener('click', () => closeShare());
@@ -2356,6 +2418,7 @@ function tradeUI() {
   g.hidden = !trade;
   if (trade) g.textContent = trade.note ? 'A bracelet for you: ' + trade.note : 'A bracelet for you';
   $('untie').lastChild.textContent = trade ? ' Back to mine' : ' Keep editing';
+  $('shareBtn').hidden = !!trade;
   $('wear').lastChild.textContent = trade ? ' Hang it on my wall' : ' Add to my wall';
 }
 // The received bracelet is strung bead by bead in front of the player, then ties itself off.
@@ -2421,3 +2484,10 @@ async function start() {
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
 start();
+
+// Bottom sheets sit above the on-screen keyboard: the keyboard's height is kept in a CSS variable.
+if (window.visualViewport) {
+  const kb = () => document.documentElement.style.setProperty('--kb', Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop) + 'px');
+  visualViewport.addEventListener('resize', kb);
+  visualViewport.addEventListener('scroll', kb);
+}
