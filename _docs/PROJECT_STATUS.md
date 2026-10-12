@@ -1,10 +1,10 @@
 # Project status
 
-Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, including these docs.
+Last updated: 2026-10-12 (end of session 5). Everything below is on `main` and live, including these docs.
 
 ## What exists
 
-**Design board**: a private Claude design canvas, "13 Beads screens" (https://claude.ai/artifact/Qk83C6ApFhPk5JgtKghznm), made 2026-10-10. Editable light-mode mockups of Stringing, Finished, Wall, the More menu, Share, and Decorate, built from the real styles in `src/style.css` with pictures of the 3D views, beside dark and desktop screenshots of the live game. Changes made there do not reach the game until they are built into the code.
+**Design board**: a private Claude design canvas, "13 Beads screens" (https://claude.ai/artifact/Qk83C6ApFhPk5JgtKghznm), made 2026-10-10. Editable light-mode mockups of Stringing, Finished, Wall, the More menu, Share, and Decorate, built from the real styles in `src/style.css` with pictures of the 3D views, beside dark and desktop screenshots of the live game. Session 5 added two rows at the top: "Stringing redesign (live now)" and "Finished and Wall redesign" (both now built), each with phone and desktop screens in light and dark that can be clicked through. The rows below them show the game as it was on 2026-10-10. Changes made on the board do not reach the game until they are built into the code. How the proposal screens were made: `_docs/findings/2026-10-11-design-board.md`.
 
 **Stringing (mode `line`)**
 - A 3D cord simulated as a weighted rope (Verlet chain with gravity): beads weigh it down, a pluck bends it at the finger, phone tilt tips gravity. Drawn zoomed out a little (`ZOOM = 0.82` in `frame` in `src/main.js`): beads are about 18 percent smaller than the cord has room for.
@@ -19,7 +19,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - Shake to spill: on a phone, two hard jolts within half a second pour 18 loose beads onto the table (mostly the picked color, some letters, the odd charm). Tap one to string it; untouched, they roll back into the case after 12 seconds. iPhone gets motion access from the Tilt button tap. Off with reduced motion. Tested only with simulated motion events.
 
 **Two strands** (More menu: Strands One / Two)
-- A second cord hangs below the first. A Top / Bottom / Both picker (words, not icons) sits at the bottom left of the canvas (the "See it finished" button moves to the right); new beads, typed phrases, and spilled beads go on the picked cord. "Both" threads a bead on both cords, and the cords meet there. Tapping a cord also picks it (a drag still plucks). The picked cord is drawn thicker and brighter, and a ghost bead (white with a pulsing pink ring) shows where the next bead will land.
+- A second cord hangs below the first. A Top / Bottom / Both picker (words, not icons) is a full-width row just under the canvas, above the command bar; new beads, typed phrases, and spilled beads go on the picked cord. "Both" threads a bead on both cords, and the cords meet there. Tapping a cord also picks it (a drag still plucks). The picked cord is drawn thicker and brighter, and a ghost bead (white with a pulsing pink ring) shows where the next bead will land.
 - On two strands the Beads tab starts with one-tap patterns in the picked color: Cross (a seed bead on both cords, one on each cord, one on both), Diamond (a small faceted crystal on both cords, three seed beads on each cord, another crystal on both), and Bubble (a pearl on both cords, five seed beads on each cord, another pearl). A pattern skips its first shared bead when the string already ends on one. The beads where the cords meet in Cross and Diamond take a partner color, one hand-picked per strip color (`PARTNER` in `src/beads.js`), for example white with hot pink, cream with navy, yellow with blue; Bubble keeps its pearls. Compartment pictures and labels show the pair.
 - Drag a bead above or below the middle of the string to move it to the top or bottom cord; let go right between them to thread it on both.
 - Saved as `c` on each bead: no `c` is the top cord, `c: 1` the bottom, `c: 2` both, so single-strand bracelets are unchanged. `layoutCords` in `src/beads.js` places beads: between two shared beads each cord carries its own run, centered, and the stretch is as long as the longer run. The length budget counts the longer cord. `cordGap` sets how far apart the cords are (they meet at shared beads and toward the ends).
@@ -27,7 +27,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - Opening a two-strand bracelet (saved string, Edit from the wall, trade link, undo) turns two strands on. Turning two strands off puts every bead back on one cord (undoable).
 - Trade links: a bead token ending in `~1` or `~2` is on the bottom cord or both.
 
-**Surprise me**: the first compartment of the Beads tab (labeled "Surprise") replaces the string with a ready-made bracelet; each tap brings the next one, starting at a random one. Undo restores the string. Eleven presets, one per album (`PRESETS` in `src/beads.js`, built with `era()`): the album name spelled in round letter beads in the middle, the era's charm right after the word, and the era's beads on both sides. Letter looks: white (Midnights, Speak Now, 1989, Folklore, Evermore, TTPD), black (Red, Reputation), pink (Lover), gold on black (Fearless, Showgirl); frosted gold read too faintly. Two long titles use short forms: TTPD and SHOWGIRL. The debut album is left out because its title is the artist's name. The footer carries "Fan-made. Not affiliated with any artist or label." Nothing is shown in the bead count pill (Shauna wanted the name on the bracelet, not in a label).
+**Surprise me**: the first compartment of the Beads tab (labeled "Surprise") replaces the string with a ready-made bracelet; each tap brings the next one, starting at a random one. Undo restores the string. Eleven presets, one per album (`PRESETS` in `src/beads.js`, built with `era()`): the album name spelled in round letter beads in the middle, the era's charm right after the word, and the era's beads on both sides. Letter looks: white (Midnights, Speak Now, 1989, Folklore, Evermore, TTPD), black (Red, Reputation), pink (Lover), gold on black (Fearless, Showgirl); frosted gold read too faintly. Two long titles use short forms: TTPD and SHOWGIRL. The debut album is left out because its title is the artist's name. The footer carries "Fan-made. Not affiliated with any artist or label." Nothing is shown in the bead count (Shauna wanted the name on the bracelet, not in a label).
 
 **Finding beads**: the Beads tab is sorted into groups, one after another with no empty compartments (empty ones read as missing beads, Shauna's phone test): Recent, Ideas (Surprise me and, on two strands, the patterns), Basics, Shiny, Fun, Seed, Pearls (`BEAD_GROUPS` in `src/main.js`). A row of chips above the tray jumps to each group and lights up the one in view. Recent holds the last six beads picked from the case in any tab, newest first; it refreshes the next time the tray is drawn (switching tab or color), so compartments never move under a finger. Recent is not saved between visits.
 
@@ -55,16 +55,18 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - Drag sideways on a cone to spin it; tap to jingle; hold or right-click a bracelet for a sheet titled with its phrase: Edit it (dark), Leave it, and a quiet red Take it off. Edit puts it on the string; a string in progress hangs in its place unless it is the untouched starter. The held bracelet is not lifted or the others dimmed (reviewer idea, not built).
 - Decorate opens as a sheet from the bottom, so the sign stays in view while it changes: 52px swatches (the picked one has a dark ring and a check; keyboard focus a pink outline), the sign word, Done. Tapping the sign opens it with the word selected.
 - Wide screens: the right-hand panel holds Decorate (always open) and "On your wall", a list of the hung bracelets by phrase with Edit and Take off, then Save photo and Make another.
-- Neon sign: always lit, letters spaced like separate tubes, centered between the cones and the top buttons. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`. Tapping the sign's word on the wall opens Decorate just below the sign with the word selected, so typing replaces it and the sign updates in view (`signAt` in `src/main.js`); a mouse shows a pointer over the sign and bracelets.
+- Neon sign: always lit, letters spaced like separate tubes, centered above the cones. Decorate sets the wall color, the sign word (12 characters), and the sign color (Rainbow default, White, Pink, Blue), all saved in `13beads.wall`. Tapping the sign's word on the wall opens the Decorate sheet with the word selected, so typing replaces it while the sign updates above the sheet (`signAt` in `src/main.js`); a mouse shows a pointer over the sign and bracelets.
 - Keyboard: Tab reaches each bracelet, Enter or Delete opens its options, popovers trap Tab and close on Escape.
 
 **Sound (`src/audio.js`)**: musical, D major. Stringing plays a melody over I, V, vi, IV; charms add bells; strumming arpeggiates; hanging resolves home. Acoustic guitar voice by default, through a small room reverb. The ping-pong echo is off for the guitar (it made plucks sound doubled); the other voices still use it.
 
-**Footer**: "‹ More games" and "Made by Shauna", with "Fan-made. Not affiliated with any artist or label." centered below.
+**Footer**: below the fold, one swipe under the game: "‹ More games" and "Made by Shauna", with "Fan-made. Not affiliated with any artist or label." centered below.
 
 ## Not verified
 
-- Two strands on a real phone: the cord picker and moved finish button, tapping a cord to pick it, dragging beads between cords, and how Cross, Diamond, and Bubble read at phone size.
+- Everything from the session 5 redesigns on a real phone: swiping the bead case header, the fold animation, the command bar, the footer below the fold, the Share, Decorate, and bracelet options sheets (especially that they sit above the keyboard in iPhone Safari, via `visualViewport`), and the live card preview's speed on an older phone. Only the cloud software renderer was used.
+- Desktop at sizes between 900 and 1280px wide, and very short desktop windows (the right-hand panels scroll, untested at small heights).
+- Two strands on a real phone: the cord picker row, tapping a cord to pick it, dragging beads between cords, and how Cross, Diamond, and Bubble read at phone size.
 - Session 4 beads and charms on a phone (seed beads, round letters, the new dangles, the S snake), and the jump chips and Recent row.
 - Shake to spill on a real phone (only simulated motion events were tested), and whether two 17 m/s² jolts is the right strength.
 - Tilt and the iPhone permission button.
@@ -104,7 +106,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-08 | Bracelets on the T-bar | Hang from hooks facing forward | On a real T-bar they sit edge-on and phrases cannot be read. (Superseded 2026-10-09: rings around cones.) |
 | 2026-10-08 | Wall color | Soft pink painted plaster | Shauna chose a painted wall to start. Whether players pick the color is still open. (Superseded the same day: player picks, white default.) |
 | 2026-10-08 | Unlocks and trading links | Deferred | Shauna: hold until the core is further along. |
-| 2026-10-08 | Wall and tie-off controls | Float on the canvas instead of panels below it | Shauna asked. Direct manipulation: act on the bracelet itself, icons in corners, one labeled primary action. |
+| 2026-10-08 | Wall and tie-off controls | Float on the canvas instead of panels below it | Shauna asked. Direct manipulation: act on the bracelet itself, icons in corners, one labeled primary action. (Superseded 2026-10-11 and 2026-10-12: controls moved off the canvas into bars and panels, after a UX review found they covered the bracelet.) |
 | 2026-10-08 | Taking a bracelet off | Press and hold (or right-click) a bracelet, then confirm | Replaces "Take one off", which only removed the newest. |
 | 2026-10-08 | Wall color | Player picks from 3: white (default), pink, sage | Shauna approved. Neutral white makes bead colors pop. Few curated options all look good with the gold stand. |
 | 2026-10-08 | Neon sign word | Player can change it. Default is the game name, "13 beads" | Shauna: if it is editable it should be the player's word, within limits that keep it looking good. |
@@ -112,7 +114,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-08 | Wall props | Plant removed. Stand and shelf shadows off. Focus on the wall texture | Shauna: the shadows looked odd and the plant was clutter. |
 | 2026-10-08 | Night wall | Each color keeps its own feel at night | Shauna asked. |
 | 2026-10-08 | Interface style | Fewer, quieter controls: icon header, grouped icons, one dark primary button | Shauna asked for a simpler, more sophisticated interface. |
-| 2026-10-08 | Back to games | Muted "‹ Games" link at the start of the header | Shauna: visible but not obvious or intrusive. (Superseded 2026-10-09: moved to the footer.) |
+| 2026-10-08 | Back to games | Muted "‹ Games" link at the start of the header | Shauna: visible but not obvious or intrusive. (Superseded 2026-10-09: moved to the footer; then 2026-10-11: a back arrow before the wordmark.) |
 | 2026-10-08 | Sound | Musical: every sound is a note in one key, stringing plays a melody | Shauna rejected both the original sounds and a realistic rebuild, and asked for music notes. (2026-10-09: echo off for the guitar.) |
 | 2026-10-08 | Daytime neon on white | Fine for now | Shauna. |
 | 2026-10-09 | Instrument | Acoustic guitar by default | Shauna asked for a guitar option. Music box, kalimba, and synth pluck stay available in code. |
@@ -146,7 +148,7 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 | 2026-10-09 | True-size beads and wrist sizes | On hold; one bead size | True size only helps planning if accurate; without it wrist size is irrelevant (Shauna). |
 | 2026-10-09 | View | Hanging string, zoomed out about 18 percent | Shauna: "zoom out a little", then "perfect". |
 | 2026-10-09 | Pop-up hint box | Removed everywhere | Shauna: it blocks the player. Messages still reach screen readers. |
-| 2026-10-09 | Controls | Hybrid: Undo, Redo, Clear on the canvas; Sound, theme, end switch, Start over, Table in a "⋯" menu; phrase field in the Letters tab | Shauna picked option C, then asked for Redo and for Clear back on the canvas as a trash icon. |
+| 2026-10-09 | Controls | Hybrid: Undo, Redo, Clear on the canvas; Sound, theme, end switch, Start over, Table in a "⋯" menu; phrase field in the Letters tab | Shauna picked option C, then asked for Redo and for Clear back on the canvas as a trash icon. (Superseded 2026-10-11: Undo, Redo, Clear moved to the command bar under the canvas.) |
 | 2026-10-09 | Finish flow | "See it finished" then "Keep editing" or "Add to my wall" | Shauna wanted to preview the finished bracelet and keep editing. |
 | 2026-10-09 | Edit from the wall | Edit it / Take it off / Leave it; a string in progress swaps onto the wall | Shauna: yes to the swap, so nothing is lost. |
 | 2026-10-09 | Wall background | Plain painted wall; limewash, plaster ridges, window light, depth of field, and wall shadows removed | Shauna: it looked weird and overcomplicated. The shadows read as gray ghosts. |
@@ -214,6 +216,9 @@ Last updated: 2026-10-11 (session 5). Everything below is on `main` and live, in
 - The share card's QR canvas sat under a global `.stage canvas` rule (absolute, full size). Scope canvas rules to the game canvas.
 - Session 4: `pkill -f "vite preview"` killed the shell again. Start each preview on a new port with `setsid` instead; the preview also stopped by itself between some tool calls, so check it answers before screenshotting.
 - Session 4: the device link cannot push (no GitHub login on the Mac) and the first `add_repo` request was refused by the permission check; on the second try it went through. Shauna pushed the confetti commit herself in between. Fetch before assuming what is on `main`.
+- Session 5: the first commit carried an assistant co-author line from the session's default attribution. Shauna's rule (no AI credit) overrides it; the commit was amended within a minute. Check every commit message before pushing.
+- Session 5: I told Shauna the design board might be out of date without checking it. It was not. Compare the board with the live game before claiming drift.
+- Session 5: Shauna asked to approve redesigns on the board first, then asked to see the stringing redesign live; the Finished and Wall redesign went board first, then build on her "go ahead". Ask which she wants for each large change.
 - In Playwright tests, "See it finished" on an empty string does nothing (correctly), so tests that hang bracelets must string another before tying again. A page opened from a trade link stalls the software renderer's screenshot; check its state with `$eval` instead.
 - Session 4: git on the Mac needed delete permission for the folder (lock files). Granted once per session via the delete permission prompt.
 - Era bracelet names went through three versions in one evening: a 3.5 second label in the count pill (missed), the label kept while customizing (she did not want a label at all), then the name spelled in letter beads on the bracelet. Ask where text should live before building a label.

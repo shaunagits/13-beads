@@ -23,7 +23,7 @@ npm run dev
 
 | File | What it holds |
 |---|---|
-| `index.html` | Page structure: header, stage, the bead tray panel, and the controls that float on the canvas for the tie-off and wall screens (`#hud`, shown per mode with `data-show`). |
+| `index.html` | Page structure: header (with the back arrow), the stage (canvas, plus `#hud` for the invisible keyboard buttons over hung bracelets and the bracelet options sheet), and one panel per screen under the canvas: `#lineBar` and `#buildPanel` (the bead case) while stringing, `#tiedPanel` (Share sheet) on Finished, `#wallPanel` (Decorate sheet, hung list) on the wall. On screens 900px and wider the case and panels move to a right-hand column. |
 | `src/main.js` | The 3D scene, string physics, pointer, tilt, and shake input, the tie-off animation and confetti, the wall (velvet cones, neon sign, lighting moods), the More menu, the share card, trade links, and photo export. |
 | `src/beads.js` | The bead and charm catalog, the code that builds each one in 3D, and the trade link bead code (`encodeBracelet`, `decodeBracelet`). |
 | `src/theme.js` | Light or dark: follows the device until the player uses the header toggle, then remembers their pick. Other code reads `isDark()` and listens with `onTheme()`. |

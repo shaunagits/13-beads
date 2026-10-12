@@ -30,3 +30,22 @@ Cloud Playwright with the pre-installed Chromium and the swiftshader flags from 
 
 - The board is a snapshot of the game on 2026-10-10 (Surprise compartment, jump chips, two strands off). Recapture if the screens have changed.
 - Assets upload to the canvas with the Artifact tool (`asset: true`), then are referenced by their `/_blob/<id>` URL.
+
+## Session 5: proposal boards (2026-10-11 and 12)
+
+Two rows were added at the top of the board for redesigns, each a phone and a desktop screen in light and dark:
+"Stringing redesign" (`ProposalPhone`, `ProposalDesk`, and their `Dark` copies) and "Finished and Wall redesign"
+(`FinishedPhone`, `WallPhone`, `FinishedDesk`, `WallDesk`, and `Dark` copies). Both were then built into the game.
+
+- Each proposal screen takes a `dark` prop. All its colors come from one palette object (`P`) chosen in `renderVals()`, so the
+  dark screen is a two-line wrapper: `<dc-import name="ProposalPhone" dark="{{ true }}">`. File names are PascalCase with no
+  dashes, to be safe as `dc-import` names.
+- Screens are clickable (tabs, colors, sheets) with `state` in the component; Tweaks set `twoStrands`, `trade`, and
+  `stringInProgress`.
+- The 3D pictures were rendered from the live game at the exact new canvas sizes: inject
+  `#hud{visibility:hidden} .stage{flex:none;width:Wpx;height:Hpx}`, fire a `resize` event, wait about 7 seconds, and
+  screenshot the `#stage` rectangle. The share card was captured with Playwright's download event on Save card.
+- Uploading assets bumps the artifact's version: a publish right after can be refused as "not viewed the latest". Read the
+  artifact (no path) and publish again.
+- The independent UX reviews behind both redesigns: `2026-10-11-stringing-ux-review.md` and
+  `2026-10-11-finished-wall-ux-review.md`.
