@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Width each bead takes up along the string, as a fraction of bead size.
-export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 0.84, starb: 1.0, dice: 0.9, facet: 0.42, marble: 0.84, moon2: 0.72, gunspacer: 0.24, pony: 0.78, clay: 0.3, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 0.9, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
+export const UNIT = { seed: 0.28, seedg: 0.28, seedl: 0.28, seedx: 0.28, matte: 0.84, starb: 1.0, dice: 0.9, facet: 0.42, marble: 0.84, moon2: 0.72, gunspacer: 0.24, pony: 0.78, clay: 0.24, round: 0.86, crystal: 0.84, cube: 0.86, smiley: 1.1, jelly: 0.78, metal: 0.8, ball: 0.44, daisy: 0.2, rondelle: 0.32, cap: 0.2, letter: 0.96, pearl: 0.92, glitter: 0.78, glow: 0.78, star: 1.06, heart: 1.04, mirror: 0.98, spacer: 0.3,
   lucky13: 1.04, snake: 2.05, butterfly: 1.12, moon: 0.84, guitar: 0.36,
   pheart: 1.04, sparkle: 1.0, jewel: 0.95, gull: 1.18, rainbow: 1.0, leaf: 1.08, tree: 0.9, clock: 1.0, photo: 0.86, cat: 1.0, wheart: 1.0, arrow: 1.3,
   mic: 0.36, chair: 0.36, ladder: 0.36, cardigan: 0.36, scarf: 0.36, boot: 0.36, coupe: 0.36,
@@ -320,10 +320,10 @@ function pipTex(n) {
     for (const [u, v] of at) { x.beginPath(); x.arc(u * s, v * s, s * 0.085, 0, TAU); x.fill(); }
   }));
 }
-// A polymer clay disc (heishi): a thin washer with flat faces and a softly rounded rim.
+// A polymer clay disc (heishi): a thin washer with flat faces and a softly rounded rim. 6mm across, two thirds of a pony bead.
 function clayGeo() {
   if (geo.clay) return geo.clay;
-  const pts = [], rin = 0.13, rout = 0.5, half = 0.125;
+  const pts = [], rin = 0.1, rout = 0.335, half = 0.1;
   for (let i = 0; i <= 24; i++) {
     const t = (i / 24) * Math.PI;
     pts.push(new THREE.Vector2(rin + (rout - rin) * Math.pow(Math.sin(t), 0.16), -half * Math.cos(t)));
@@ -332,16 +332,16 @@ function clayGeo() {
   g.rotateZ(Math.PI / 2);
   return (geo.clay = g);
 }
-// A flat daisy spacer: eight round petals around a hole, face-on to the string.
+// A flat daisy spacer: eight round petals around a hole, face-on to the string. About 5mm across.
 function daisyGeo() {
   if (geo.daisy) return geo.daisy;
   const s = new THREE.Shape(), n = 8;
   for (let i = 0; i <= 96; i++) {
-    const a = (i / 96) * TAU, r = 0.3 + 0.09 * Math.pow(Math.abs(Math.cos((a * n) / 2)), 0.6);
+    const a = (i / 96) * TAU, r = 0.2 + 0.06 * Math.pow(Math.abs(Math.cos((a * n) / 2)), 0.6);
     i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r);
   }
   const hole = new THREE.Path();
-  hole.absarc(0, 0, 0.09, 0, TAU, true);
+  hole.absarc(0, 0, 0.07, 0, TAU, true);
   s.holes.push(hole);
   const g = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 8 });
   g.translate(0, 0, -0.04);
@@ -375,7 +375,7 @@ function crystalGeo() {
 // The smiley's face is a grid bent onto the front of the squashed sphere, so the print hugs the curve.
 function smileyFaceGeo() {
   if (geo.smileyFace) return geo.smileyFace;
-  const g = new THREE.PlaneGeometry(0.66, 0.66, 16, 16), p = g.attributes.position, R = 0.45, Z = 0.45 * 0.72;
+  const g = new THREE.PlaneGeometry(0.81, 0.81, 16, 16), p = g.attributes.position, R = 0.55, Z = 0.55 * 0.72;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), q = Math.max(0, 1 - (x * x + y * y) / (R * R));
     p.setZ(i, Z * Math.sqrt(q) + 0.004);
@@ -1437,7 +1437,7 @@ export function makeBead(d) {
       }))));
       break;
     case 'smiley': {
-      group.add(mesh((geo.smiley ||= new THREE.SphereGeometry(0.45, 36, 24).scale(1, 1, 0.72)), mat(defKey(d), () => plastic(deep(d.h, d.s, d.l)))));
+      group.add(mesh((geo.smiley ||= new THREE.SphereGeometry(0.55, 36, 24).scale(1, 1, 0.72)), mat(defKey(d), () => plastic(deep(d.h, d.s, d.l)))));
       const ink = d.l < 30 ? '#ffffff' : '#1c1830';
       const face = new THREE.Mesh(smileyFaceGeo(), mat('smile' + ink, () => new THREE.MeshBasicMaterial({
         map: smileyTex(ink), transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2,
