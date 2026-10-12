@@ -22,11 +22,14 @@ export const COLORS = [
   // Added 2026-10-10 from Shauna's bracelet photos. New colors always go at the end, since trade links name a color
   // by its place in this list; COLOR_ORDER sets where each one shows on the strip.
   ['Blush', 14, 60, 80], ['Baby blue', 200, 78, 80], ['Cream', 40, 70, 90], ['Navy', 228, 70, 28],
+  // Added 2026-10-12: shades the strip was missing that turn up in concert bracelets.
+  ['Burgundy', 345, 62, 30], ['Forest green', 145, 55, 25], ['Mint', 150, 60, 80], ['Coral', 8, 88, 66],
+  ['Lilac', 288, 50, 78], ['Gray', 255, 6, 58], ['Tan', 30, 42, 56],
 ].map(([name, h, s, l]) => ({ name, h, s, l }));
 // Two-strand patterns put a partner color on the beads where the cords meet, so the shape reads. One hand-picked
 // partner per strip color, by index into COLORS (Shauna approved automatic pairing over a picker, 2026-10-11).
-export const PARTNER = [11, 11, 14, 15, 15, 14, 11, 3, 11, 8, 11, 10, 0, 15, 15, 14];
-export const COLOR_ORDER = [0, 12, 1, 2, 3, 14, 4, 5, 6, 13, 7, 15, 8, 9, 10, 11];
+export const PARTNER = [11, 11, 14, 15, 15, 14, 11, 3, 11, 8, 11, 10, 0, 15, 15, 14, 14, 14, 17, 11, 8, 10, 14];
+export const COLOR_ORDER = [0, 12, 19, 1, 16, 2, 3, 14, 22, 18, 4, 17, 5, 6, 13, 7, 15, 8, 9, 20, 21, 10, 11];
 
 // Bead types that come in every strip color. A bead's def is { k, h, s, l }.
 export const COLOR_TYPES = [

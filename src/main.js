@@ -2898,8 +2898,31 @@ start();
 
 // The game installs to a home screen and opens offline: a service worker keeps the page and its files.
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {}); });
 }
+// Staying current: a home screen app can sit open for days. Each time the player comes back to the game, it checks
+// whether a newer version is live (the page names a different build file) and, if so, reloads into it, but only on
+// the string screen with nothing open. The string is saved on every change, so only undo history is lost. Anywhere
+// else (tie-off, the wall, a trade or visit, a sheet or field in use) it waits for the next return.
+const ownBuild = (document.querySelector('script[type="module"][src*="assets/index-"]') || {}).src || '';
+let newBuild = false, checking = false;
+const safeToReload = () => mode === 'line' && !trade && !visit && !document.querySelector('.sheet:not([hidden]), [role="dialog"]:not([hidden]), .menu:not([hidden])')
+  && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName));
+async function checkBuild() {
+  if (!ownBuild || location.protocol !== 'https:' || checking || !navigator.onLine) return;
+  checking = true;
+  try {
+    if (!newBuild) {
+      const html = await (await fetch(new URL('../', ownBuild), { cache: 'no-store' })).text();
+      const live = (html.match(/assets\/index-[\w-]+\.js/) || [])[0];
+      newBuild = !!live && !ownBuild.endsWith(live);
+    }
+    if (newBuild && safeToReload()) location.reload();
+  } catch (e) { /* offline or blocked: try again next time */ }
+  checking = false;
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkBuild(); });
+window.addEventListener('pageshow', (e) => { if (e.persisted) checkBuild(); });
 
 // Bottom sheets sit above the on-screen keyboard: the keyboard's height is kept in a CSS variable.
 if (window.visualViewport) {

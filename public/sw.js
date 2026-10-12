@@ -1,7 +1,7 @@
 // Offline support: the page and its files are kept after the first visit, so the game opens with no signal.
 // Pages are fetched fresh when possible (falling back to the kept copy); built files carry a hash in their name,
 // so the kept copy is always right. Fonts are kept once seen.
-const CACHE = '13beads-v1';
+const CACHE = '13beads-v2';
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./']).catch(() => {})).then(() => self.skipWaiting()));
 });
@@ -12,11 +12,13 @@ const keep = (req, res) => { if (res && res.ok || (res && res.type === 'opaque')
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  // The page's check for a newer version must reach the network, never the kept copy.
+  if (req.cache === 'no-store') return;
   const url = new URL(req.url);
   const font = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== location.origin && !font) return;
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then((res) => keep(req, res)).catch(() => caches.match(req).then((r) => r || caches.match('./'))));
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => keep(req, res)).catch(() => caches.match(req).then((r) => r || caches.match('./'))));
     return;
   }
   e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => keep(req, res))));
